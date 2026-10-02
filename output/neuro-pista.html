@@ -1,0 +1,118 @@
+﻿<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Aprendendo a dirigir — Neuroevolução</title>
+    <link rel="stylesheet" href="neuro-pista.css">
+    <script src="vendor/three.min.js" defer></script>
+    <script src="neuro-pista-track.js" defer></script>
+    <script src="neuro-pista-3d.js" defer></script>
+    <script src="neuro-pista.js" defer></script>
+  </head>
+  <body>
+    <main id="neuro-pista">
+      <h1>Aprendendo a dirigir</h1>
+
+      <!-- Controles do treinamento -->
+      <div class="viz-controls">
+        <button class="btn btn-primary" id="np-play" type="button">Iniciar treinamento</button>
+        <button class="btn" id="np-step" type="button">Avançar um passo</button>
+        <label class="form-label">Quantidade de carros
+          <input class="form-select" id="np-count" type="number" min="1" max="100" step="1" value="40">
+        </label>
+        <button class="btn" id="np-apply-count" type="button">Aplicar e reiniciar</button>
+        <label class="form-label">
+          Velocidade
+          <select class="form-select" id="np-rate">
+            <option value="1">1×</option>
+            <option value="4">4×</option>
+            <option value="12">12×</option>
+          </select>
+        </label>
+        <label class="form-check">
+          <input class="form-check-input" id="np-sensors" type="checkbox" checked>
+          <span>Sensores do líder</span>
+        </label>
+      </div>
+
+      <div class="viz-row tabular-nums" id="np-stats"></div>
+
+      <!-- Pista e rede neural do carro líder -->
+      <div class="np-visuals">
+        <section>
+          <h2 id="np-track-title">Circuito de treinamento</h2>
+          <div class="viz-controls np-camera-controls" id="np-camera-controls" hidden>
+            <label class="form-label">
+              Câmera
+              <select class="form-select" id="np-camera">
+                <option value="overview">Visão da pista</option>
+                <option value="follow">Orbital do carro</option>
+                <option value="chase">Terceira pessoa</option>
+              </select>
+            </label>
+            <label class="form-label">Carro acompanhado
+              <select class="form-select" id="np-target"><option value="auto">Líder automático</option></select>
+            </label>
+            <button class="btn" id="np-rotate" type="button" aria-label="Girar câmera">Girar</button>
+            <button class="btn" id="np-zoom-in" type="button" aria-label="Aproximar câmera">+</button>
+            <button class="btn" id="np-zoom-out" type="button" aria-label="Afastar câmera">−</button>
+            <button class="btn" id="np-camera-reset" type="button">Restaurar câmera</button>
+          </div>
+          <canvas id="np-track-3d" role="img" aria-label="Corrida em 3D com carros, pista e sensores do líder" hidden></canvas>
+          <canvas id="np-track" role="img" aria-label="Circuito com retas e curvas, carros controlados por redes neurais e sensores"></canvas>
+          <p class="text-small text-muted" id="np-3d-status" role="status"></p>
+          <div class="text-small" id="np-track-label"></div>
+        </section>
+        <section>
+          <h2 id="np-network-title">Rede do líder · 6 → 6 → 2</h2>
+          <p class="text-small text-muted">Sensores → processamento → decisões<br>48 conexões · 8 vieses · ativação tanh</p>
+          <canvas id="np-network" role="img" aria-label="Rede neural do líder: sensores e velocidade, seis neurônios ocultos, direção e pedal"></canvas>
+          <p class="text-small">Clique em H1–H6, Direção ou Pedal para pausar e inspecionar. As linhas destacadas chegam ao neurônio selecionado.</p>
+          <div class="text-small" id="np-actions"></div>
+          <div class="np-output-meters">
+            <label>Direção desejada <meter id="np-steering-meter" min="-1" max="1" value="0"></meter><span class="np-meter-labels"><span>−1 esquerda</span><span>+1 direita</span></span></label>
+            <label>Pedal desejado <meter id="np-pedal-meter" min="-1" max="1" value="0"></meter><span class="np-meter-labels"><span>−1 frear</span><span>+1 acelerar</span></span></label>
+          </div>
+          <p class="text-small" id="np-applied"></p>
+          <details>
+            <summary>Entender as entradas e as cores</summary>
+            <p class="text-small">E2/D2: sensores laterais; E1/D1: diagonais; Frente: sensor frontal. Cada distância vai de 0 (parede próxima) a 1 (40 m livres). Vel. é a velocidade dividida pela máxima.</p>
+            <p class="text-small">Círculos mostram a ativação. Linhas mostram a contribuição entrada × peso: verde soma, roxo subtrai; maior espessura indica maior magnitude. O viés aparece na tabela. A função tanh limita cada saída entre −1 e +1.</p>
+          </details>
+        </section>
+      </div>
+
+      <div class="viz-row text-small np-legend">
+        <span><span class="np-key np-key-positive"></span>Valor positivo (+)</span>
+        <span><span class="np-key np-key-negative"></span>Valor negativo (−)</span>
+        <span class="text-muted">Cor mais intensa = maior magnitude</span>
+      </div>
+
+      <!-- Cálculos visíveis quando o treinamento está pausado -->
+      <div>
+        <div class="viz-controls">
+          <label class="form-label">
+            Inspecionar neurônio
+            <select class="form-select" id="np-neuron"></select>
+          </label>
+          <span class="text-small" id="np-sum"></span>
+        </div>
+        <p class="text-small text-muted">z = soma das entradas × pesos + viés. Saída = tanh(z). Selecionar um neurônio pausa a simulação.</p>
+        <div id="np-inspect">
+        <table class="table table-sm tabular-nums">
+          <thead>
+            <tr>
+              <th>Entrada</th>
+              <th class="text-end">Valor × peso</th>
+              <th class="text-end">Produto</th>
+            </tr>
+          </thead>
+          <tbody id="np-terms"></tbody>
+        </table>
+        </div>
+      </div>
+      <div class="sr-only" id="np-announce" aria-live="polite"></div>
+    </main>
+  </body>
+</html>

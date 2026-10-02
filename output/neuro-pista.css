@@ -1,0 +1,245 @@
+/* Tema local: permite abrir o HTML diretamente no navegador. */
+:root {
+  color-scheme: light dark;
+  --background: light-dark(#ffffff, #16181c);
+  --foreground: light-dark(#24282e, #eceef2);
+  --muted-foreground: light-dark(#626974, #b0b7c2);
+  --muted: light-dark(#edf0f4, #292e36);
+  --border: light-dark(#cbd0d8, #49515e);
+  --viz-series-1: light-dark(#16765a, #64d8b1);
+  --viz-series-2: light-dark(#a448b0, #d494df);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--background);
+  color: var(--foreground);
+  font-family: system-ui, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+#neuro-pista {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 24px;
+}
+
+h1 {
+  font-size: 24px;
+  font-weight: 500;
+}
+
+h2 {
+  font-size: 16px;
+  font-weight: 500;
+}
+
+/* Controles e indicadores */
+.viz-controls,
+.viz-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+}
+
+.form-label {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.form-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn,
+.form-select {
+  max-width: 100%;
+  padding: 8px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--background);
+  color: var(--foreground);
+  font: inherit;
+}
+
+.btn {
+  cursor: pointer;
+}
+
+.btn-primary {
+  background: var(--foreground);
+  color: var(--background);
+}
+
+.btn:hover {
+  filter: brightness(0.9);
+}
+
+#np-stats {
+  margin: 16px 0;
+}
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+.text-small {
+  font-size: 12px;
+}
+
+.text-muted {
+  color: var(--muted-foreground);
+}
+
+/* Pista, rede e legenda */
+.np-visuals {
+  display: grid;
+  grid-template-columns: minmax(0, 1.8fr) minmax(300px, 1fr);
+  gap: 24px;
+}
+
+.np-visuals section {
+  min-width: 0;
+}
+
+canvas {
+  display: block;
+  width: 100%;
+  height: 280px;
+}
+
+#np-network {
+  height: 380px;
+  cursor: pointer;
+}
+
+.np-output-meters {
+  display: grid;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.np-output-meters meter {
+  display: block;
+  width: 100%;
+  height: 16px;
+}
+
+.np-meter-labels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+
+summary {
+  cursor: pointer;
+}
+
+#np-track-3d {
+  height: 420px;
+  border-radius: 10px;
+  touch-action: none;
+  cursor: grab;
+}
+
+#np-track-3d:active {
+  cursor: grabbing;
+}
+
+.np-camera-controls {
+  margin-bottom: 12px;
+  gap: 8px;
+}
+
+.np-legend {
+  margin: 12px 0;
+}
+
+.np-key {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-right: 5px;
+  border-radius: 50%;
+}
+
+.np-key-positive {
+  background: var(--viz-series-1);
+}
+
+.np-key-negative {
+  background: var(--viz-series-2);
+}
+
+/* Inspeção dos cálculos */
+#np-sum {
+  overflow-wrap: anywhere;
+}
+
+.table {
+  width: 100%;
+  margin-top: 12px;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.table th,
+.table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.text-end {
+  text-align: right;
+}
+
+[hidden] {
+  display: none !important;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+@media (max-width: 850px) {
+  #neuro-pista {
+    padding: 16px;
+  }
+
+  .np-visuals {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+
+  #np-track-3d {
+    height: 340px;
+  }
+}
+
+@media (pointer: coarse) {
+  .btn,
+  .form-select,
+  .form-check {
+    min-height: 44px;
+  }
+
+  .form-select {
+    font-size: 16px;
+  }
+}
