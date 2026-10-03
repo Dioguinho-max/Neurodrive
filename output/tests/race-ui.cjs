@@ -1,0 +1,121 @@
+const fs = require('node:fs');
+const path = require('node:path');
+const assert = require('node:assert/strict');
+const read = (file) => fs.readFileSync(path.join(__dirname, '..', file), 'utf8');
+const nodes = Object.fromEntries([...read('corrida.html').matchAll(/id="([^"]+)"/g)].map((match) =>
+  [match[1], { textContent: '', value: 'normal', disabled: false, style: {}, setAttribute() {},
+    open: false, showModal() { this.open = true; }, close() { this.open = false; }, focus() {} }]));
+const events = {};
+let frame;
+let lastCars;
+const host = {
+  addEventListener(type, handler) { events[type] = handler; },
+  createNeuroTrack3D: () => ({ update(cars) { lastCars = cars; } }),
+};
+const documentMock = {
+  getElementById: (id) => { assert(nodes[id], id); return nodes[id]; },
+  querySelectorAll: () => [],
+  addEventListener(type, handler) { events[type] = handler; },
+};
+for (const file of ['neuro-pista-track.js', 'neurodrive-race-engine.js']) new Function('window', read(file))(host);
+new Function('window', 'document', 'requestAnimationFrame', read('neurodrive-race.js'))(
+  host, documentMock, (callback) => { frame = callback; },
+);
+assert.equal(nodes['race-menu'].open, true, 'Menu inicial deve abrir antes da largada');
+assert.equal(nodes['race-developer'].hidden, true, 'Ferramentas técnicas devem ficar ocultas para o jogador');
+assert.equal(nodes['race-menu-resume'].hidden, true);
+nodes['menu-track'].value = 'serra';
+nodes['menu-difficulty'].value = 'normal';
+nodes['menu-laps'].value = '3';
+nodes['race-menu-play'].onclick();
+assert.equal(nodes['race-menu'].open, false);
+nodes['race-transmission'].value = 'manual';
+nodes['race-transmission'].onchange();
+assert.equal(lastCars[0].manual, true);
+nodes['race-transmission'].value = 'automatic';
+nodes['race-transmission'].onchange();
+assert.equal(lastCars[0].manual, false);
+events.keydown({ code: 'KeyW', target: {}, preventDefault() {} });
+for (let i = 0; i < 240; i++) frame(i * 17);
+assert(lastCars[0].speed > 0);
+events.keydown({ code: 'Escape', target: {}, preventDefault() {} });
+assert.equal(nodes['race-menu'].open, true);
+assert.equal(nodes['menu-recover'].hidden, false);
+assert.equal(nodes['menu-end-qualifying'].hidden, false);
+const menuX = lastCars[0].x;
+events.keydown({ code: 'KeyP', target: {}, preventDefault() {} });
+frame(240 * 17);
+assert.equal(lastCars[0].x, menuX, 'Menu deve bloquear movimento e atalhos da corrida');
+nodes['race-menu-resume'].onclick();
+assert.equal(nodes['race-menu'].open, false);
+events.blur();
+const x = lastCars[0].x;
+for (let i = 240; i < 270; i++) frame(i * 17);
+assert.equal(lastCars[0].x, x);
+assert.equal(nodes['race-banner'].textContent, 'Pausado');
+nodes['race-pause'].onclick();
+frame(270 * 17);
+assert.notEqual(nodes['race-banner'].textContent, 'Pausado');
+nodes['race-start'].onclick();
+assert.equal(lastCars[0].speed, 0);
+assert.equal(nodes['race-banner'].textContent, '3');
+lastCars[0].bestLap = 70;
+lastCars[1].bestLap = 65;
+nodes['race-menu-open'].onclick();
+nodes['menu-end-qualifying'].onclick();
+assert.equal(nodes['race-menu'].open, false);
+assert.equal(nodes['race-next'].disabled, false);
+assert.equal(nodes['race-results'].open, true);
+assert.equal(nodes['race-results-table'].hidden, false);
+assert.equal(nodes['race-podium'].hidden, true);
+assert.equal((nodes['race-tower-list'].innerHTML.match(/<li /g) || []).length, 6);
+assert.equal((nodes['race-ranking'].innerHTML.match(/<tr /g) || []).length, 6);
+assert(nodes['race-ranking'].innerHTML.includes('+5.00 s'));
+assert(nodes['race-ranking'].innerHTML.includes('1:05.00'));
+nodes['race-laps'].value = '5';
+nodes['race-next'].onclick();
+assert.equal(nodes['race-next'].disabled, true);
+assert(nodes['race-session'].textContent.includes('Corrida'));
+assert.equal(nodes['race-lap'].textContent, '1 / 5');
+assert.equal(nodes['race-laps'].disabled, true);
+assert.equal(nodes['race-results'].open, false);
+Object.assign(lastCars[0], { done: true, place: 2, finishTime: 100 });
+Object.assign(lastCars[1], { done: true, place: 1, finishTime: 90 });
+Object.assign(lastCars[2], { done: true, place: 3, finishTime: 110 });
+for (let i = 271; i < 520; i++) frame(i * 17);
+assert.equal(nodes['race-results'].open, true);
+assert.equal(nodes['race-podium'].hidden, false);
+assert.equal(nodes['race-results-table'].hidden, true);
+assert.equal((nodes['race-podium'].innerHTML.match(/class="podium-place"/g) || []).length, 3);
+assert(nodes['race-podium'].innerHTML.includes('1:30.00'));
+nodes['race-results-continue'].onclick();
+assert.equal(nodes['race-results-table'].hidden, false);
+assert.equal(nodes['race-podium'].hidden, true);
+assert.equal((nodes['race-results-rows'].innerHTML.match(/<tr /g) || []).length, 6);
+nodes['race-results-close'].onclick();
+frame(520 * 17);
+assert.equal(nodes['race-results'].open, false, 'Resultados fechados não devem reabrir automaticamente');
+nodes['race-menu-open'].onclick();
+assert.equal(nodes['race-menu'].open, true);
+assert.equal(nodes['race-menu-resume'].textContent, 'Voltar aos resultados');
+nodes['race-menu-resume'].onclick();
+assert.equal(nodes['race-results'].open, true);
+nodes['race-show-results'].onclick();
+assert.equal(nodes['race-results'].open, true);
+nodes['race-track'].value = 'veloz';
+nodes['race-track'].onchange();
+assert.equal(nodes['race-next'].disabled, true);
+assert.equal(nodes['race-pause'].disabled, true);
+assert(nodes['race-session'].textContent.includes('Veloz'));
+assert.equal(nodes['race-results'].open, false);
+nodes['race-menu-open'].onclick();
+nodes['menu-track'].value = 'tecnico';
+nodes['menu-difficulty'].value = 'hard';
+nodes['menu-laps'].value = '10';
+nodes['race-menu-play'].onclick();
+assert(nodes['race-session'].textContent.includes('Técnico'));
+assert.equal(nodes['race-difficulty'].value, 'hard');
+assert.equal(nodes['race-laps'].value, '10');
+assert.equal(nodes['race-banner'].textContent, '3');
+assert.equal(nodes['race-menu'].open, false);
+console.log('OK: menu inicial, configurações, pausa pelo menu, retomada, resultados, teclado e reinício.');

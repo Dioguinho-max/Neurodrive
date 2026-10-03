@@ -5,12 +5,17 @@
 (() => {
   'use strict';
 
-  window.createNeuroTrack3D = function createNeuroTrack3D(element) {
+  window.createNeuroTrack3D = function createNeuroTrack3D(element, options = {}) {
     const THREE = window.THREE;
     if (!THREE) throw new Error('Three.js não foi carregado.');
 
-    const track = window.NeuroTrack;
+    const track = options.track || window.NeuroTrack;
     const canvas = element('track-3d');
+    const listeners = [];
+    function listen(type, handler, settings) {
+      canvas.addEventListener(type, handler, settings);
+      listeners.push([type, handler, settings]);
+    }
     const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     renderer.shadowMap.enabled = true;
@@ -40,6 +45,8 @@
     const glass = material('#315167', { metalness: 0.35, roughness: 0.2 });
     const bodyMaterials = [material('#53a8da'), material('#f0b65e'), material('#b09bde')];
     const leaderMaterial = material('#48e6a4', { emissive: '#123d2c', emissiveIntensity: 0.25 });
+    const playerPaint = material('#48e6a4', { metalness: 0.35, roughness: 0.4 });
+    const playerStripe = material('#163d33');
     const crashedMaterial = material('#657078');
     const brakeMaterial = material('#ff2929', { emissive: '#ff1515', emissiveIntensity: 1 });
 
@@ -58,7 +65,7 @@
         const next = (i + 1) % track.points.length;
         const a = track.offset(i, inner), b = track.offset(i, outer);
         const c = track.offset(next, inner), d = track.offset(next, outer);
-        for (const point of [a, c, b, b, c, d]) vertices.push(point.x, 0.15, point.y);
+        for (const point of [a, c, b, b, c, d]) vertices.push(point.x, track.heightAt(point.x, point.y) + 0.15, point.y);
       }
       const geometry = new THREE.BufferGeometry();
       geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
@@ -69,8 +76,14 @@
       return mesh;
     }
 
-    const ground = addMesh(new THREE.PlaneGeometry(4000, 3500), grass, scene);
-    ground.rotation.x = -Math.PI / 2;
+    const terrain = new THREE.PlaneGeometry(4000, 3500, 140, 120);
+    terrain.rotateX(-Math.PI / 2);
+    const terrainPoints = terrain.attributes.position;
+    for (let i = 0; i < terrainPoints.count; i++) {
+      terrainPoints.setY(i, track.heightAt(terrainPoints.getX(i), terrainPoints.getZ(i)) - 0.8);
+    }
+    terrain.computeVertexNormals();
+    const ground = addMesh(terrain, grass, scene);
     ground.receiveShadow = true;
     ribbon(-track.halfWidth, track.halfWidth, asphalt);
     for (let i = 0; i < track.points.length; i += 2) {
@@ -84,10 +97,10 @@
     // Linha de largada perpendicular ao sentido da pista.
     const tileGeometry = new THREE.BoxGeometry(4, 0.2, 4);
     for (let row = 0; row < 2; row++) {
-      for (let col = 0; col < 16; col++) {
-        const point = track.offset(0, -30 + col * 4);
+      for (let col = 0; col < track.halfWidth / 2; col++) {
+        const point = track.offset(0, -track.halfWidth + 2 + col * 4);
         const tile = addMesh(tileGeometry, (row + col) % 2 ? rubber : white, scene, [
-          point.x + Math.cos(point.angle) * row * 4, 0.3,
+          point.x + Math.cos(point.angle) * row * 4, track.heightAt(point.x, point.y) + 0.3,
           point.y + Math.sin(point.angle) * row * 4,
         ]);
         tile.rotation.y = -point.angle;
@@ -99,13 +112,13 @@
     const boardGeometry = new THREE.BoxGeometry(2, 16, 14);
     for (let i = 0; i < track.points.length; i += 3) {
       for (const side of [-1, 1]) {
-        const point = track.offset(i, side * (track.halfWidth + 16));
-        const barrier = addMesh(barrierGeometry, white, scene, [point.x, 2.5, point.y]);
+        const point = track.offset(i, side * (track.halfWidth + 40));
+        const barrier = addMesh(barrierGeometry, white, scene, [point.x, track.heightAt(point.x, point.y) + 2.5, point.y]);
         barrier.rotation.y = -point.angle;
       }
       if (i % 30 === 0) {
         const point = track.offset(i, track.halfWidth + 26);
-        const board = addMesh(boardGeometry, red, scene, [point.x, 8, point.y]);
+        const board = addMesh(boardGeometry, red, scene, [point.x, track.heightAt(point.x, point.y) + 8, point.y]);
         board.rotation.y = -point.angle;
       }
     }
@@ -118,6 +131,8 @@
     wheelGeometry.rotateX(Math.PI / 2);
     const lampGeometry = new THREE.BoxGeometry(0.4, 1, 2);
     const spoilerGeometry = new THREE.BoxGeometry(1.5, 0.7, 10);
+    const stripeGeometry = new THREE.BoxGeometry(16.05, 0.08, 1.2);
+    const roofStripeGeometry = new THREE.BoxGeometry(6.55, 0.08, 1.2);
     const models = [];
 
     function createCarModel(index) {
@@ -126,6 +141,9 @@
       body.castShadow = true;
       addMesh(cabinGeometry, glass, group, [-1, 5.3, 0]);
       const roof = addMesh(roofGeometry, body.material, group, [-1, 6.9, 0]);
+      const stripes = [addMesh(stripeGeometry, playerStripe, group, [0, 4.65, 0]),
+        addMesh(roofStripeGeometry, playerStripe, group, [-1, 7.2, 0])];
+      stripes.forEach((stripe) => { stripe.visible = false; });
       addMesh(spoilerGeometry, rubber, group, [-7, 5, 0]);
       const frontWheels = [];
       for (const x of [-5, 5]) {
@@ -140,7 +158,7 @@
         brakes.push(addMesh(lampGeometry, red, group, [-8.1, 3.4, z]));
       }
       scene.add(group);
-      return { group, body, roof, frontWheels, brakes };
+      return { group, body, roof, frontWheels, brakes, stripes };
     }
 
     // Um único conjunto de linhas reutilizado para os cinco sensores do líder.
@@ -178,23 +196,37 @@
 
       const mode = element('camera').value;
       const car = snapshot?.target;
+      const speedRatio = car ? Math.min(1, car.speed / (car.maxSpeed || 3.2)) : 0;
+      const raceCamera = options.speedEffects && mode === 'chase';
+      const desiredFov = raceCamera ? 56 + speedRatio * 22 : 45;
+      const fieldOfView = camera.fov + (desiredFov - camera.fov) * 0.12;
+      if (camera.fov !== fieldOfView) {
+        camera.fov = fieldOfView;
+        camera.updateProjectionMatrix();
+      }
       if (mode === 'chase' && car) {
         // Terceira pessoa: camera atras do carro, olhando adiante na pista.
-        const behind = 42 * zoom;
+        const behind = (raceCamera ? 30 + speedRatio * 4 : 42) * zoom;
         const angle = car.angle + chaseOrbit;
         camera.position.set(
           car.x - Math.cos(angle) * behind,
-          20 * zoom,
+          Math.max(
+            track.heightAt(car.x, car.y) + (raceCamera ? 12 - speedRatio * 2 : 20) * zoom,
+            track.heightAt(car.x - Math.cos(angle) * behind, car.y - Math.sin(angle) * behind) + 8,
+          ),
           car.y - Math.sin(angle) * behind,
         );
-        camera.lookAt(car.x + Math.cos(car.angle) * 32, 4, car.y + Math.sin(car.angle) * 32);
+        const lookX = car.x + Math.cos(car.angle) * 32;
+        const lookY = car.y + Math.sin(car.angle) * 32;
+        camera.lookAt(lookX, track.heightAt(lookX, lookY) + 4, lookY);
       } else {
         const follow = mode === 'follow' && car;
         const bounds = track.bounds;
         const target = follow
-          ? new THREE.Vector3(car.x, 2, car.y)
+          ? new THREE.Vector3(car.x, track.heightAt(car.x, car.y) + 2, car.y)
           : new THREE.Vector3((bounds.minX + bounds.maxX) / 2, 0, (bounds.minY + bounds.maxY) / 2);
-        const distance = (follow ? 105 : 1850 * Math.max(1, 1.45 / camera.aspect)) * zoom;
+        const circuitSize = Math.max(bounds.maxX - bounds.minX, bounds.maxY - bounds.minY);
+        const distance = (follow ? 105 : circuitSize * 1.45 * Math.max(1, 1.45 / camera.aspect)) * zoom;
         const angle = azimuth + (follow ? car.angle + Math.PI : 0);
         camera.position.set(
           target.x + Math.cos(angle) * Math.cos(elevation) * distance,
@@ -206,11 +238,11 @@
       renderer.render(scene, camera);
     }
 
-    canvas.addEventListener('pointerdown', (event) => {
+    listen('pointerdown', (event) => {
       dragging = { x: event.clientX, y: event.clientY, id: event.pointerId };
       canvas.setPointerCapture(event.pointerId);
     });
-    canvas.addEventListener('pointermove', (event) => {
+    listen('pointermove', (event) => {
       if (!dragging || dragging.id !== event.pointerId) return;
       if (element('camera').value === 'chase') chaseOrbit -= (event.clientX - dragging.x) * 0.008;
       else azimuth -= (event.clientX - dragging.x) * 0.008;
@@ -219,10 +251,10 @@
       dragging.y = event.clientY;
       render();
     });
-    canvas.addEventListener('lostpointercapture', () => { dragging = null; });
-    canvas.addEventListener('pointerup', () => { dragging = null; });
-    canvas.addEventListener('pointercancel', () => { dragging = null; });
-    canvas.addEventListener('wheel', (event) => {
+    listen('lostpointercapture', () => { dragging = null; });
+    listen('pointerup', () => { dragging = null; });
+    listen('pointercancel', () => { dragging = null; });
+    listen('wheel', (event) => {
       event.preventDefault();
       zoom = clamp(zoom * Math.exp(event.deltaY * 0.001), 0.45, 1.8);
       render();
@@ -246,15 +278,40 @@
     };
 
     return {
+      dispose() {
+        listeners.forEach(([type, handler, settings]) => canvas.removeEventListener(type, handler, settings));
+        const geometries = new Set(), materials = new Set();
+        scene.traverse((object) => {
+          if (object.geometry) geometries.add(object.geometry);
+          if (object.material) materials.add(object.material);
+        });
+        geometries.forEach((geometry) => geometry.dispose());
+        materials.forEach((surface) => surface.dispose());
+        if (!materials.has(playerPaint)) playerPaint.dispose();
+        if (!materials.has(playerStripe)) playerStripe.dispose();
+        sun.shadow.map?.dispose();
+        renderer.dispose();
+      },
       update(population, leader, showSensors, target = leader) {
         snapshot = { leader, target };
         models.forEach((model, index) => { model.group.visible = index < population.length; });
         population.forEach((car, index) => {
           const model = models[index] || (models[index] = createCarModel(index));
           model.group.visible = true;
-          model.group.position.set(car.x, 0.3, car.y);
-          model.group.rotation.y = -car.angle;
-          const surface = car === leader ? leaderMaterial
+          model.group.position.set(car.x, track.heightAt(car.x, car.y) + 0.3, car.y);
+          const forwardX = Math.cos(car.angle), forwardY = Math.sin(car.angle);
+          const pitch = Math.atan2(track.heightAt(car.x + forwardX * 8, car.y + forwardY * 8)
+            - track.heightAt(car.x - forwardX * 8, car.y - forwardY * 8), 16);
+          const bank = -Math.atan2(track.heightAt(car.x - forwardY * 4, car.y + forwardX * 4)
+            - track.heightAt(car.x + forwardY * 4, car.y - forwardX * 4), 8);
+          model.group.rotation.set(bank + (car.bodyRoll || 0), -car.angle, pitch, 'YZX');
+          const customized = car.player && car.skin;
+          if (customized) {
+            playerPaint.color.set(car.skin.color);
+            playerStripe.color.set(car.skin.accent);
+          }
+          model.stripes.forEach((stripe) => { stripe.visible = Boolean(customized); });
+          const surface = customized ? playerPaint : car === leader ? leaderMaterial
             : car.alive ? bodyMaterials[index % 3] : crashedMaterial;
           model.body.material = surface;
           model.roof.material = surface;
@@ -262,13 +319,18 @@
           model.brakes.forEach((lamp) => { lamp.material = car.activations[2][1] < 0 && car.alive ? brakeMaterial : red; });
         });
 
-        halo.position.set(leader.x, 0.4, leader.y);
+        halo.position.set(leader.x, track.heightAt(leader.x, leader.y) + 0.5, leader.y);
+        const slopeX = (track.heightAt(leader.x + 1, leader.y) - track.heightAt(leader.x - 1, leader.y)) / 2;
+        const slopeY = (track.heightAt(leader.x, leader.y + 1) - track.heightAt(leader.x, leader.y - 1)) / 2;
+        halo.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), new THREE.Vector3(-slopeX, 1, -slopeY).normalize());
         sensors.visible = showSensors;
         [-1.2, -0.6, 0, 0.6, 1.2].forEach((offset, index) => {
           const distance = leader.inputs[index] * 160;
           sensorPositions.set([
-            leader.x, 7, leader.y,
-            leader.x + Math.cos(leader.angle + offset) * distance, 7,
+            leader.x, track.heightAt(leader.x, leader.y) + 7, leader.y,
+            leader.x + Math.cos(leader.angle + offset) * distance,
+            track.heightAt(leader.x + Math.cos(leader.angle + offset) * distance,
+              leader.y + Math.sin(leader.angle + offset) * distance) + 7,
             leader.y + Math.sin(leader.angle + offset) * distance,
           ], index * 6);
         });

@@ -58,7 +58,11 @@ assert.equal(ui['np-track'].hidden, true);
 assert.equal(ui['np-track-3d'].hidden, false);
 const cars = app.render().scene.children.filter((object) => object.isGroup);
 assert.equal(cars.length, 40);
-assert(cars.every((car) => car.children.length === 12));
+assert(cars.every((car) => car.children.length === 14));
+assert(Math.abs(cars[0].position.y - app.track.heightAt(app.track.start.x, app.track.start.y) - 0.3) < 1e-6);
+const heights = app.track.points.map((point) => app.track.heightAt(point.x, point.y));
+assert(Math.max(...heights) - Math.min(...heights) > 20);
+assert(cars[0].rotation.toArray().slice(0, 3).every(Number.isFinite));
 
 ui['np-play'].onclick();
 for (let i = 1; i <= 90; i++) app.advance(i * 17);

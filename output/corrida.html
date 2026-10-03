@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>NeuroDrive — Corrida</title>
+    <link rel="stylesheet" href="neuro-pista.css">
+    <link rel="stylesheet" href="neurodrive-race.css">
+    <script src="vendor/three.min.js" defer></script>
+    <script src="neuro-pista-track.js" defer></script>
+    <script src="neuro-pista-3d.js" defer></script>
+    <script src="neurodrive-race-engine.js" defer></script>
+    <script src="neurodrive-audio.js" defer></script>
+    <script src="neurodrive-garage.js" defer></script>
+    <script src="neurodrive-race.js" defer></script>
+  </head>
+  <body>
+    <main id="neuro-race">
+      <header class="viz-row game-toolbar">
+        <div class="game-brand">NEURO<span>DRIVE</span></div>
+        <button class="btn" id="race-menu-open">Menu (Esc)</button>
+      <button class="btn" id="race-show-results" hidden>Ver resultados</button>
+      </header>
+      <p id="race-session" role="status">Classificação: uma volta de aquecimento e duas tentativas cronometradas. Limite de 5 minutos.</p>
+      <div class="race-hud" aria-label="Painel da corrida">
+        <div class="race-tachometer">
+          <svg viewBox="0 0 240 145" role="img" aria-label="Conta-giros de zero a oito mil rotações por minuto">
+            <path class="rpm-track" d="M 25 115 A 95 95 0 0 1 215 115" />
+            <path class="rpm-redline" d="M 208 79 A 95 95 0 0 1 215 115" />
+            <g class="rpm-labels"><text x="20" y="134">0</text><text x="44" y="49">2</text><text x="116" y="15">4</text><text x="186" y="49">6</text><text x="212" y="134">8</text></g>
+            <line id="race-rpm-needle" x1="120" y1="115" x2="35" y2="115" />
+            <circle cx="120" cy="115" r="6" fill="currentColor" />
+            <text x="120" y="77" text-anchor="middle" class="rpm-unit">RPM × 1000</text>
+          </svg>
+          <span id="race-rpm">900 rpm</span> · <strong id="race-gear">1ª marcha</strong>
+        </div>
+        <span>Posição <strong id="race-position">1 / 6</strong></span>
+        <span>Volta <strong id="race-lap">1 / 3</strong></span>
+        <span>Velocidade <strong id="race-speed">0 km/h</strong></span>
+        <span>Tempo <strong id="race-time">0:00.00</strong></span>
+        <span>Aderência <strong id="race-grip">Normal</strong></span>
+      </div>
+      <div class="race-stage">
+        <canvas id="np-track-3d" role="img" aria-label="Corrida 3D, seu carro usa a pintura escolhida na garagem"></canvas>
+        <div id="race-speed-lines" aria-hidden="true"></div>
+        <div id="race-banner" role="status" aria-live="polite">Pronto para largar?</div>
+        <aside class="race-tower" aria-label="Posições e tempos ao vivo">
+          <div id="race-tower-title" class="race-tower-title">CLASSIFICAÇÃO</div>
+          <ol id="race-tower-list"></ol>
+          <div class="race-tower-foot">Você em verde · intervalos nos checkpoints</div>
+        </aside>
+      </div>
+      <p id="race-message" role="status">Segure W ou ↑ na contagem para cortar giro parado. WASD ou setas: dirigir · P: pausar · R: reposicionar (2 s de espera) · Personalize seu carro na garagem.</p>
+      <div class="viz-controls race-touch" aria-label="Controles de direção">
+        <button class="btn" data-drive="left" aria-label="Virar à esquerda">← Esquerda</button>
+        <button class="btn" data-drive="right" aria-label="Virar à direita">Direita →</button>
+        <button class="btn race-shift" data-drive="shiftDown" hidden>Q · − marcha</button>
+        <button class="btn race-shift" data-drive="shiftUp" hidden>E · + marcha</button>
+        <button class="btn" data-drive="brake">Frear</button>
+        <button class="btn btn-primary" data-drive="accelerate">Acelerar</button>
+      </div>
+      <dialog id="race-menu" class="race-menu" aria-labelledby="race-menu-title">
+        <div class="menu-hero">
+          <p class="menu-eyebrow">CORRIDA NO NAVEGADOR · 3 CIRCUITOS</p>
+          <h2 id="race-menu-title">NEURO<span>DRIVE</span></h2>
+          <p>Encontre o traçado. Conquiste a pole.<br>Dispute cada posição.</p>
+          <div class="menu-lights" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
+        </div>
+        <div class="menu-content">
+          <p id="race-menu-status" role="status">Seu próximo grid começa aqui.</p>
+          <button class="btn btn-primary" id="race-menu-resume" hidden>Continuar sessão</button>
+
+          <nav class="menu-pages" aria-label="Menu principal">
+            <button class="btn" id="menu-page-race" aria-pressed="true">Corrida</button>
+            <button class="btn" id="menu-page-account" aria-pressed="false">Conta</button>
+            <button class="btn" id="menu-page-store" aria-pressed="false">Loja</button>
+          </nav>
+          <div id="menu-race-screen">
+          <h3>Nova disputa</h3>
+          <div class="menu-settings">
+            <label class="form-label">Circuito
+              <select class="form-select" id="menu-track"><option value="serra">Serra Verde</option><option value="veloz">Autódromo Veloz</option><option value="tecnico">Vale Técnico</option></select>
+            </label>
+            <label class="form-label">Dificuldade
+              <select class="form-select" id="menu-difficulty"><option value="easy">Fácil</option><option value="normal" selected>Normal</option><option value="hard">Difícil</option></select>
+            </label>
+            <label class="form-label">Voltas da corrida
+              <select class="form-select" id="menu-laps"><option value="1">1 volta</option><option value="3" selected>3 voltas</option><option value="5">5 voltas</option><option value="10">10 voltas</option><option value="20">20 voltas</option><option value="50">50 voltas</option></select>
+            </label>
+          </div>
+          <p class="text-small">Classifique com sua melhor volta e dispute a corrida contra cinco adversários.</p>
+          <button class="btn btn-primary" id="race-menu-play">Iniciar classificação</button>
+          <p class="text-small" id="race-menu-restart-note" hidden>Uma nova disputa substitui o progresso da sessão atual.</p>
+          <details class="menu-help"><summary>Configurações de pilotagem, som e câmera</summary>
+          <label class="form-label">Câmbio<select class="form-select" id="race-transmission"><option value="automatic">Automático</option><option value="manual">Manual · E sobe / Q reduz</option></select></label>
+          <p class="text-small">No manual, cada toque troca uma marcha. Reduções acima do corte são bloqueadas.</p>
+        <label class="form-check"><input id="race-sound" type="checkbox" checked> Som do motor</label>
+        <label class="form-label">Volume <input id="race-volume" type="range" min="0" max="100" value="30" aria-label="Volume do jogo"></label>
+        <span class="text-small" id="race-audio-status" role="status"></span>
+        <label class="form-label">Câmera
+          <select class="form-select" id="np-camera"><option value="chase">Terceira pessoa</option><option value="overview">Visão da pista</option><option value="follow">Orbital</option></select>
+        </label>
+          </details>
+          <button class="btn" id="menu-end-qualifying" hidden>Encerrar classifica&#231;&#227;o e ver grid</button>
+          <button class="btn" id="menu-recover" hidden>Voltar &#224; pista e continuar</button>
+          <details class="menu-help"><summary>Como jogar</summary>
+            <p><strong>WASD ou setas:</strong> acelerar, frear e virar. No celular, use os botões na tela.</p>
+            <p><strong>P:</strong> pausar · <strong>Esc:</strong> menu · <strong>R:</strong> voltar à pista (invalida a volta atual).</p>
+            <p>Segure o acelerador durante a contagem para subir o giro. Freie antes das curvas fechadas e evite o gramado.</p>
+            <p>A classificação tem uma volta de aquecimento e duas tentativas. O melhor tempo válido define o grid. Som, volume e câmera podem ser ajustados neste menu.</p>
+          </details>
+          </div>
+          <section class="garage-panel" id="garage-panel" hidden>
+            <h3 id="garage-title">Sua conta de piloto</h3>
+            <p id="garage-status" role="status" aria-live="polite">Conectando à garagem…</p>
+            <div id="garage-login-screen">
+            <p class="text-small">Seu piloto, suas pinturas, suas conquistas.</p>
+            <div class="garage-actions"><button class="btn" id="auth-login-mode" aria-pressed="true">Entrar</button><button class="btn" id="auth-register-mode" aria-pressed="false">Criar conta</button></div>
+            <form id="garage-auth">
+              <fieldset id="garage-auth-fields">
+                <label class="form-label">Nome de piloto
+                  <input id="garage-username" name="username" autocomplete="username" required minlength="3" maxlength="20" pattern="[a-zA-Z0-9_]{3,20}" placeholder="Seu_nome">
+                </label>
+                <label class="form-label">Senha
+                  <input id="garage-password" name="password" type="password" autocomplete="current-password" required minlength="10" maxlength="128" placeholder="Pelo menos 10 caracteres">
+                </label>
+                <label class="form-label" id="garage-confirm-label" hidden>Confirme a senha<input id="garage-confirm" type="password" autocomplete="new-password" minlength="10" maxlength="128"></label>
+                <button class="btn" id="garage-show-password" type="button">Mostrar senha</button>
+                <button class="btn btn-primary auth-submit" id="garage-auth-submit" type="submit" value="login">Entrar na conta</button>
+              </fieldset>
+            </form>
+            <div id="garage-account" hidden>
+              <p class="garage-identity"><strong id="garage-name"></strong> · <strong id="garage-balance"></strong> moedas</p>
+              <p id="garage-stats" class="text-small"></p><div class="garage-actions"><button class="btn" id="garage-bonus">Resgatar bônus de 100 moedas</button><button class="btn" id="garage-logout">Sair da conta</button></div>
+              <p class="text-small" id="garage-bonus-note"></p>
+            </div>
+            </div>
+            <div id="garage-store-screen" hidden>
+            <p id="garage-store-balance"></p>
+            <button class="btn" id="garage-store-login">Entrar para comprar</button>
+            <label class="form-label">Mostrar<select class="form-select" id="garage-filter"><option value="all">Todas as skins</option><option value="owned">Minha garagem</option></select></label>
+            <p class="text-small">Skins são apenas visuais. Nova conta: 500 moedas. Bônus de 100 a cada 24 horas. Sem dinheiro real.</p>
+            <p class="text-small">Conclua corridas conectado: 50 moedas + 20 por volta, até 200 por corrida e 500 por dia (UTC). A classificação não dá moedas.</p>
+            <div id="garage-skins" class="garage-skins" aria-label="Loja de pinturas"></div>
+            </div>
+            <button class="btn" id="garage-retry" type="button" hidden>Tentar conectar novamente</button>
+          </section>
+          <a class="menu-lab" href="neuro-pista.html">Explorar o Laboratório de IA ↗</a>
+        </div>
+      </dialog>
+      <dialog id="race-results" class="race-results" aria-labelledby="race-results-title">
+        <p class="race-results-eyebrow" id="race-results-stage"></p>
+        <h2 id="race-results-title">Resultados</h2>
+        <p id="race-results-note"></p>
+        <p id="race-reward" role="status"></p>
+        <button class="btn" id="race-reward-retry" hidden>Tentar resgatar recompensa</button>
+        <div id="race-podium" class="race-podium"></div>
+        <div id="race-results-table" class="race-timing-scroll">
+          <table class="table race-timing">
+            <thead><tr><th scope="col">Pos.</th><th scope="col">Piloto</th><th scope="col">Volta</th><th scope="col">Última volta</th><th scope="col">Melhor volta</th><th scope="col">Tempo total</th><th scope="col">Diferença</th><th scope="col">Estado</th></tr></thead>
+            <tbody id="race-results-rows"></tbody>
+          </table>
+        </div>
+        <div class="viz-controls race-results-actions">
+          <button class="btn btn-primary" id="race-results-continue">Ver classificação completa</button>
+          <button class="btn" id="race-results-close">Fechar</button>
+        </div>
+      </dialog>
+      <details id="race-developer" class="race-developer" hidden><summary>Desenvolvedor</summary>
+      <div class="viz-controls">
+        <label class="form-label">Circuito (reinicia a etapa)
+          <select class="form-select" id="race-track">
+            <option value="serra">Serra Verde</option>
+            <option value="veloz">Autódromo Veloz</option>
+            <option value="tecnico">Vale Técnico</option>
+          </select>
+        </label>
+        <label class="form-label">Dificuldade na próxima largada
+          <select class="form-select" id="race-difficulty"><option value="easy">Fácil</option><option value="normal" selected>Normal</option><option value="hard">Difícil</option></select>
+        </label>
+        <button class="btn btn-primary" id="race-start">Iniciar classificação</button>
+        <button class="btn" id="race-end-qualifying" disabled>Encerrar classificação</button>
+        <button class="btn btn-primary" id="race-next" disabled>Ir para a corrida</button>
+        <label class="form-label">Voltas da corrida
+          <select class="form-select" id="race-laps">
+            <option value="1">1 volta</option><option value="3" selected>3 voltas</option>
+            <option value="5">5 voltas</option><option value="10">10 voltas</option>
+            <option value="20">20 voltas</option><option value="50">50 voltas</option>
+          </select>
+        </label>
+        <button class="btn" id="race-pause" disabled>Pausar (P)</button>
+        <button class="btn" id="race-recover" disabled>Voltar à pista (R)</button>
+        <button class="btn" id="np-rotate">Girar</button>
+        <button class="btn" id="np-zoom-in" aria-label="Aproximar">+</button>
+        <button class="btn" id="np-zoom-out" aria-label="Afastar">−</button>
+        <button class="btn" id="np-camera-reset">Restaurar câmera</button>
+      </div>
+      <h2 id="race-ranking-title">Tempos da classificação</h2>
+      <div class="race-timing-scroll">
+        <table class="table race-timing">
+          <thead><tr><th scope="col">Pos.</th><th scope="col">Piloto</th><th scope="col">Volta</th><th scope="col">Última volta</th><th scope="col">Melhor volta</th><th scope="col">Tempo total</th><th scope="col">Diferença</th><th scope="col">Estado</th></tr></thead>
+          <tbody id="race-ranking"></tbody>
+        </table>
+      </div>
+      <p class="text-small text-muted" id="race-timing-note"></p>
+      </details>
+      <div class="sr-only" id="race-timing-announcement" role="status" aria-live="polite"></div>
+    </main>
+  </body>
+</html>

@@ -3,14 +3,27 @@
  */
 (() => {
   'use strict';
-  const controls = [
+  const original = [
     [-300, -280], [100, -280], [450, -260], [560, -80],
     [390, 70], [180, 0], [60, 180], [350, 270],
     [270, 430], [-70, 400], [-280, 220], [-520, 300],
     [-650, 100], [-550, -60], [-500, -260],
+  ].map(([x, y]) => [x * 1.35, y * 1.35]);
+  window.NeuroTracks = [
+    { id: 'serra', name: 'Serra Verde', width: 44, controls: original },
+    { id: 'veloz', name: 'Autódromo Veloz', width: 48, controls: [
+      [-650,-220], [0,-220], [650,-220], [850,0], [650,220], [0,220], [-650,220], [-850,0],
+    ] },
+    { id: 'tecnico', name: 'Vale Técnico', width: 40, controls: [
+      [-600,-350], [-100,-350], [400,-350], [650,-150], [520,70], [240,40],
+      [80,250], [360,400], [180,600], [-180,520], [-350,300], [-650,340], [-800,80], [-700,-140],
+    ] },
   ];
+  window.createNeuroTrack = function createNeuroTrack(id = 'serra') {
+  const config = window.NeuroTracks.find((item) => item.id === id) || window.NeuroTracks[0];
+  const controls = config.controls;
   const points = [];
-  const halfWidth = 32;
+  const halfWidth = config.width;
   const cellSize = 80;
   const grid = new Map();
   const key = (x, y) => `${x},${y}`;
@@ -42,7 +55,7 @@
     const segment = { a, b, dx, dy, size, start: length };
     length += size;
     // Indexação espacial evita percorrer a pista inteira a cada sensor.
-    const padding = halfWidth + 12;
+    const padding = halfWidth + 60;
     for (let x = Math.floor((Math.min(a.x, b.x) - padding) / cellSize); x <= Math.floor((Math.max(a.x, b.x) + padding) / cellSize); x++) {
       for (let y = Math.floor((Math.min(a.y, b.y) - padding) / cellSize); y <= Math.floor((Math.max(a.y, b.y) + padding) / cellSize); y++) {
         const cell = key(x, y);
@@ -59,7 +72,11 @@
     for (const segment of candidates) {
       const t = Math.max(0, Math.min(1, ((x - segment.a.x) * segment.dx + (y - segment.a.y) * segment.dy) / segment.size ** 2));
       const distance = Math.hypot(x - segment.a.x - t * segment.dx, y - segment.a.y - t * segment.dy);
-      if (distance < result.distance) result = { distance, progress: segment.start + t * segment.size };
+      if (distance < result.distance) result = {
+        distance, progress: segment.start + t * segment.size,
+        x: segment.a.x + t * segment.dx, y: segment.a.y + t * segment.dy,
+        tx: segment.dx / segment.size, ty: segment.dy / segment.size,
+      };
     }
     return result;
   }
@@ -74,9 +91,18 @@
   const xs = points.map((p) => p.x);
   const ys = points.map((p) => p.y);
   const bounds = { minX: Math.min(...xs) - 50, maxX: Math.max(...xs) + 50, minY: Math.min(...ys) - 50, maxY: Math.max(...ys) + 50 };
-  window.NeuroTrack = {
-    points, segments, length, halfWidth, bounds, nearest, offset,
+  // Terreno contínuo: mesma superfície para asfalto, gramado, carros e câmera.
+  const reliefScale = config.id === 'veloz' ? 0.4 : config.id === 'tecnico' ? 1.2 : 1;
+  function heightAt(x, y) {
+    return 30 + reliefScale * (18 * Math.sin(x / 300) + 12 * Math.cos(y / 220)
+      + 8 * Math.sin((x + y) / 400));
+  }
+  return {
+    id: config.id, name: config.name,
+    points, segments, length, halfWidth, bounds, nearest, offset, heightAt,
     start: offset(0, 0),
     contains: (x, y, margin = 0) => nearest(x, y).distance < halfWidth - margin,
   };
+  };
+  window.NeuroTrack = window.createNeuroTrack();
 })();
