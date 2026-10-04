@@ -2,7 +2,9 @@
   'use strict';
   const get = (id) => document.getElementById(id);
   const updateHUD = window.createRaceHUD(get);
-  let socket, self, room, latest, previous, arrived = 0, renderer, trackId, ready = false;
+  let socket, self, room, latest, renderer, trackId, ready = false;
+  const motion = window.createOnlineBuffer();
+  let rankingKey = '', lastInput = '', lastInputAt = 0;
   let displayedFinish = false;
   const keys = new Set(), pointers = new Map();
   const actions = { KeyW: 'accelerate', ArrowUp: 'accelerate', KeyS: 'brake', ArrowDown: 'brake', KeyA: 'left', ArrowLeft: 'left', KeyD: 'right', ArrowRight: 'right', KeyQ: 'shiftDown', KeyE: 'shiftUp' };
@@ -13,7 +15,8 @@
   function menu() { clear(); if (!get('online-lobby').open) get('online-lobby').showModal(); }
   function resetRoom() {
     get('online-hud').hidden = true;
-    room = null; latest = null; previous = null; ready = false; displayedFinish = false;
+    room = null; latest = null; ready = false; displayedFinish = false;
+    motion.clear(); rankingKey = ''; lastInput = ''; lastInputAt = 0;
     get('online-ready').disabled = false;
     get('online-room').hidden = true; get('online-back').hidden = true;
     get('online-options').hidden = false; get('online-reward').textContent = ''; audio?.silence();
@@ -49,7 +52,7 @@
           say('Compartilhe o código com seus amigos.');
         } else if (message.type === 'state') {
           if (!latest) { get('online-lobby').close(); audio?.unlock(); get('online-back').hidden = false; get('online-ready').disabled = true; get('online-start').disabled = true; }
-          previous = latest; latest = message; arrived = performance.now();
+          latest = message; motion.push(message, performance.now());
           if (trackId !== message.track) {
             renderer?.dispose(); trackId = message.track;
             try { renderer = window.createNeuroTrack3D((id) => get('np-' + id), { track: window.createNeuroTrack(trackId), speedEffects: !window.matchMedia('(prefers-reduced-motion: reduce)').matches }); }
@@ -57,8 +60,12 @@
           }
           const player = latest.cars.find((car) => car.id === latest.self);
           const ranking = [...latest.cars].sort((a, b) => Number(Boolean(a.disconnected)) - Number(Boolean(b.disconnected)) || (a.place || 99) - (b.place || 99) || b.progress - a.progress);
+          const nextRankingKey = JSON.stringify(ranking.map((car) => [car.id, car.name, car.disconnected, car.done, car.completedLaps]));
+          if (rankingKey !== nextRankingKey) {
+          rankingKey = nextRankingKey;
           get('online-ranking').replaceChildren();
           for (const car of ranking) { const li = document.createElement('li'); li.dataset.self = String(car.id === latest.self); li.textContent = `${car.name} · ${car.disconnected ? 'desconectado' : car.done ? 'chegou' : `volta ${Math.min(latest.laps, car.completedLaps + 1)}/${latest.laps}`}`; get('online-ranking').append(li); }
+          }
           get('online-hud').hidden = false;
           updateHUD(player, ranking.indexOf(player) + 1, ranking.length, latest.laps, latest.elapsed);
           get('race-banner').textContent = latest.phase === 'countdown' ? latest.countdown : latest.phase === 'finished' ? 'Prova encerrada' : '';
@@ -99,17 +106,15 @@
     const input = { type: 'input' };
     if (!get('online-lobby').open && !document.hidden) { keys.forEach((key) => { input[actions[key]] = true; }); pointers.forEach((key) => { input[key] = true; }); }
     else input.brake = true;
-    send(input);
-  }, 40);
+    const encoded = JSON.stringify(input), now = performance.now();
+    // Send changes promptly, with a heartbeat below the server's input timeout.
+    if (encoded !== lastInput || now - lastInputAt >= 100) {
+      send(input); lastInput = encoded; lastInputAt = now;
+    }
+  }, 16);
   function draw() {
-    if (latest && renderer) {
-      const alpha = Math.min(1, (performance.now() - arrived) / 50);
-      const cars = latest.cars.map((car) => {
-        const old = previous?.cars.find((p) => p.id === car.id);
-        if (!old || Math.hypot(old.x - car.x, old.y - car.y) > 40) return car;
-        return { ...car, x: old.x + (car.x - old.x) * alpha, y: old.y + (car.y - old.y) * alpha,
-          angle: old.angle + Math.atan2(Math.sin(car.angle - old.angle), Math.cos(car.angle - old.angle)) * alpha };
-      });
+    if (latest && renderer && !document.hidden) {
+      const cars = motion.sample(performance.now());
       const player = cars.find((car) => car.id === latest.self);
       renderer.update(cars, player, false, player); audio?.update(player, latest, !player.done && !document.hidden);
     }
