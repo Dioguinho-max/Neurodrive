@@ -12,6 +12,8 @@
     <script src="neurodrive-race-engine.js" defer></script>
     <script src="neurodrive-audio.js" defer></script>
     <script src="neurodrive-garage.js" defer></script>
+    <link rel="stylesheet" href="neurodrive-hud.css">
+    <script src="neurodrive-hud.js" defer></script>
     <script src="neurodrive-race.js" defer></script>
   </head>
   <body>
@@ -22,24 +24,20 @@
       <button class="btn" id="race-show-results" hidden>Ver resultados</button>
       </header>
       <p id="race-session" role="status">Classificação: uma volta de aquecimento e duas tentativas cronometradas. Limite de 5 minutos.</p>
-      <div class="race-hud" aria-label="Painel da corrida">
-        <div class="race-tachometer">
-          <svg viewBox="0 0 240 145" role="img" aria-label="Conta-giros de zero a oito mil rotações por minuto">
-            <path class="rpm-track" d="M 25 115 A 95 95 0 0 1 215 115" />
-            <path class="rpm-redline" d="M 208 79 A 95 95 0 0 1 215 115" />
-            <g class="rpm-labels"><text x="20" y="134">0</text><text x="44" y="49">2</text><text x="116" y="15">4</text><text x="186" y="49">6</text><text x="212" y="134">8</text></g>
-            <line id="race-rpm-needle" x1="120" y1="115" x2="35" y2="115" />
-            <circle cx="120" cy="115" r="6" fill="currentColor" />
-            <text x="120" y="77" text-anchor="middle" class="rpm-unit">RPM × 1000</text>
+      <aside class="drive-hud" aria-label="Painel de pilotagem">
+        <div class="drive-dial" id="race-instruments" data-redline="false">
+          <svg viewBox="0 0 268 204" aria-hidden="true">
+            <path class="drive-arc-track" d="M 39 180 A 110 110 0 1 1 229 180" />
+            <path class="drive-arc-limit" pathLength="100" stroke-dasharray="20 80" stroke-dashoffset="20" d="M 39 180 A 110 110 0 1 1 229 180" />
+            <path id="race-rpm-fill" class="drive-arc-fill" pathLength="100" stroke-dasharray="100" stroke-dashoffset="89" d="M 39 180 A 110 110 0 1 1 229 180" />
+            <g class="drive-ticks" text-anchor="middle"><text x="26" y="192">0</text><text x="23" y="91">2</text><text x="134" y="9">4</text><text x="245" y="91">6</text><text x="242" y="192">8</text></g>
           </svg>
-          <span id="race-rpm">900 rpm</span> · <strong id="race-gear">1ª marcha</strong>
+          <div class="drive-speed"><strong id="race-speed">0</strong><span>KM/H</span></div>
+          <div class="drive-gear" aria-label="Marcha"><strong id="race-gear">1</strong><span id="race-drive-mode">AUTO</span></div>
+          <div class="drive-rpm" id="race-rpm">900 rpm</div>
         </div>
-        <span>Posição <strong id="race-position">1 / 6</strong></span>
-        <span>Volta <strong id="race-lap">1 / 3</strong></span>
-        <span>Velocidade <strong id="race-speed">0 km/h</strong></span>
-        <span>Tempo <strong id="race-time">0:00.00</strong></span>
-        <span>Aderência <strong id="race-grip">Normal</strong></span>
-      </div>
+        <div class="drive-session"><span>POS<strong id="race-position">1 / 6</strong></span><span>VOLTA<strong id="race-lap">1 / 3</strong></span><span class="drive-time">TEMPO<strong id="race-time">0:00.00</strong></span></div>
+      </aside>
       <div class="race-stage">
         <canvas id="np-track-3d" role="img" aria-label="Corrida 3D, seu carro usa a pintura escolhida na garagem"></canvas>
         <div id="race-speed-lines" aria-hidden="true"></div>

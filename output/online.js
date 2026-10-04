@@ -1,6 +1,7 @@
 (() => {
   'use strict';
   const get = (id) => document.getElementById(id);
+  const updateHUD = window.createRaceHUD(get);
   let socket, self, room, latest, previous, arrived = 0, renderer, trackId, ready = false;
   let displayedFinish = false;
   const keys = new Set(), pointers = new Map();
@@ -11,6 +12,7 @@
   function clear() { keys.clear(); pointers.clear(); send({ type: 'input', brake: true }); }
   function menu() { clear(); if (!get('online-lobby').open) get('online-lobby').showModal(); }
   function resetRoom() {
+    get('online-hud').hidden = true;
     room = null; latest = null; previous = null; ready = false; displayedFinish = false;
     get('online-ready').disabled = false;
     get('online-room').hidden = true; get('online-back').hidden = true;
@@ -57,7 +59,8 @@
           const ranking = [...latest.cars].sort((a, b) => Number(Boolean(a.disconnected)) - Number(Boolean(b.disconnected)) || (a.place || 99) - (b.place || 99) || b.progress - a.progress);
           get('online-ranking').replaceChildren();
           for (const car of ranking) { const li = document.createElement('li'); li.dataset.self = String(car.id === latest.self); li.textContent = `${car.name} · ${car.disconnected ? 'desconectado' : car.done ? 'chegou' : `volta ${Math.min(latest.laps, car.completedLaps + 1)}/${latest.laps}`}`; get('online-ranking').append(li); }
-          get('online-hud').textContent = `${Math.round(player.speed * 54)} km/h · ${player.gear}ª · ${ranking.indexOf(player) + 1}º · ${latest.elapsed.toFixed(1)} s`;
+          get('online-hud').hidden = false;
+          updateHUD(player, ranking.indexOf(player) + 1, ranking.length, latest.laps, latest.elapsed);
           get('race-banner').textContent = latest.phase === 'countdown' ? latest.countdown : latest.phase === 'finished' ? 'Prova encerrada' : '';
           if (player.done && !displayedFinish || latest.phase === 'finished' && !displayedFinish) { displayedFinish = true; menu(); }
           get('online-reward').textContent = player.rewardPending ? 'Salvando recompensa…' : player.reward !== undefined ? `Recompensa: ${player.reward} moedas. Seu saldo foi salvo na conta.` : latest.phase === 'finished' && !player.done ? 'Prova encerrada pelo limite de tempo. Sem recompensa.' : '';

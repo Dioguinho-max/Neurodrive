@@ -5,12 +5,25 @@
   <title>NeuroDrive · Online</title>
   <link rel="stylesheet" href="neuro-pista.css"><link rel="stylesheet" href="neurodrive-race.css"><link rel="stylesheet" href="online.css">
   <script src="vendor/three.min.js" defer></script><script src="neuro-pista-track.js" defer></script>
-  <script src="neuro-pista-3d.js" defer></script><script src="neurodrive-audio.js" defer></script><script src="online.js" defer></script>
+  <script src="neuro-pista-3d.js" defer></script><script src="neurodrive-audio.js" defer></script><link rel="stylesheet" href="neurodrive-hud.css"><script src="neurodrive-hud.js" defer></script><script src="online.js" defer></script>
 </head>
 <body><main id="neuro-race">
   <div class="race-stage"><canvas id="np-track-3d" aria-label="Corrida online 3D"></canvas><div id="race-banner" role="status"></div></div>
   <header class="viz-row game-toolbar"><div class="game-brand">NEURO<span>DRIVE ONLINE</span></div><button class="btn" id="online-menu">Sala (Esc)</button></header>
-  <p id="online-hud" role="status">Conecte-se para disputar uma corrida.</p>
+      <aside class="drive-hud" aria-label="Painel de pilotagem" id="online-hud" hidden>
+        <div class="drive-dial" id="race-instruments" data-redline="false">
+          <svg viewBox="0 0 268 204" aria-hidden="true">
+            <path class="drive-arc-track" d="M 39 180 A 110 110 0 1 1 229 180" />
+            <path class="drive-arc-limit" pathLength="100" stroke-dasharray="20 80" stroke-dashoffset="20" d="M 39 180 A 110 110 0 1 1 229 180" />
+            <path id="race-rpm-fill" class="drive-arc-fill" pathLength="100" stroke-dasharray="100" stroke-dashoffset="89" d="M 39 180 A 110 110 0 1 1 229 180" />
+            <g class="drive-ticks" text-anchor="middle"><text x="26" y="192">0</text><text x="23" y="91">2</text><text x="134" y="9">4</text><text x="245" y="91">6</text><text x="242" y="192">8</text></g>
+          </svg>
+          <div class="drive-speed"><strong id="race-speed">0</strong><span>KM/H</span></div>
+          <div class="drive-gear" aria-label="Marcha"><strong id="race-gear">1</strong><span id="race-drive-mode">AUTO</span></div>
+          <div class="drive-rpm" id="race-rpm">900 rpm</div>
+        </div>
+        <div class="drive-session"><span>POS<strong id="race-position">1 / 6</strong></span><span>VOLTA<strong id="race-lap">1 / 3</strong></span><span class="drive-time">TEMPO<strong id="race-time">0:00.00</strong></span></div>
+      </aside>
   <ol id="online-ranking" aria-label="Posições da corrida"></ol>
   <div class="viz-controls race-touch" aria-label="Controles"><button class="btn" data-drive="left">←</button><button class="btn" data-drive="right">→</button><button class="btn" data-drive="brake">Frear</button><button class="btn" data-drive="accelerate">Acelerar</button><button class="btn" data-drive="shiftDown">Q −</button><button class="btn" data-drive="shiftUp">E +</button></div>
   <dialog id="online-lobby" class="race-results" aria-labelledby="online-title">

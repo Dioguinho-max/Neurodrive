@@ -2,6 +2,7 @@
 (() => {
   'use strict';
   const get = (id) => document.getElementById(id);
+  const updateHUD = window.createRaceHUD(get);
   // Ferramentas de inspeção são opt-in e não aparecem para o jogador.
   get('race-developer').hidden = !new URLSearchParams(window.location?.search || '').has('dev');
   const audio = window.createNeuroAudio?.();
@@ -189,17 +190,10 @@
     player.skin = window.NeuroGarage?.getSkin() || null;
     renderer?.update(race.cars, player, false, player);
     const ranking = race.standings();
-    get('race-position').textContent = `${ranking.indexOf(player) + 1} / 6`;
-    get('race-lap').textContent = `${Math.min(race.laps, Math.max(1, player.completedLaps + 1))} / ${race.laps}`;
+    updateHUD(player, ranking.indexOf(player) + 1, ranking.length, race.laps, race.elapsed);
     get('race-laps').disabled = started && !race.qualifying && race.phase !== 'finished';
-    get('race-speed').textContent = `${Math.round(player.speed * 54)} km/h`;
-    get('race-grip').textContent = player.offRoad ? 'No gramado' : player.sliding ? 'Saindo de frente' : 'Normal';
-    get('race-rpm').textContent = `${Math.round(player.rpm)} rpm`;
-    get('race-gear').textContent = `${player.gear}ª · ${player.manual ? 'MANUAL' : 'AUTO'}${player.limiter ? ' · CORTE' : player.shiftTicks ? ' · trocando' : ''}`;
     audio?.update(player, race, started && !paused);
-    get('race-rpm-needle').setAttribute('transform', `rotate(${player.rpm / 8000 * 180} 120 115)`);
     get('race-speed-lines').style.opacity = String(Math.max(0, player.speed / player.maxSpeed - 0.55) * 0.5);
-    get('race-time').textContent = timeLabel(race.elapsed);
     const qualifying = race.qualifying;
     get('race-ranking-title').textContent = qualifying ? 'Melhores voltas · ordem do grid' : 'Classificação da corrida';
     const playerBest = player.bestLap === null ? 'sem tempo válido' : timeLabel(player.bestLap);

@@ -1,0 +1,25 @@
+.drive-hud { position: absolute; z-index: 2; right: max(24px, env(safe-area-inset-right)); bottom: max(24px, env(safe-area-inset-bottom)); width: 268px; color: #f4f8fc; pointer-events: none; font-variant-numeric: tabular-nums; filter: drop-shadow(0 6px 14px #0007); }
+.drive-dial { position: relative; height: 204px; background: radial-gradient(ellipse at 50% 72%, #09141dee 0%, #09141da8 55%, transparent 73%); --dial-color: #8bf0ba; }
+.drive-dial[data-redline="true"] { --dial-color: #ff6268; }
+.drive-dial svg { position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+.drive-arc-track, .drive-arc-fill, .drive-arc-limit { fill: none; stroke-linecap: butt; stroke-width: 7; }
+.drive-arc-track { stroke: #dbe7f329; }
+.drive-arc-fill { stroke: var(--dial-color); transition: stroke-dashoffset 90ms linear, stroke 160ms linear; }
+.drive-arc-limit { stroke: #ff6268; stroke-width: 3; }
+.drive-ticks { fill: #b7c9d7; font: 10px system-ui, sans-serif; }
+.drive-speed { position: absolute; top: 64px; left: 26px; width: 142px; text-align: center; }
+.drive-speed strong { display: block; font-size: 62px; line-height: 1; font-weight: 750; letter-spacing: -3px; }
+.drive-speed span { display: block; font-size: 10px; letter-spacing: .2em; color: #b7c9d7; margin-top: 7px; }
+.drive-gear { position: absolute; top: 66px; right: 37px; min-width: 48px; text-align: center; border-left: 1px solid #ffffff29; padding-left: 12px; }
+.drive-gear strong { display: block; color: var(--dial-color); font-size: 44px; line-height: 1.15; font-weight: 650; }
+.drive-gear span { display: block; font-size: 9px; color: #b7c9d7; letter-spacing: .08em; margin-top: 6px; }
+.drive-rpm { position: absolute; top: 153px; width: 100%; text-align: center; color: #b7c9d7; font-size: 11px; letter-spacing: .09em; }
+.drive-session { display: grid; grid-template-columns: 1fr 1fr; background: #0b1720dc; border-top: 1px solid #bfd2df38; border-radius: 0 0 10px 10px; padding: 10px 16px; gap: 8px; margin-top: -17px; position: relative; }
+.drive-session span { color: #94aabd; font-size: 9px; letter-spacing: .12em; }
+.drive-session strong { color: #f4f8fc; font-size: 13px; font-weight: 600; letter-spacing: 0; margin-left: 7px; }
+.drive-session .drive-time { grid-column: 1 / -1; text-align: center; border-top: 1px solid #ffffff12; padding-top: 7px; }
+.drive-hud[hidden] { display: none; }
+@media (max-width: 700px) { .drive-hud { width: 220px; right: 10px; bottom: 12px; } .drive-dial { height: 170px; } .drive-speed { top: 54px; left: 19px; width: 120px; } .drive-speed strong { font-size: 50px; } .drive-gear { top: 55px; right: 28px; min-width: 40px; padding-left: 8px; } .drive-gear strong { font-size: 35px; } .drive-rpm { top: 131px; font-size: 10px; } .drive-session { padding: 9px 12px; } }
+@media (pointer: coarse) { .drive-hud { bottom: max(94px, calc(env(safe-area-inset-bottom) + 80px)); } }
+@media (max-height: 520px) { .drive-hud { width: 200px; } .drive-dial { height: 145px; } .drive-speed { top: 45px; left: 21px; width: 95px; } .drive-speed strong { font-size: 43px; } .drive-gear { top: 45px; right: 25px; min-width: 40px; padding-left: 8px; } .drive-gear strong { font-size: 31px; } .drive-rpm { top: 116px; font-size: 9px; } .drive-session { padding: 7px 10px; } .drive-time { display: none; } }
+@media (prefers-reduced-motion: reduce) { .drive-arc-fill { transition: none; } }

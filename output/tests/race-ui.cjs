@@ -17,7 +17,7 @@ const documentMock = {
   querySelectorAll: () => [],
   addEventListener(type, handler) { events[type] = handler; },
 };
-for (const file of ['neuro-pista-track.js', 'neurodrive-race-engine.js']) new Function('window', read(file))(host);
+for (const file of ['neuro-pista-track.js', 'neurodrive-race-engine.js', 'neurodrive-hud.js']) new Function('window', read(file))(host);
 new Function('window', 'document', 'requestAnimationFrame', read('neurodrive-race.js'))(
   host, documentMock, (callback) => { frame = callback; },
 );

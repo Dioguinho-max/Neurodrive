@@ -74,7 +74,7 @@ A pressão de freio cresce gradualmente ao segurar S ou ↓, e diminui ao soltar
 
 O câmbio pode ser **automático ou manual**. A preferência fica salva neste navegador. No manual, E sobe, Q reduz e os botões de toque também permitem trocar. Cada pressão troca uma marcha; segurar a tecla não encadeia trocas. O motor permanece no corte até o jogador subir a marcha, e reduções que excedam o corte são bloqueadas.
 
-A corrida usa uma transmissão automática simplificada de seis marchas, com interrupção breve da força durante as trocas. O painel tem conta-giros semicircular, ponteiro de RPM e indicação de marcha. No teste de aceleração livre, o carro chega a aproximadamente 28 km/h após um segundo, 100 km/h em 4,8 segundos e à máxima de 205 km/h em 18,1 segundos. Curvas, frenagens e contatos alteram esses tempos; não se trata de um modelo mecânico completo de motor a combustão.
+A corrida usa uma transmissão automática simplificada de seis marchas, com interrupção breve da força durante as trocas. Os modos single e online compartilham um painel com velocidade e marcha em destaque, arco de RPM que muda de cor perto do limite e informações de posição, volta e tempo. No teste de aceleração livre, o carro chega a aproximadamente 28 km/h após um segundo, 100 km/h em 4,8 segundos e à máxima de 205 km/h em 18,1 segundos. Curvas, frenagens e contatos alteram esses tempos; não se trata de um modelo mecânico completo de motor a combustão.
 
 **Motor e largada:** segure W, ↑ ou o botão Acelerar durante a contagem regressiva para subir o giro parado e atingir o corte em aproximadamente 6.800 RPM. Soltar o acelerador reduz o giro. A embreagem acopla gradualmente na largada; acelerar parado não faz o câmbio pular marchas. Em movimento, o motor chega ao corte antes de subir cada marcha, com uma breve interrupção e queda de RPM.
 
@@ -84,7 +84,7 @@ Na terceira pessoa, a câmera fica mais baixa e amplia o campo de visão conform
 
 O motor está em `output/neurodrive-race-engine.js`, a interface em `output/neurodrive-race.js` e os estilos em `output/neurodrive-race.css`. O modo Corrida requer WebGL.
 
-A aderência dos pneus limita as curvas: entrar rápido demais faz o carro sair de frente, abrindo a trajetória mesmo com o volante virado. Frear e virar ao mesmo tempo reduz a aderência lateral disponível. O gramado permite escapar da pista, mas oferece menos controle e reduz a velocidade. O painel indica **Saindo de frente** ou **No gramado**, e a carroceria inclina nas curvas. A IA também calcula uma velocidade de curva mais segura. Esse modelo é simplificado, sem simular capotamentos.
+A aderência dos pneus limita as curvas: entrar rápido demais faz o carro sair de frente, abrindo a trajetória mesmo com o volante virado. Frear e virar ao mesmo tempo reduz a aderência lateral disponível. O gramado permite escapar da pista, mas oferece menos controle e reduz a velocidade. A carroceria inclina nas curvas. A IA também calcula uma velocidade de curva mais segura. Esse modelo é simplificado, sem simular capotamentos.
 
 A direção tem resposta progressiva em velocidade alta e uma margem de aderência mais generosa no asfalto: pequenos ajustes e curvas médias são tolerados, enquanto curvas bem fechadas ainda exigem redução de velocidade.
 
