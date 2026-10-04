@@ -149,6 +149,9 @@ body { overflow: hidden; }
   .race-tower li { padding: 4px; }
   .race-menu[open] { align-content: start; }
 }
+.beta-badge { display: inline-block; vertical-align: middle; padding: 3px 7px; border: 1px solid #eec77970; border-radius: 5px; background: #32291d; color: #ffe0a1; font: 700 10px/1.4 system-ui, sans-serif; letter-spacing: .1em; white-space: nowrap; }
+.beta-notice { margin: 14px 0; padding: 12px; border-left: 2px solid #eec779; border-radius: 4px; background: #eec7790d; color: #e5d9c1; font-size: 13px; line-height: 1.6; }
+.beta-notice .beta-badge { margin-right: 6px; }
 .menu-pages { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 18px 0; }
 #menu-race-screen > .btn { width: 100%; min-height: 44px; margin-top: 10px; }
 .menu-pages [aria-pressed="true"], .garage-actions [aria-pressed="true"] { background: #265341; border-color: #8bf0ba; color: #d9ffe9; }

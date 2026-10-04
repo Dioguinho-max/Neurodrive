@@ -9,7 +9,7 @@
 </head>
 <body><main id="neuro-race">
   <div class="race-stage"><canvas id="np-track-3d" aria-label="Corrida online 3D"></canvas><div id="race-banner" role="status"></div></div>
-  <header class="viz-row game-toolbar"><div class="game-brand">NEURO<span>DRIVE ONLINE</span></div><button class="btn" id="online-menu">Sala (Esc)</button></header>
+  <header class="viz-row game-toolbar"><div class="game-brand">NEURO<span>DRIVE ONLINE</span> <small class="beta-badge">BETA</small></div><button class="btn" id="online-menu">Sala (Esc)</button></header>
       <aside class="drive-hud" aria-label="Painel de pilotagem" id="online-hud" hidden>
         <div class="drive-dial" id="race-instruments" data-redline="false">
           <svg viewBox="0 0 268 204" aria-hidden="true">
@@ -28,6 +28,7 @@
   <div class="viz-controls race-touch" aria-label="Controles"><button class="btn" data-drive="left">←</button><button class="btn" data-drive="right">→</button><button class="btn" data-drive="brake">Frear</button><button class="btn" data-drive="accelerate">Acelerar</button><button class="btn" data-drive="shiftDown">Q −</button><button class="btn" data-drive="shiftUp">E +</button></div>
   <dialog id="online-lobby" class="race-results" aria-labelledby="online-title">
     <p class="race-results-eyebrow">Online · beta · 2 a 6 jogadores</p><h1 id="online-title">Dispute com seus amigos</h1>
+    <div class="beta-notice"><strong class="beta-badge">BETA</strong> Jogo em desenvolvimento. Você pode encontrar bugs e mudanças durante os testes.</div>
     <p id="online-message" role="status">Entre na conta no menu principal antes de conectar.</p>
     <button class="btn btn-primary" id="online-connect">Conectar</button>
     <div id="online-options" hidden>
