@@ -18,6 +18,8 @@ O backend utiliza as contas próprias do NeuroDrive, com senhas scrypt e cookies
 
 Na primeira inicialização, `server/cloud-schema.sql` cria o esquema e suas tabelas, sem alterar as tabelas do blog. A conexão deve ter permissão para criar o esquema. O TLS valida o certificado do banco; se a cadeia não for reconhecida, obtenha o certificado CA no Supabase e configure `DATABASE_CA` com seu conteúdo PEM. Não desabilite a validação TLS.
 
+Se aparecer `SELF_SIGNED_CERT_IN_CHAIN`, abra **Database → Settings → SSL Configuration → Download Certificate** no projeto Supabase. Abra o certificado baixado em um editor de texto e copie seu conteúdo completo, incluindo `-----BEGIN CERTIFICATE-----` e `-----END CERTIFICATE-----`, para a variável `DATABASE_CA` no Render. Cole o conteúdo, não o nome ou caminho do arquivo, sem aspas externas. Quebras de linha reais e sequências literais `\n` são aceitas. Salve e faça novo deploy.
+
 ## 2. Render: serviço novo
 
 Crie um **Web Service** do repositório `Dioguinho-max/neurodrive`, com nome novo, por exemplo `neurodrive-api`. Não selecione o serviço `tech-ia-blog`.

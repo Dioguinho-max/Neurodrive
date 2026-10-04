@@ -9,7 +9,8 @@ function createPool(env = process.env) {
   // Mantém a validação TLS; parâmetros da URL não podem sobrescrever o SSL.
   for (const name of ['sslmode', 'sslcert', 'sslkey', 'sslrootcert']) url.searchParams.delete(name);
   return new Pool({ connectionString: url.toString(), max: 5, connectionTimeoutMillis: 10000,
-    ssl: { rejectUnauthorized: true, ...(env.DATABASE_CA ? { ca: env.DATABASE_CA.replace(/\\n/g, '\n') } : {}) } });
+    ssl: { rejectUnauthorized: true, ...(env.DATABASE_CA?.trim()
+      ? { ca: env.DATABASE_CA.trim().replace(/\\r\\n/g, '\n').replace(/\\n/g, '\n') } : {}) } });
 }
 class CloudStore {
   constructor(pool) { this.pool = pool; }
