@@ -3,6 +3,7 @@
   const get = (id) => document.getElementById(id);
   const updateHUD = window.createRaceHUD(get);
   let socket, self, room, latest, renderer, trackId, ready = false;
+  let prediction, rtt = 0, playerPosition = 1;
   const motion = window.createOnlineBuffer();
   let rankingKey = '', lastInput = '', lastInputAt = 0;
   let displayedFinish = false;
@@ -11,12 +12,13 @@
   const audio = window.createNeuroAudio?.();
   const say = (message) => { get('online-message').textContent = message; };
   const send = (data) => { if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify(data)); };
-  function clear() { keys.clear(); pointers.clear(); send({ type: 'input', brake: true }); }
+  function clear() { keys.clear(); pointers.clear(); prediction?.input({ brake: true }, performance.now()); send({ type: 'input', brake: true }); }
   function menu() { clear(); if (!get('online-lobby').open) get('online-lobby').showModal(); }
   function resetRoom() {
     get('online-hud').hidden = true;
     room = null; latest = null; ready = false; displayedFinish = false;
     motion.clear(); rankingKey = ''; lastInput = ''; lastInputAt = 0;
+    prediction = null; rtt = 0;
     get('online-ready').disabled = false;
     get('online-room').hidden = true; get('online-back').hidden = true;
     get('online-options').hidden = false; get('online-reward').textContent = ''; audio?.silence();
@@ -39,6 +41,10 @@
         const message = JSON.parse(event.data);
         if (message.type === 'auth') {
           self = message.id; get('online-connect').hidden = true; resetRoom(); say(`Conectado como ${message.name}. Crie uma sala ou informe o código.`);
+        } else if (message.type === 'pong') {
+          const measured = Math.max(0, performance.now() - message.time);
+          rtt = rtt ? rtt * 0.7 + measured * 0.3 : measured;
+          get('online-connection').textContent = `Conexão: ${Math.round(rtt)} ms${rtt > 250 ? ' · atraso alto na rede' : ''}`;
         } else if (message.type === 'error') say(message.message);
         else if (message.type === 'left') { resetRoom(); say('Você saiu da sala.'); menu(); }
         else if (message.type === 'lobby') {
@@ -59,6 +65,8 @@
             catch { renderer = null; say('Não foi possível iniciar WebGL.'); menu(); send({ type: 'leave' }); }
           }
           const player = latest.cars.find((car) => car.id === latest.self);
+          prediction ||= window.createOnlinePrediction(window.createNeuroTrack(trackId));
+          prediction.receive(player, latest.phase, performance.now(), rtt);
           const ranking = [...latest.cars].sort((a, b) => Number(Boolean(a.disconnected)) - Number(Boolean(b.disconnected)) || (a.place || 99) - (b.place || 99) || b.progress - a.progress);
           const nextRankingKey = JSON.stringify(ranking.map((car) => [car.id, car.name, car.disconnected, car.done, car.completedLaps]));
           if (rankingKey !== nextRankingKey) {
@@ -67,7 +75,8 @@
           for (const car of ranking) { const li = document.createElement('li'); li.dataset.self = String(car.id === latest.self); li.textContent = `${car.name} · ${car.disconnected ? 'desconectado' : car.done ? 'chegou' : `volta ${Math.min(latest.laps, car.completedLaps + 1)}/${latest.laps}`}`; get('online-ranking').append(li); }
           }
           get('online-hud').hidden = false;
-          updateHUD(player, ranking.indexOf(player) + 1, ranking.length, latest.laps, latest.elapsed);
+          playerPosition = ranking.indexOf(player) + 1;
+          updateHUD(player, playerPosition, ranking.length, latest.laps, latest.elapsed);
           get('race-banner').textContent = latest.phase === 'countdown' ? latest.countdown : latest.phase === 'finished' ? 'Prova encerrada' : '';
           if (player.done && !displayedFinish || latest.phase === 'finished' && !displayedFinish) { displayedFinish = true; menu(); }
           get('online-reward').textContent = player.rewardPending ? 'Salvando recompensa…' : player.reward !== undefined ? `Recompensa: ${player.reward} moedas. Seu saldo foi salvo na conta.` : latest.phase === 'finished' && !player.done ? 'Prova encerrada pelo limite de tempo. Sem recompensa.' : '';
@@ -107,15 +116,20 @@
     if (!get('online-lobby').open && !document.hidden) { keys.forEach((key) => { input[actions[key]] = true; }); pointers.forEach((key) => { input[key] = true; }); }
     else input.brake = true;
     const encoded = JSON.stringify(input), now = performance.now();
+    prediction?.input(input, now);
     // Send changes promptly, with a heartbeat below the server's input timeout.
     if (encoded !== lastInput || now - lastInputAt >= 100) {
       send(input); lastInput = encoded; lastInputAt = now;
     }
   }, 16);
+  setInterval(() => { if (socket?.readyState === WebSocket.OPEN && self) send({ type: 'ping', time: performance.now() }); }, 1000);
   function draw() {
     if (latest && renderer && !document.hidden) {
       const cars = motion.sample(performance.now());
-      const player = cars.find((car) => car.id === latest.self);
+      const index = cars.findIndex((car) => car.id === latest.self);
+      const player = prediction?.sample(performance.now()) || cars[index];
+      cars[index] = player;
+      updateHUD(player, playerPosition, cars.length, latest.laps, latest.elapsed);
       renderer.update(cars, player, false, player); audio?.update(player, latest, !player.done && !document.hidden);
     }
     requestAnimationFrame(draw);

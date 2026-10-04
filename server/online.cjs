@@ -106,6 +106,7 @@ function attachOnline(server, { origin, store, tickMs = 1000 / 60 }) {
           send(peer, { type: 'auth', id: peer.id, name: peer.profile.username });
           return;
         }
+        if (msg.type === 'ping' && Number.isFinite(msg.time)) { send(peer, { type: 'pong', time: msg.time }); return; }
         if (msg.type === 'leave') { leave(peer); send(peer, { type: 'left' }); return; }
         if (msg.type === 'create') {
           if (peer.room) throw new Error('Saia da sala atual primeiro.');

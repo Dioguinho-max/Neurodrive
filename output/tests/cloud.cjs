@@ -65,6 +65,8 @@ function messages(ws) {
     const ma = messages(a); await once(a, 'open');
     a.send(JSON.stringify({ type: 'auth', ticket: (await api('online-ticket', {}, ca)).data.ticket }));
     await ma((m) => m.type === 'auth');
+    a.send(JSON.stringify({ type: 'ping', time: 123 }));
+    assert.equal((await ma((m) => m.type === 'pong')).time, 123);
     a.send(JSON.stringify({ type: 'create', track: 'serra', laps: 1 }));
     const room = await ma((m) => m.type === 'lobby');
     a.send(JSON.stringify({ type: 'start' }));

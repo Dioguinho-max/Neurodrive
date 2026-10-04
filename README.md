@@ -8,6 +8,8 @@ O jogo roda no navegador, com HTML, CSS e JavaScript, sem compilação. O Labora
 
 ## Contas, garagem e loja
 
+No modo online, o navegador antecipa direção, aceleração e freio do próprio carro usando a física compartilhada com o servidor. As atualizações do Render corrigem a previsão; adversários continuam com interpolação. A previsão para após 200 ms sem novos estados, evitando movimento indefinido durante falhas de conexão. Colisões entre carros, voltas, posições e moedas continuam sob controle do servidor. O menu da sala mostra o atraso de ida e volta em milissegundos. Isso melhora a resposta dos controles, mas não elimina latência da rede nem baixo desempenho gráfico.
+
 Instale Node.js **22.13 ou superior** e execute na raiz do projeto:
 
 ```bash

@@ -5,6 +5,7 @@
   <title>NeuroDrive · Online</title>
   <link rel="stylesheet" href="neuro-pista.css"><link rel="stylesheet" href="neurodrive-race.css"><link rel="stylesheet" href="online.css">
   <script src="vendor/three.min.js" defer></script><script src="neuro-pista-track.js" defer></script>
+  <script src="neurodrive-race-engine.js" defer></script><script src="neurodrive-prediction.js" defer></script>
   <script src="neuro-pista-3d.js" defer></script><script src="neurodrive-audio.js" defer></script><link rel="stylesheet" href="neurodrive-hud.css"><script src="neurodrive-hud.js" defer></script><script src="neurodrive-online-buffer.js" defer></script><script src="online.js" defer></script>
 </head>
 <body><main id="neuro-race">
@@ -30,6 +31,7 @@
     <p class="race-results-eyebrow">Online · beta · 2 a 6 jogadores</p><h1 id="online-title">Dispute com seus amigos</h1>
     <div class="beta-notice"><strong class="beta-badge">BETA</strong> Jogo em desenvolvimento. Você pode encontrar bugs e mudanças durante os testes.</div>
     <p id="online-message" role="status">Entre na conta no menu principal antes de conectar.</p>
+    <p id="online-connection">Conexão ainda não medida.</p>
     <button class="btn btn-primary" id="online-connect">Conectar</button>
     <div id="online-options" hidden>
       <div class="viz-controls"><label class="form-label">Circuito<select class="form-select" id="online-track"><option value="serra">Serra Verde</option><option value="veloz">Autódromo Veloz</option><option value="tecnico">Vale Técnico</option></select></label>

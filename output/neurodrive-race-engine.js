@@ -36,6 +36,78 @@
     else car.rpm = targetRpm;
   }
 
+  function advanceCar(track, car, steering, pedal, maximumSpeed) {
+    if (car.player) car.activations = [car.inputs, [], [steering, pedal]];
+    // Menos curso em alta velocidade, entrada gradual e retorno mais rápido.
+    const requestedSteering = car.player ? steering * (0.78 - 0.34 * car.speed / MAX_RACE_SPEED) : steering;
+    const steeringRate = car.player ? (steering === 0 ? 0.055 : 0.025) : 0.06;
+    car.steering += clamp(requestedSteering - car.steering, -steeringRate, steeringRate);
+    updatePowertrain(car, pedal, maximumSpeed);
+    car.offRoad = !track.contains(car.x, car.y, 5);
+    // Em alta, pequenos comandos fazem ajustes suaves; o giro cresce
+    // progressivamente ao segurar o volante para uma curva mais fechada.
+    const highSpeedBlend = clamp((car.speed * 54 - 60) / 100, 0, 1);
+    const steeringCurve = 0.25 + 0.75 * Math.pow(Math.min(1, Math.abs(car.steering) / 0.78), 2);
+    const requestedYaw = car.steering * (1 - highSpeedBlend * (1 - steeringCurve)) * 0.065 * car.speed / 3.2;
+    // v (m/s) × velocidade angular (rad/s) = aceleração lateral.
+    // 1 unidade/quadro = 15 m/s. Pneus têm aderência finita, não giro ilimitado.
+    const lateralDemand = Math.abs(requestedYaw) * car.speed * 900;
+    // Margem arcade no asfalto: curvas suaves e médias são mais tolerantes.
+    const grip = (car.offRoad ? 0.48 : 2.1) * 9.81;
+    const brakeLoad = Math.min(0.6, car.brake * 0.6);
+    const lateralGrip = grip * Math.sqrt(1 - brakeLoad * brakeLoad);
+    car.gripUsage = lateralDemand / lateralGrip;
+    car.sliding = car.gripUsage > 1.05 && car.speed > 0.4;
+    const maximumYaw = lateralGrip / Math.max(1, car.speed * 900);
+    const yaw = clamp(requestedYaw, -maximumYaw, maximumYaw);
+    car.angle = wrap(car.angle + yaw);
+    car.bodyRoll += (clamp(yaw * car.speed * 900 / 9.81, -1.2, 1.2) * 0.075 - car.bodyRoll) * 0.1;
+    // Arrasto dos pneus e do gramado; não há correção automática para o traçado.
+    if (car.sliding) car.speed = Math.max(0, car.speed - Math.min(0.018, (car.gripUsage - 1) * 0.0025));
+    if (car.offRoad) car.speed = Math.max(0, car.speed - 0.007 - car.speed * 0.003);
+    const x = car.x + Math.cos(car.angle) * car.speed;
+    const y = car.y + Math.sin(car.angle) * car.speed;
+    if (track.contains(x, y, -30)) {
+      car.x = x;
+      car.y = y;
+      car.wallContact = false;
+    } else {
+      // Desliza pela tangente da borda em vez de rejeitar todo o movimento.
+      const edge = track.nearest(x, y);
+      if (Number.isFinite(edge.distance)) {
+        const lateral = (x - edge.x) * -edge.ty + (y - edge.y) * edge.tx;
+        const offset = clamp(lateral, -track.halfWidth - 29, track.halfWidth + 29);
+        car.x = edge.x - edge.ty * offset;
+        car.y = edge.y + edge.tx * offset;
+        let tangent = Math.atan2(edge.ty, edge.tx);
+        if (Math.cos(car.angle - tangent) < 0) tangent = wrap(tangent + Math.PI);
+        car.angle = wrap(car.angle + wrap(tangent - car.angle) * 0.45);
+        car.steering *= 0.7;
+      }
+      // Um toque tira um pouco de velocidade; contato contínuo não a zera.
+      if (car.wallCooldown > 0) car.speed = Math.max(0, car.speed - 0.002);
+      else { car.speed *= 0.85; car.wallCooldown = 45; }
+      car.wallContact = true;
+    }
+  }
+
+  // Visual prediction uses the same drivetrain, grip and wall response as the server.
+  // Lap progress, collisions between cars and rewards remain server-authoritative.
+  window.predictNeuroCar = (track, car, command) => {
+    if (car.done) return;
+    const shift = command.shiftUp ? 1 : command.shiftDown ? -1 : 0;
+    if (car.manual && shift && shift !== (car.lastShift || 0) && !car.shiftTicks && !car.cooldown) {
+      const gear = clamp(car.gear + shift, 1, 6);
+      if (gear !== car.gear && (shift > 0 || car.speed * 54 <= gearLimits[gear - 1])) {
+        car.gear = gear; car.shiftTicks = 14; car.cutTicks = 0;
+      }
+    }
+    car.lastShift = shift;
+    if (car.wallCooldown > 0) car.wallCooldown--;
+    if (car.cooldown > 0) { car.cooldown--; return; }
+    advanceCar(track, car, Number(Boolean(command.right)) - Number(Boolean(command.left)), command.brake ? -1 : command.accelerate ? 1 : 0, MAX_RACE_SPEED);
+  };
+
   window.createNeuroRace = function createNeuroRace(track, difficulty = 'normal', options = {}) {
     const qualifying = options.session === 'qualifying';
     const requestedGrid = options.grid || [];
@@ -180,6 +252,7 @@
         }
       }
       previousShifts.set(player.id, shift);
+      player.lastShift = shift;
       }
       if (phase === 'countdown') {
         for (const car of cars) {
@@ -206,58 +279,7 @@
         const [steering, pedal] = car.player
           ? [Number(Boolean(command.right)) - Number(Boolean(command.left)), command.brake ? -1 : command.accelerate ? 1 : 0]
           : aiDecision(car);
-        if (car.player) car.activations = [car.inputs, [], [steering, pedal]];
-        // Menos curso em alta velocidade, entrada gradual e retorno mais rápido.
-        const requestedSteering = car.player ? steering * (0.78 - 0.34 * car.speed / MAX_RACE_SPEED) : steering;
-        const steeringRate = car.player ? (steering === 0 ? 0.055 : 0.025) : 0.06;
-        car.steering += clamp(requestedSteering - car.steering, -steeringRate, steeringRate);
-        updatePowertrain(car, pedal, car.player ? MAX_RACE_SPEED : aiSpeed);
-        car.offRoad = !track.contains(car.x, car.y, 5);
-        // Em alta, pequenos comandos fazem ajustes suaves; o giro cresce
-        // progressivamente ao segurar o volante para uma curva mais fechada.
-        const highSpeedBlend = clamp((car.speed * 54 - 60) / 100, 0, 1);
-        const steeringCurve = 0.25 + 0.75 * Math.pow(Math.min(1, Math.abs(car.steering) / 0.78), 2);
-        const requestedYaw = car.steering * (1 - highSpeedBlend * (1 - steeringCurve)) * 0.065 * car.speed / 3.2;
-        // v (m/s) × velocidade angular (rad/s) = aceleração lateral.
-        // 1 unidade/quadro = 15 m/s. Pneus têm aderência finita, não giro ilimitado.
-        const lateralDemand = Math.abs(requestedYaw) * car.speed * 900;
-        // Margem arcade no asfalto: curvas suaves e médias são mais tolerantes.
-        const grip = (car.offRoad ? 0.48 : 2.1) * 9.81;
-        const brakeLoad = Math.min(0.6, car.brake * 0.6);
-        const lateralGrip = grip * Math.sqrt(1 - brakeLoad * brakeLoad);
-        car.gripUsage = lateralDemand / lateralGrip;
-        car.sliding = car.gripUsage > 1.05 && car.speed > 0.4;
-        const maximumYaw = lateralGrip / Math.max(1, car.speed * 900);
-        const yaw = clamp(requestedYaw, -maximumYaw, maximumYaw);
-        car.angle = wrap(car.angle + yaw);
-        car.bodyRoll += (clamp(yaw * car.speed * 900 / 9.81, -1.2, 1.2) * 0.075 - car.bodyRoll) * 0.1;
-        // Arrasto dos pneus e do gramado; não há correção automática para o traçado.
-        if (car.sliding) car.speed = Math.max(0, car.speed - Math.min(0.018, (car.gripUsage - 1) * 0.0025));
-        if (car.offRoad) car.speed = Math.max(0, car.speed - 0.007 - car.speed * 0.003);
-        const x = car.x + Math.cos(car.angle) * car.speed;
-        const y = car.y + Math.sin(car.angle) * car.speed;
-        if (track.contains(x, y, -30)) {
-          car.x = x;
-          car.y = y;
-          car.wallContact = false;
-        } else {
-          // Desliza pela tangente da borda em vez de rejeitar todo o movimento.
-          const edge = track.nearest(x, y);
-          if (Number.isFinite(edge.distance)) {
-            const lateral = (x - edge.x) * -edge.ty + (y - edge.y) * edge.tx;
-            const offset = clamp(lateral, -track.halfWidth - 29, track.halfWidth + 29);
-            car.x = edge.x - edge.ty * offset;
-            car.y = edge.y + edge.tx * offset;
-            let tangent = Math.atan2(edge.ty, edge.tx);
-            if (Math.cos(car.angle - tangent) < 0) tangent = wrap(tangent + Math.PI);
-            car.angle = wrap(car.angle + wrap(tangent - car.angle) * 0.45);
-            car.steering *= 0.7;
-          }
-          // Um toque tira um pouco de velocidade; contato contínuo não a zera.
-          if (car.wallCooldown > 0) car.speed = Math.max(0, car.speed - 0.002);
-          else { car.speed *= 0.85; car.wallCooldown = 45; }
-          car.wallContact = true;
-        }
+        advanceCar(track, car, steering, pedal, car.player ? MAX_RACE_SPEED : aiSpeed);
       }
 
       // Colisões circulares aproximadas, sem permitir empurrar carros para fora.
