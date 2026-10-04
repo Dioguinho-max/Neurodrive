@@ -2,10 +2,10 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { Pool } = require('pg');
 const catalog = require('./catalog.cjs');
+const { databaseUrl } = require('./startup-config.cjs');
 const fail = (status, message) => Object.assign(new Error(message), { status });
 function createPool(env = process.env) {
-  if (!env.DATABASE_URL) throw new Error('Configure DATABASE_URL no backend.');
-  const url = new URL(env.DATABASE_URL);
+  const url = databaseUrl(env);
   // Mantém a validação TLS; parâmetros da URL não podem sobrescrever o SSL.
   for (const name of ['sslmode', 'sslcert', 'sslkey', 'sslrootcert']) url.searchParams.delete(name);
   return new Pool({ connectionString: url.toString(), max: 5, connectionTimeoutMillis: 10000,

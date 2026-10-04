@@ -6,6 +6,7 @@ const { promisify } = require('node:util');
 const { CloudStore, createPool } = require('./cloud-store.cjs');
 const { attachOnline } = require('./online.cjs');
 const catalog = require('./catalog.cjs');
+const { startupConfig, startupMessage } = require('./startup-config.cjs');
 const scrypt = promisify(crypto.scrypt);
 const hash = (s) => crypto.createHash('sha256').update(s).digest('hex');
 const fail = (status, message) => Object.assign(new Error(message), { status });
@@ -112,14 +113,23 @@ function createCloudServer({ store, frontendOrigin, backendOrigin }) {
 }
 module.exports = { createCloudServer };
 if (require.main === module) {
+  let pool;
+  let stage = 'configuração';
   (async () => {
-    if (!process.env.FRONTEND_ORIGIN || !process.env.BACKEND_ORIGIN) throw new Error('Configure FRONTEND_ORIGIN e BACKEND_ORIGIN.');
-    if (process.env.NODE_ENV === 'production' && [process.env.FRONTEND_ORIGIN, process.env.BACKEND_ORIGIN].some((value) => !value.startsWith('https://'))) throw new Error('Produção requer HTTPS.');
-    const pool = createPool();
+    const config = startupConfig(process.env);
+    stage = 'conexão PostgreSQL e criação do esquema';
+    console.log('Configuração validada. Conectando ao PostgreSQL…');
+    pool = createPool();
     const store = new CloudStore(pool); await store.init();
-    const server = createCloudServer({ store, frontendOrigin: process.env.FRONTEND_ORIGIN, backendOrigin: process.env.BACKEND_ORIGIN });
-    server.listen(Number(process.env.PORT || 3000), '0.0.0.0', () => console.log('NeuroDrive cloud pronto.'));
+    stage = 'inicialização HTTP';
+    const server = createCloudServer({ store, ...config });
+    await new Promise((resolve, reject) => { server.once('error', reject); server.listen(config.port, '0.0.0.0', resolve); });
+    console.log('NeuroDrive cloud pronto.');
     const stop = () => { server.shutdownOnline(); server.close(() => pool.end().then(() => process.exit(0))); };
     process.on('SIGTERM', stop); process.on('SIGINT', stop);
-  })().catch((error) => { console.error('Falha ao iniciar cloud:', error.code || error.name); process.exitCode = 1; });
+  })().catch(async (error) => {
+    console.error(`Falha ao iniciar cloud [${stage}]: ${startupMessage(error)}`);
+    if (pool) await pool.end().catch(() => {});
+    process.exitCode = 1;
+  });
 }

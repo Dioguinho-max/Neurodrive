@@ -1,0 +1,20 @@
+const assert = require('node:assert/strict');
+const { spawnSync } = require('node:child_process');
+const path = require('node:path');
+const { startupConfig, startupMessage } = require('../../server/startup-config.cjs');
+const env = { NODE_ENV: 'production', FRONTEND_ORIGIN: 'https://game.example/', BACKEND_ORIGIN: 'https://api.example/', DATABASE_URL: 'postgresql://user:private-test-password@db.example/postgres' };
+assert.equal(startupConfig(env).frontendOrigin, 'https://game.example');
+assert.throws(() => startupConfig({}), /FRONTEND_ORIGIN, BACKEND_ORIGIN, DATABASE_URL/);
+assert.throws(() => startupConfig({ ...env, DATABASE_URL: 'https://project.supabase.co' }), /postgres/);
+assert.throws(() => startupConfig({ ...env, BACKEND_ORIGIN: 'https://api.example/path' }), /sem caminho/);
+assert.throws(() => startupConfig({ ...env, FRONTEND_ORIGIN: 'http://game.example' }), /HTTPS/);
+assert.throws(() => startupConfig({ ...env, PORT: 'NaN' }), /PORT/);
+assert.match(startupMessage({ code: '28P01', message: env.DATABASE_URL }), /Autenticação/);
+assert(!startupMessage({ message: env.DATABASE_URL }).includes('private-test-password'));
+assert.match(startupMessage({ message: 'Connection terminated due to connection timeout' }), /esgotado/);
+const child = spawnSync(process.execPath, [path.join(__dirname, '../../server/cloud.cjs')], {
+  env: { ...process.env, FRONTEND_ORIGIN: '', BACKEND_ORIGIN: '', DATABASE_URL: '' }, encoding: 'utf8', timeout: 15000,
+});
+assert.equal(child.status, 1);
+assert.match(child.stderr, /Variáveis ausentes.*FRONTEND_ORIGIN, BACKEND_ORIGIN, DATABASE_URL/);
+console.log('OK: validação de configuração e diagnóstico de inicialização sem expor credenciais.');
