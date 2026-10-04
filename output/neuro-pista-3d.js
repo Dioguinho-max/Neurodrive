@@ -45,8 +45,6 @@
     const glass = material('#315167', { metalness: 0.35, roughness: 0.2 });
     const bodyMaterials = [material('#53a8da'), material('#f0b65e'), material('#b09bde')];
     const leaderMaterial = material('#48e6a4', { emissive: '#123d2c', emissiveIntensity: 0.25 });
-    const playerPaint = material('#48e6a4', { metalness: 0.35, roughness: 0.4 });
-    const playerStripe = material('#163d33');
     const crashedMaterial = material('#657078');
     const brakeMaterial = material('#ff2929', { emissive: '#ff1515', emissiveIntensity: 1 });
 
@@ -137,6 +135,8 @@
 
     function createCarModel(index) {
       const group = new THREE.Group();
+      const playerPaint = material('#48e6a4', { metalness: 0.35, roughness: 0.4 });
+      const playerStripe = material('#163d33');
       const body = addMesh(bodyGeometry, bodyMaterials[index % 3], group, [0, 3, 0]);
       body.castShadow = true;
       addMesh(cabinGeometry, glass, group, [-1, 5.3, 0]);
@@ -158,7 +158,7 @@
         brakes.push(addMesh(lampGeometry, red, group, [-8.1, 3.4, z]));
       }
       scene.add(group);
-      return { group, body, roof, frontWheels, brakes, stripes };
+      return { group, body, roof, frontWheels, brakes, stripes, playerPaint, playerStripe };
     }
 
     // Um único conjunto de linhas reutilizado para os cinco sensores do líder.
@@ -286,9 +286,8 @@
           if (object.material) materials.add(object.material);
         });
         geometries.forEach((geometry) => geometry.dispose());
+        models.forEach((model) => { materials.add(model.playerPaint); materials.add(model.playerStripe); });
         materials.forEach((surface) => surface.dispose());
-        if (!materials.has(playerPaint)) playerPaint.dispose();
-        if (!materials.has(playerStripe)) playerStripe.dispose();
         sun.shadow.map?.dispose();
         renderer.dispose();
       },
@@ -307,11 +306,11 @@
           model.group.rotation.set(bank + (car.bodyRoll || 0), -car.angle, pitch, 'YZX');
           const customized = car.player && car.skin;
           if (customized) {
-            playerPaint.color.set(car.skin.color);
-            playerStripe.color.set(car.skin.accent);
+            model.playerPaint.color.set(car.skin.color);
+            model.playerStripe.color.set(car.skin.accent);
           }
           model.stripes.forEach((stripe) => { stripe.visible = Boolean(customized); });
-          const surface = customized ? playerPaint : car === leader ? leaderMaterial
+          const surface = customized ? model.playerPaint : car === leader ? leaderMaterial
             : car.alive ? bodyMaterials[index % 3] : crashedMaterial;
           model.body.material = surface;
           model.roof.material = surface;

@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: neurodrive-api
+    runtime: node
+    plan: starter
+    numInstances: 1
+    buildCommand: npm ci
+    startCommand: node server/cloud.cjs
+    healthCheckPath: /health
+    autoDeployTrigger: off
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: NODE_VERSION
+        value: "22"
+      - key: DATABASE_URL
+        sync: false
+      - key: DATABASE_CA
+        sync: false
+      - key: FRONTEND_ORIGIN
+        value: https://neurodrive-chi.vercel.app
+      - key: BACKEND_ORIGIN
+        sync: false

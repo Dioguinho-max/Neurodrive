@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>NeuroDrive · Online</title>
+  <link rel="stylesheet" href="neuro-pista.css"><link rel="stylesheet" href="neurodrive-race.css"><link rel="stylesheet" href="online.css">
+  <script src="vendor/three.min.js" defer></script><script src="neuro-pista-track.js" defer></script>
+  <script src="neuro-pista-3d.js" defer></script><script src="neurodrive-audio.js" defer></script><script src="online.js" defer></script>
+</head>
+<body><main id="neuro-race">
+  <div class="race-stage"><canvas id="np-track-3d" aria-label="Corrida online 3D"></canvas><div id="race-banner" role="status"></div></div>
+  <header class="viz-row game-toolbar"><div class="game-brand">NEURO<span>DRIVE ONLINE</span></div><button class="btn" id="online-menu">Sala (Esc)</button></header>
+  <p id="online-hud" role="status">Conecte-se para disputar uma corrida.</p>
+  <ol id="online-ranking" aria-label="Posições da corrida"></ol>
+  <div class="viz-controls race-touch" aria-label="Controles"><button class="btn" data-drive="left">←</button><button class="btn" data-drive="right">→</button><button class="btn" data-drive="brake">Frear</button><button class="btn" data-drive="accelerate">Acelerar</button><button class="btn" data-drive="shiftDown">Q −</button><button class="btn" data-drive="shiftUp">E +</button></div>
+  <dialog id="online-lobby" class="race-results" aria-labelledby="online-title">
+    <p class="race-results-eyebrow">Online · beta · 2 a 6 jogadores</p><h1 id="online-title">Dispute com seus amigos</h1>
+    <p id="online-message" role="status">Entre na conta no menu principal antes de conectar.</p>
+    <button class="btn btn-primary" id="online-connect">Conectar</button>
+    <div id="online-options" hidden>
+      <div class="viz-controls"><label class="form-label">Circuito<select class="form-select" id="online-track"><option value="serra">Serra Verde</option><option value="veloz">Autódromo Veloz</option><option value="tecnico">Vale Técnico</option></select></label>
+      <label class="form-label">Voltas<select class="form-select" id="online-laps"><option value="1">1 volta</option><option value="3" selected>3 voltas</option><option value="5">5 voltas</option></select></label><button class="btn" id="online-create">Criar sala</button></div>
+      <form id="online-join"><label class="form-label">Código da sala<input id="online-code" maxlength="6" minlength="6" pattern="[a-fA-F0-9]{6}" required autocomplete="off" placeholder="ABC123"></label><button class="btn" type="submit">Entrar na sala</button></form>
+    </div>
+    <section id="online-room" hidden><h2 id="online-room-code"></h2><ul id="online-players"></ul>
+      <label class="form-check"><input type="checkbox" id="online-manual"> Câmbio manual (E sobe, Q reduz)</label>
+      <div class="viz-controls"><button class="btn" id="online-ready">Pronto</button><button class="btn btn-primary" id="online-start">Largar</button><button class="btn" id="online-leave">Sair da sala</button></div>
+    </section>
+    <p>Vagas restantes são preenchidas por IA. O dono inicia quando todos estiverem prontos. A corrida não pausa ao abrir o menu; desconectar abandona a prova. Limite de 15 minutos.</p>
+    <details><summary>Som, câmera e controles</summary>
+      <label class="form-check"><input type="checkbox" id="online-sound" checked>Som do motor</label>
+      <label class="form-label">Câmera<select class="form-select" id="np-camera"><option value="chase">Terceira pessoa</option><option value="overview">Visão da pista</option><option value="follow">Orbital</option></select></label>
+      <div class="viz-controls"><button class="btn" id="np-rotate">Girar</button><button class="btn" id="np-zoom-in">+</button><button class="btn" id="np-zoom-out">−</button><button class="btn" id="np-camera-reset">Restaurar câmera</button><button class="btn" id="online-recover">Voltar à pista (R)</button></div>
+      <p>WASD ou setas para dirigir. Q/E para trocar no manual. R reposiciona. Esc abre a sala.</p>
+    </details>
+    <p id="online-reward" role="status"></p>
+    <button class="btn" id="online-back" hidden>Voltar à pista</button><a class="btn" href="corrida.html">Menu principal e conta</a>
+  </dialog>
+</main></body></html>

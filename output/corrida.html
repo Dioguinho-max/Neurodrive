@@ -133,6 +133,14 @@
               <p class="garage-identity"><strong id="garage-name"></strong> · <strong id="garage-balance"></strong> moedas</p>
               <p id="garage-stats" class="text-small"></p><div class="garage-actions"><button class="btn" id="garage-bonus">Resgatar bônus de 100 moedas</button><button class="btn" id="garage-logout">Sair da conta</button></div>
               <p class="text-small" id="garage-bonus-note"></p>
+              <form id="garage-password-form" hidden>
+                <h4>Alterar senha</h4>
+                <label class="form-label">Senha atual<input id="garage-current-password" type="password" autocomplete="current-password" minlength="10" maxlength="128" required></label>
+                <label class="form-label">Nova senha<input id="garage-new-password" type="password" autocomplete="new-password" minlength="10" maxlength="128" required></label>
+                <label class="form-label">Confirme a nova senha<input id="garage-new-confirm" type="password" autocomplete="new-password" minlength="10" maxlength="128" required></label>
+                <button class="btn" id="garage-change-password" type="submit">Salvar nova senha</button>
+                <p class="text-small">As outras sessões da conta serão encerradas.</p>
+              </form>
             </div>
             </div>
             <div id="garage-store-screen" hidden>
@@ -140,12 +148,13 @@
             <button class="btn" id="garage-store-login">Entrar para comprar</button>
             <label class="form-label">Mostrar<select class="form-select" id="garage-filter"><option value="all">Todas as skins</option><option value="owned">Minha garagem</option></select></label>
             <p class="text-small">Skins são apenas visuais. Nova conta: 500 moedas. Bônus de 100 a cada 24 horas. Sem dinheiro real.</p>
-            <p class="text-small">Conclua corridas conectado: 50 moedas + 20 por volta, até 200 por corrida e 500 por dia (UTC). A classificação não dá moedas.</p>
+            <p class="text-small" id="garage-rewards-info">Conclua corridas conectado: 50 moedas + 20 por volta, até 200 por corrida e 500 por dia (UTC). A classificação não dá moedas.</p>
             <div id="garage-skins" class="garage-skins" aria-label="Loja de pinturas"></div>
             </div>
             <button class="btn" id="garage-retry" type="button" hidden>Tentar conectar novamente</button>
           </section>
           <a class="menu-lab" href="neuro-pista.html">Explorar o Laboratório de IA ↗</a>
+          <a class="btn" href="online.html">Jogar online · salas por código</a>
         </div>
       </dialog>
       <dialog id="race-results" class="race-results" aria-labelledby="race-results-title">

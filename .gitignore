@@ -4,3 +4,7 @@ server/data/
 *.sqlite-wal
 .env
 node_modules/
+dist/
+.vercel/
+.env.*
+*.pem

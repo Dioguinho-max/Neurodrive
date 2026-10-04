@@ -10,6 +10,7 @@
   let authMode = 'login';
   let attempt = null;
   let identity = 0;
+  let capabilities = { localRewards: true, online: false };
   window.NeuroGarage = { getSkin: () => skins.find((skin) => skin.id === player?.equipped) || null, beginRace, finishRace };
 
   function showPage(value) {
@@ -36,7 +37,8 @@
   function beginRace(config) {
     const current = { owner: player?.username, identity, result: null, sending: false };
     attempt = current;
-    current.ticket = config && player && online
+    if (!capabilities.localRewards) current.reason = 'No servidor publicado, as moedas são concedidas nas salas online. Esta corrida local foi um treino.';
+    current.ticket = config && player && online && capabilities.localRewards
       ? request('races/start', config).then((result) => result.ticket).catch(() => null) : Promise.resolve(null);
   }
   async function finishRace(result) {
@@ -49,6 +51,7 @@
     try {
       const ticket = await current.ticket;
       if (current !== attempt) return;
+      if (current.reason) { get('race-reward').textContent = current.reason; return; }
       if (!ticket || current.identity !== identity || current.owner !== player?.username) {
         get('race-reward').textContent = 'Corrida sem recompensa. Entre na conta antes da largada e mantenha a conexão com o servidor.';
         return;
@@ -83,6 +86,9 @@
     get('garage-retry').hidden = online;
     get('garage-retry').disabled = busy;
     get('garage-store-login').hidden = Boolean(player);
+    get('garage-password-form').hidden = !player || !capabilities.online;
+    get('garage-change-password').disabled = busy;
+    get('garage-rewards-info').textContent = `${capabilities.online ? 'Conclua corridas nas salas online' : 'Conclua corridas conectado'}: 50 moedas + 20 por volta, até 200 por corrida e 500 por dia (UTC). A classificação não dá moedas.`;
     get('garage-store-balance').textContent = player ? `Seu saldo: ${player.coins} moedas` : 'Entre na conta para guardar suas compras.';
     if (player) {
       get('garage-name').textContent = player.username;
@@ -132,9 +138,10 @@
       get('garage-confirm').value = '';
       get('garage-password').type = get('garage-confirm').type = 'password';
       get('garage-show-password').textContent = 'Mostrar senha';
+      for (const id of ['garage-current-password', 'garage-new-password', 'garage-new-confirm']) get(id).value = '';
       get('garage-status').textContent = message;
     } catch (error) {
-      if (error.status === 401 && !['login', 'register'].includes(route)) player = null;
+      if (error.status === 401 && !['login', 'register', 'password'].includes(route)) player = null;
       get('garage-status').textContent = error.status ? error.message : 'Conexão interrompida. Tente novamente; uma compra repetida não cobra duas vezes.';
     } finally { busy = false; render(); }
   }
@@ -149,6 +156,7 @@
     render();
     try {
       skins = (await request('catalog')).skins;
+      capabilities = await request('config').catch(() => ({ localRewards: true, online: false }));
       try { player = (await request('me')).player; }
       catch (error) { if (error.status !== 401) throw error; player = null; }
       online = true;
@@ -168,6 +176,11 @@
     act(action, { username: get('garage-username').value.trim(), password: get('garage-password').value }, action === 'register' ? 'Conta criada! Você recebeu 500 moedas.' : 'Bem-vindo de volta!');
   };
   get('garage-logout').onclick = () => act('logout', {}, 'Você saiu da conta. Modo visitante ativado.');
+  get('garage-password-form').onsubmit = (event) => {
+    event.preventDefault();
+    if (get('garage-new-password').value !== get('garage-new-confirm').value) { get('garage-status').textContent = 'As novas senhas não coincidem.'; return; }
+    act('password', { currentPassword: get('garage-current-password').value, password: get('garage-new-password').value }, 'Senha alterada. Outras sessões foram encerradas.');
+  };
   get('garage-bonus').onclick = () => act('bonus', {}, '100 moedas adicionadas à sua conta.');
   get('garage-retry').onclick = connect;
   get('garage-panel').ontoggle = () => { if (!busy) render(); };

@@ -25,6 +25,7 @@ const tick = () => new Promise((resolve) => setImmediate(resolve));
     const route = url.split('/').pop();
     let status = 200;
     const data = options.body && JSON.parse(options.body);
+    if (route === 'config') return { ok: true, status: 200, json: async () => ({ localRewards: true, online: false }) };
     if (url.endsWith('races/start')) return { ok: true, status: 200, json: async () => ({ ticket: 'ticket-teste' }) };
     if (url.endsWith('races/finish')) {
       player = { ...player, coins: 370 };

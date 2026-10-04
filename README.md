@@ -1,5 +1,7 @@
 # NeuroDrive 
 
+**Beta online:** infraestrutura para Vercel + Render + Supabase e salas privadas para 2–6 jogadores. Veja [DEPLOY.md](DEPLOY.md) para configuração, importação das contas e conferência antes de publicar. O código está preparado; as URLs e o acesso aos serviços novos precisam ser configurados antes do lançamento.
+
 Simulador 3D de carros autônomos com **neuroevolução** e visualização interativa de redes neurais. Acompanhe os carros em um circuito com curvas e retas, observe suas decisões e pause para entender os cálculos de cada neurônio.
 
 O jogo roda no navegador, com HTML, CSS e JavaScript, sem compilação. O Laboratório e a corrida como visitante funcionam sem backend. Contas, moedas e skins usam o servidor Node.js com SQLite, sem pacotes externos.
@@ -28,7 +30,7 @@ Por padrão, o servidor escuta apenas em `127.0.0.1:3000`. As variáveis `HOST`,
 
 **Recompensas de corrida:** entre na conta antes da largada. Completar a prova concede 50 moedas + 20 por volta, até 200 por corrida e 500 por dia UTC, além do bônus diário. A classificação não concede moedas. `POST /api/races/start` registra circuito e voltas; `POST /api/races/finish` resgata a recompensa com o identificador recebido. O servidor verifica titularidade, tempo mínimo plausível, número de voltas e limite diário, e credita cada corrida apenas uma vez, dentro de uma transação. Reiniciar uma prova invalida o recibo pendente anterior. Recibos expiram em seis horas. Se a conexão falhar na chegada, use **Tentar resgatar recompensa** antes de iniciar outra prova ou recarregar a página. Corridas e vitórias registradas aparecem na conta.
 
-**Multiplayer ainda não está implementado.** Essas recompensas são do modo local: o navegador ainda informa o resultado, e a validação de tempo não prova que houve uma corrida legítima. Elas não devem servir para dinheiro real ou ranking competitivo. A futura etapa online precisará de salas, sincronização e simulação autoritativa no servidor.
+**Modo online beta:** `online.html` conecta a salas privadas no backend cloud. A física e a chegada são calculadas no servidor, e somente resultados dele concedem recompensas na publicação. A versão SQLite local mantém as recompensas de treino acima; elas não devem servir para ranking competitivo. Veja [limites e configuração](DEPLOY.md).
 
 ## Modo Corrida
 

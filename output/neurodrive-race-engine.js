@@ -50,7 +50,7 @@
     let countdown = 180;
     let elapsed = 0;
     let finishCount = 0;
-    let previousShift = 0;
+    const previousShifts = new Map();
 
     function pointAt(distance, lane = 0) {
       const s = ((distance % track.length) + track.length) % track.length;
@@ -69,10 +69,11 @@
       const slot = grid.indexOf(id + 1);
       const distance = qualifying ? 0 : startDistance - slot * 30;
       const point = pointAt(distance, qualifying ? 0 : slot % 2 ? 11 : -11);
+      const human = options.online ? options.humans.includes(id + 1) : id === 0;
       return {
-        id: id + 1, name: id === 0 ? 'Você' : `IA ${id}`, player: id === 0,
+        id: id + 1, name: id === 0 ? 'Você' : `IA ${id}`, player: human,
         ...point, speed: 0, maxSpeed: MAX_RACE_SPEED, steering: 0, gear: 1, rpm: 900, shiftTicks: 0, alive: true, done: false,
-        throttle: 0, brake: 0, manual: id === 0 && options.transmission === 'manual', limiter: false, cutTicks: 0, launchTicks: 0,
+        throttle: 0, brake: 0, manual: human && options.transmission === 'manual', limiter: false, cutTicks: 0, launchTicks: 0,
         gripUsage: 0, sliding: false, offRoad: false, bodyRoll: 0,
         progress: distance - startDistance, checkpoint: 0,
         finishTime: null, place: null, cooldown: 0, stalled: 0, wallContact: false, wallCooldown: 0,
@@ -155,6 +156,7 @@
       if (qualifying) return [...cars].sort((a, b) =>
         (a.bestLap ?? Infinity) - (b.bestLap ?? Infinity) || a.id - b.id);
       return [...cars].sort((a, b) => {
+        if (Boolean(a.disconnected) !== Boolean(b.disconnected)) return a.disconnected ? 1 : -1;
         if (a.done && b.done) return a.place - b.place;
         if (a.done) return -1;
         if (b.done) return 1;
@@ -164,8 +166,10 @@
 
     function step(input = {}) {
       if (phase === 'finished') return;
-      const shift = input.shiftUp ? 1 : input.shiftDown ? -1 : 0;
-      const player = cars[0];
+      for (const player of cars.filter((car) => car.player)) {
+      const command = options.online ? input[player.id] || {} : input;
+      const shift = command.shiftUp ? 1 : command.shiftDown ? -1 : 0;
+      const previousShift = previousShifts.get(player.id) || 0;
       if (player.manual && phase === 'racing' && shift && shift !== previousShift && !player.shiftTicks && !player.cooldown) {
         const gear = clamp(player.gear + shift, 1, 6);
         // Bloqueia reduções que ultrapassariam o corte do motor.
@@ -175,10 +179,12 @@
           player.cutTicks = 0;
         }
       }
-      previousShift = shift;
+      previousShifts.set(player.id, shift);
+      }
       if (phase === 'countdown') {
         for (const car of cars) {
-          car.throttle = car.player ? Number(Boolean(input.accelerate) && !input.brake) : 0.65;
+          const command = options.online ? input[car.id] || {} : input;
+          car.throttle = car.player ? Number(Boolean(command.accelerate) && !command.brake) : 0.65;
           const target = car.throttle ? 900 + car.throttle * (REV_LIMIT - 900) : 900;
           car.rpm += clamp(target - car.rpm, -95, 125);
           car.limiter = car.rpm >= REV_LIMIT - 20;
@@ -196,8 +202,9 @@
         if (car.done) continue;
         if (car.wallCooldown > 0) car.wallCooldown--;
         if (car.cooldown > 0) { car.cooldown--; continue; }
+        const command = options.online ? input[car.id] || {} : input;
         const [steering, pedal] = car.player
-          ? [Number(Boolean(input.right)) - Number(Boolean(input.left)), input.brake ? -1 : input.accelerate ? 1 : 0]
+          ? [Number(Boolean(command.right)) - Number(Boolean(command.left)), command.brake ? -1 : command.accelerate ? 1 : 0]
           : aiDecision(car);
         if (car.player) car.activations = [car.inputs, [], [steering, pedal]];
         // Menos curso em alta velocidade, entrada gradual e retorno mais rápido.
@@ -311,12 +318,14 @@
           car.invalidLap = false;
         }
       }
-      if (qualifying ? cars.every((car) => car.done) || elapsed >= 300 : cars[0].done) phase = 'finished';
+      if (qualifying ? cars.every((car) => car.done) || elapsed >= 300
+        : options.online ? cars.filter((car) => car.player).every((car) => car.done) || elapsed >= 900 : cars[0].done) phase = 'finished';
     }
 
     return {
       cars, laps, pointAt, step, standings, qualifying,
-      setTransmission: (mode) => { cars[0].manual = mode === 'manual'; previousShift = 0; },
+      setTransmission: (mode) => { cars[0].manual = mode === 'manual'; previousShifts.clear(); },
+      recoverCar: (id) => { const car = cars.find((item) => item.id === id); if (car) recover(car); },
       gridOrder: () => standings().map((car) => car.id),
       endQualifying: () => { if (qualifying) phase = 'finished'; },
       recoverPlayer: () => recover(cars[0]),
