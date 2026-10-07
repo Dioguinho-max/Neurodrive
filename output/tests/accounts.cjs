@@ -29,7 +29,7 @@ async function api(route, data, cookie = '', extra = {}) {
     await start();
     assert.equal((await fetch(base)).status, 200);
     assert.equal((await fetch(base + '/server/data/neurodrive.sqlite')).status, 404);
-    assert.equal((await api('catalog')).data.skins.length, 4);
+    assert.equal((await api('catalog')).data.skins.length, 14);
     assert.equal((await api('me')).status, 401);
     assert.equal((await api('register', { username: 'piloto', password: 'curta' })).status, 400);
     const credentials = { username: 'piloto', password: 'SenhaTeste_12345' };

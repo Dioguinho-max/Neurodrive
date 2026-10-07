@@ -42,16 +42,21 @@
     // Materiais e geometrias compartilhados entre todos os carros.
     const material = (color, extra = {}) => new THREE.MeshPhysicalMaterial({ color, roughness: 0.65, ...extra });
     const textures = [];
-    const grain = new Uint8Array(64 * 64 * 4);
-    for (let i = 0; i < 64 * 64; i++) {
-      const shade = 105 + ((i * 73 ^ i * 19 >>> 3) % 38);
+    let textureSeed = 1947;
+    const random = () => { textureSeed = (Math.imul(textureSeed, 1664525) + 1013904223) >>> 0; return textureSeed / 4294967296; };
+    const grain = new Uint8Array(256 * 256 * 4);
+    for (let i = 0; i < 256 * 256; i++) {
+      const shade = 155 + random() * 30;
       grain.set([shade, shade, shade, 255], i * 4);
     }
-    const asphaltMap = new THREE.DataTexture(grain, 64, 64);
+    const asphaltMap = new THREE.DataTexture(grain, 256, 256);
     asphaltMap.wrapS = asphaltMap.wrapT = THREE.RepeatWrapping;
+    asphaltMap.magFilter = THREE.LinearFilter;
+    asphaltMap.minFilter = THREE.LinearMipmapLinearFilter;
+    asphaltMap.generateMipmaps = true;
     asphaltMap.needsUpdate = true;
     textures.push(asphaltMap);
-    const asphalt = material('#72777d', { map: asphaltMap, roughness: 0.98 });
+    const asphalt = material('#555c65', { map: asphaltMap, roughness: 0.96 });
     let environmentMap = null;
     function getEnvironment() {
       if (environmentMap) return environmentMap;
@@ -72,11 +77,21 @@
       textures.push(environmentMap);
       return environmentMap;
     }
-    const grass = material('#62824c');
+    const grassPixels = new Uint8Array(128 * 128 * 4);
+    for (let y = 0; y < 128; y++) for (let x = 0; x < 128; x++) {
+      const patch = Math.sin(x * Math.PI / 32) * Math.cos(y * Math.PI / 32) * 14 + random() * 23;
+      grassPixels.set([100 + patch, 126 + patch, 64 + patch * 0.6, 255], (y * 128 + x) * 4);
+    }
+    const grassMap = new THREE.DataTexture(grassPixels, 128, 128);
+    grassMap.wrapS = grassMap.wrapT = THREE.RepeatWrapping;
+    grassMap.repeat.set(100, 90);
+    grassMap.magFilter = THREE.LinearFilter; grassMap.minFilter = THREE.LinearMipmapLinearFilter;
+    grassMap.generateMipmaps = true; grassMap.needsUpdate = true; textures.push(grassMap);
+    const grass = material('#b5c29a', { map: grassMap, roughness: 1 });
     const white = material('#eef3f5');
     const red = material('#d26758');
     const rubber = material('#19212c');
-    const glass = material('#315167', { metalness: 0.35, roughness: 0.2 });
+    const glass = material('#172d3d', { metalness: 0.55, roughness: 0.12, clearcoat: 1 });
     const bodyMaterials = [material('#53a8da'), material('#f0b65e'), material('#b09bde')];
     const leaderMaterial = material('#48e6a4', { emissive: '#123d2c', emissiveIntensity: 0.25 });
     const crashedMaterial = material('#657078');
@@ -161,17 +176,70 @@
       }
     }
 
+    if (options.racePresentation && track.pit) {
+      function pitSurface(from, to, left, right, surface) {
+        const vertices = [], uv = [];
+        for (let d = from; d < to; d += 3) {
+          const end = Math.min(to, d + 3);
+          // O asfalto principal já ocupa toda a largura da pista: o pit só preenche o lado externo.
+          const edgeLeft = (s) => Math.max(track.halfWidth, left(s));
+          const edgeRight = (s) => Math.max(edgeLeft(s), right(s));
+          if (edgeRight(d) === edgeLeft(d) && edgeRight(end) === edgeLeft(end)) continue;
+          const bands = Math.max(1, Math.ceil(Math.max(edgeRight(d) - edgeLeft(d), edgeRight(end) - edgeLeft(end)) / 8));
+          for (let band = 0; band < bands; band++) {
+          const lo = (s) => edgeLeft(s) + (edgeRight(s) - edgeLeft(s)) * band / bands;
+          const hi = (s) => edgeLeft(s) + (edgeRight(s) - edgeLeft(s)) * (band + 1) / bands;
+          for (const [along, lane] of [[d, lo(d)], [end, lo(end)], [d, hi(d)],
+            [d, hi(d)], [end, lo(end)], [end, hi(end)]]) {
+            const p = circuitPoint(along, lane);
+            vertices.push(p.x, track.heightAt(p.x, p.y) + 0.19, p.y);
+            uv.push(p.x / 12, p.y / 12);
+          }
+          }
+        }
+        const geometry = new THREE.BufferGeometry();
+        geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+        geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+        geometry.computeVertexNormals();
+        const mesh = addMesh(geometry, surface, scene); mesh.receiveShadow = true;
+      }
+      const pitBegin = track.pit.garage(0).distance - 20;
+      const apronEnd = track.pit.garage(5).distance + 20;
+      // Uma superfície contínua, com a mesma textura e escala do asfalto principal.
+      pitSurface(pitBegin, track.pit.exit, (d) => Math.min(track.halfWidth - 0.8, track.pit.lane(d) - 10), (d) => {
+        const blend = Math.max(0, Math.min(1, (d - apronEnd) / 50));
+        return (track.halfWidth + 86) * (1 - blend) + (track.pit.lane(d) + 10) * blend;
+      }, asphalt);
+      const pitLine = material('#f4cf67', { side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -1 });
+      pitSurface(pitBegin, track.pit.exit, (d) => track.pit.lane(d) - 9, (d) => track.pit.lane(d) - 8.4, pitLine);
+      pitSurface(pitBegin, track.pit.exit, (d) => track.pit.lane(d) + 8.4, (d) => track.pit.lane(d) + 9, pitLine);
+      const paint = material('#e2e8e9', { side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -2 });
+      for (let bay = 0; bay < 6; bay++) {
+        const garage = track.pit.garage(bay);
+        for (const side of [-1, 1]) pitSurface(garage.distance + side * 9, garage.distance + side * 9 + 0.6,
+          () => garage.lane - 16, () => garage.lane + 10, paint);
+        pitSurface(garage.distance - 9, garage.distance + 9, () => garage.lane - 16, () => garage.lane - 15.4, pitLine);
+      }
+      for (let d = pitBegin; d < track.pit.mergeStart - 20; d += 22) {
+        pitSurface(d, d + 8, () => track.halfWidth + 3, () => track.halfWidth + 3.7, paint);
+        pitSurface(d, d + 12, (s) => track.halfWidth + 10 + (s - d) * 1.4,
+          (s) => track.halfWidth + 11 + (s - d) * 1.4, paint);
+      }
+    }
+
     // Vegetação instanciada: centenas de árvores com apenas duas chamadas de desenho.
     const treeSites = [];
     for (let i = 0; i < track.points.length; i += 4) {
       for (const side of [-1, 1]) {
         const point = track.offset(i, side * (track.halfWidth + 90 + (i * 17 % 100)));
-        if (options.racePresentation && Math.hypot(point.x - track.start.x, point.y - track.start.y) < 240) continue;
+        if (options.racePresentation && Math.hypot(point.x - track.start.x, point.y - track.start.y) < 500) continue;
         if (track.nearest(point.x, point.y).distance > track.halfWidth + 65) treeSites.push(point);
       }
     }
     const trunks = new THREE.InstancedMesh(new THREE.CylinderGeometry(1.4, 2, 12, 5), material('#6d5945'), treeSites.length);
-    const crowns = new THREE.InstancedMesh(new THREE.ConeGeometry(11, 30, 7), material('#345d3c'), treeSites.length);
+    const foliageGeometry = new THREE.SphereGeometry(11, 12, 8);
+    foliageGeometry.scale(1, 1.35, 0.9);
+    const crowns = new THREE.InstancedMesh(foliageGeometry, material('#3f6536', { roughness: 1 }), treeSites.length);
     const treeTransform = new THREE.Object3D();
     treeSites.forEach((point, i) => {
       const scale = 0.8 + (i * 13 % 9) / 15;
@@ -199,6 +267,8 @@
       texture.colorSpace = THREE.SRGBColorSpace; textures.push(texture);
       const face = new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide });
       for (let i = index * 15 + 8; i < track.points.length; i += 60) {
+        if (options.racePresentation && track.segments[i].start >= track.pit.garage(0).distance - 50
+          && track.segments[i].start <= track.pit.exit + 30) continue;
         const point = track.offset(i, track.halfWidth + 48);
         if (track.nearest(point.x, point.y).distance < track.halfWidth + 25) continue;
         const panel = addMesh(new THREE.PlaneGeometry(48, 12), face, scene,
@@ -214,6 +284,7 @@
 
     // Instalações próximas à largada, fora da faixa de corrida e das barreiras.
     const grandstandDetails = new THREE.Object3D();
+    const pitRoofs = [];
     scene.add(grandstandDetails);
     if (options.racePresentation) {
       const block = new THREE.BoxGeometry(1, 1, 1);
@@ -237,16 +308,30 @@
         }));
       }
 
-      // Boxes modulares com portas, cobertura e torre de controle.
+      // Garagens abertas: paredes laterais, fundo, bancada e porta recolhida.
       for (let bay = 0; bay < 6; bay++) {
-        const distance = -130 + bay * 26;
+        const distance = track.pit.garage(bay).distance;
         const lane = track.halfWidth + 72;
-        if (!clearSite(distance, lane, 24, 30)) continue;
-        buildingPart(distance, lane, 9, [24, 18, 26], concrete);
-        buildingPart(distance, lane - 13.2, 6, [19, 11, 0.5], navy);
+        buildingPart(distance, lane + 13, 9, [24, 18, 1], concrete);
+        for (const side of [-1, 1]) buildingPart(distance + side * 11.5, lane, 9, [1, 18, 26], concrete);
         buildingPart(distance, lane - 14, 14, [24, 2, 2], seatPaint[bay % 3]);
-        buildingPart(distance, lane, 19, [26, 2, 30], steel);
-        for (let row = 0; row < 3; row++) buildingPart(distance, lane - 13.5, 3 + row * 3, [18, 0.25, 0.5], concrete, grandstandDetails);
+        const roofMaterial = steel.clone(); roofMaterial.transparent = true;
+        pitRoofs.push(buildingPart(distance, lane, 19, [26, 2, 30], roofMaterial));
+        buildingPart(distance, lane + 10, 3, [15, 6, 3], navy, grandstandDetails);
+        buildingPart(distance - 8, lane + 6, 3, [3, 6, 4], red, grandstandDetails);
+        for (let row = 0; row < 3; row++) buildingPart(distance, lane - 13.5, 15.5 + row * 0.7, [20, 0.3, 0.6], concrete);
+        const sign = document.createElement('canvas'); sign.width = 256; sign.height = 64;
+        const context = sign.getContext?.('2d');
+        if (context) {
+          context.fillStyle = '#142537'; context.fillRect(0, 0, 256, 64);
+          context.fillStyle = '#ffffff'; context.font = 'bold 28px sans-serif'; context.textAlign = 'center';
+          context.fillText(`BOX ${String(bay + 1).padStart(2, '0')}`, 128, 42);
+          const texture = new THREE.CanvasTexture(sign); texture.colorSpace = THREE.SRGBColorSpace; textures.push(texture);
+          const point = circuitPoint(distance, lane - 15.1);
+          const plate = addMesh(new THREE.PlaneGeometry(18, 4), new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide }), scene,
+            [point.x, track.heightAt(point.x, point.y) + 14, point.y]);
+          plate.rotation.y = -point.angle;
+        }
       }
       const towerLane = track.halfWidth + 76;
       if (clearSite(48, towerLane, 26, 30)) {
@@ -322,11 +407,15 @@
     const boardGeometry = new THREE.BoxGeometry(2, 16, 14);
     for (let i = 0; i < track.points.length; i += 3) {
       for (const side of [-1, 1]) {
+        if (options.racePresentation && side === 1 && track.segments[i].start >= track.pit.mergeStart - 20
+          && track.segments[i].start <= track.pit.exit + 20) continue;
         const point = track.offset(i, side * (track.halfWidth + 40));
         const barrier = addMesh(barrierGeometry, white, scene, [point.x, track.heightAt(point.x, point.y) + 2.5, point.y]);
         barrier.rotation.y = -point.angle;
       }
       if (i % 30 === 0) {
+        if (options.racePresentation && track.segments[i].start >= track.pit.garage(0).distance - 30
+          && track.segments[i].start <= track.pit.exit + 30) continue;
         const point = track.offset(i, track.halfWidth + 26);
         const board = addMesh(boardGeometry, red, scene, [point.x, track.heightAt(point.x, point.y) + 8, point.y]);
         board.rotation.y = -point.angle;
@@ -334,7 +423,23 @@
     }
 
     // Modelos low-poly: comprimento e largura seguem o desenho original (16 × 9).
-    const bodyGeometry = new THREE.BoxGeometry(16, 3.2, 8);
+    function roundedBox(width, height, depth, radius) {
+      const geometry = new THREE.BoxGeometry(width, height, depth, 6, 4, 4);
+      const position = geometry.attributes.position, normals = geometry.attributes.normal;
+      const point = new THREE.Vector3(), center = new THREE.Vector3(), normal = new THREE.Vector3();
+      for (let i = 0; i < position.count; i++) {
+        point.fromBufferAttribute(position, i);
+        center.set(Math.max(-width / 2 + radius, Math.min(width / 2 - radius, point.x)),
+          Math.max(-height / 2 + radius, Math.min(height / 2 - radius, point.y)),
+          Math.max(-depth / 2 + radius, Math.min(depth / 2 - radius, point.z)));
+        normal.copy(point).sub(center).normalize();
+        point.copy(center).addScaledVector(normal, radius);
+        position.setXYZ(i, point.x, point.y, point.z);
+        normals.setXYZ(i, normal.x, normal.y, normal.z);
+      }
+      return geometry;
+    }
+    const bodyGeometry = roundedBox(16, 3.2, 8, 0.65);
     const cabinGeometry = new THREE.BoxGeometry(7.5, 2.7, 6.5);
     const cabinVertices = cabinGeometry.attributes.position;
     for (let i = 0; i < cabinVertices.count; i++) {
@@ -344,15 +449,30 @@
       }
     }
     cabinGeometry.computeVertexNormals();
-    const roofGeometry = new THREE.BoxGeometry(5.5, 0.5, 5.8);
-    const wheelGeometry = new THREE.CylinderGeometry(2, 2, 1.4, 10);
+    const roofGeometry = roundedBox(5.5, 0.5, 5.8, 0.2);
+    const wheelGeometry = new THREE.CylinderGeometry(2, 2, 1.4, 16);
     wheelGeometry.rotateX(Math.PI / 2);
     const ultraWheelGeometry = new THREE.CylinderGeometry(2, 2, 1.4, 32);
     ultraWheelGeometry.rotateX(Math.PI / 2);
+    const treadPixels = new Uint8Array(128 * 64 * 4);
+    for (let y = 0; y < 64; y++) for (let x = 0; x < 128; x++) {
+      const groove = y % 16 < 2 || (x + Math.floor(y / 4)) % 16 < 2;
+      const shade = groove ? 65 : 155 + random() * 15;
+      treadPixels.set([shade, shade, shade, 255], (y * 128 + x) * 4);
+    }
+    const treadMap = new THREE.DataTexture(treadPixels, 128, 64);
+    treadMap.wrapS = treadMap.wrapT = THREE.RepeatWrapping;
+    treadMap.magFilter = THREE.LinearFilter; treadMap.minFilter = THREE.LinearMipmapLinearFilter;
+    treadMap.generateMipmaps = true; treadMap.needsUpdate = true; textures.push(treadMap);
+    const tireRubber = material('#292c30', { map: treadMap, bumpMap: treadMap, bumpScale: 0.035, roughness: 0.98 });
     const hubGeometry = new THREE.CylinderGeometry(1.25, 1.25, 1.48, 10);
     hubGeometry.rotateX(Math.PI / 2);
     const spokeGeometry = new THREE.BoxGeometry(2.6, 0.28, 1.52);
     const alloy = material('#c5ced8', { metalness: 0.8, roughness: 0.3 });
+    const headlights = material('#e8f6ff', { emissive: '#b9ddff', emissiveIntensity: 0.6, roughness: 0.18 });
+    const grilleGeometry = new THREE.BoxGeometry(0.2, 0.9, 4.6);
+    const exhaustGeometry = new THREE.CylinderGeometry(0.35, 0.35, 1, 12);
+    exhaustGeometry.rotateZ(Math.PI / 2);
     const bumperGeometry = new THREE.BoxGeometry(0.5, 0.8, 7.6);
     const lampGeometry = new THREE.BoxGeometry(0.4, 1, 2);
     const spoilerGeometry = new THREE.BoxGeometry(1.5, 0.7, 10);
@@ -393,7 +513,7 @@
     function createCarModel(index) {
       const group = new THREE.Group();
       const playerPaint = material('#48e6a4', { metalness: 0.35, roughness: 0.4,
-        clearcoat: options.quality === 'ultra' ? 1 : 0, clearcoatRoughness: 0.15,
+        clearcoat: options.quality === 'ultra' ? 1 : 0.6, clearcoatRoughness: 0.15,
         envMapIntensity: options.quality === 'ultra' ? 1.4 : 1 });
       const playerStripe = material('#163d33');
       const body = addMesh(bodyGeometry, bodyMaterials[index % 3], group, [0, 3, 0]);
@@ -406,6 +526,29 @@
       addMesh(spoilerGeometry, rubber, group, [-7, 5, 0]);
       addMesh(bumperGeometry, rubber, group, [8.2, 1.7, 0]);
       addMesh(bumperGeometry, rubber, group, [-8.2, 1.7, 0]);
+      addMesh(grilleGeometry, rubber, group, [8.03, 2.8, 0]);
+      for (const side of [-1, 1]) {
+        addMesh(exhaustGeometry, alloy, group, [-8.3, 1.9, side * 2.5]);
+        addMesh(new THREE.BoxGeometry(9.5, 0.3, 0.15), rubber, group, [-0.6, 1.9, side * 4]);
+      }
+      const decalCanvas = document.createElement('canvas');
+      decalCanvas.width = 512; decalCanvas.height = 128;
+      const decalContext = decalCanvas.getContext?.('2d');
+      if (decalContext) {
+        decalContext.fillStyle = '#101923'; decalContext.fillRect(0, 0, 512, 128);
+        decalContext.fillStyle = '#f7f7f1'; decalContext.fillRect(5, 5, 120, 118);
+        decalContext.fillStyle = '#162537'; decalContext.font = 'bold 82px sans-serif';
+        decalContext.textAlign = 'center'; decalContext.fillText(String(index + 1).padStart(2, '0'), 65, 93);
+        decalContext.fillStyle = '#ffffff'; decalContext.font = 'bold 38px sans-serif';
+        decalContext.fillText('NEURODRIVE', 318, 58);
+        decalContext.font = '22px sans-serif'; decalContext.fillText('MOTORSPORT', 318, 94);
+        const map = new THREE.CanvasTexture(decalCanvas); map.colorSpace = THREE.SRGBColorSpace; textures.push(map);
+        const surface = new THREE.MeshStandardMaterial({ map, roughness: 0.35 });
+        for (const side of [-1, 1]) {
+          const panel = addMesh(new THREE.PlaneGeometry(6.4, 1.3), surface, group, [-1, 3, side * 4.015]);
+          if (side < 0) panel.rotation.y = Math.PI;
+        }
+      }
       const mirrorGeometry = new THREE.BoxGeometry(1.4, 0.65, 1.4);
       for (const side of [-1, 1]) addMesh(mirrorGeometry, body.material, group, [2, 4.7, side * 4.4]);
       const frontWheels = [], wheels = [];
@@ -413,7 +556,7 @@
         for (const z of [-4, 4]) {
           const pivot = new THREE.Group();
           pivot.position.set(x, 2, z); group.add(pivot);
-          const wheel = addMesh(options.quality === 'ultra' ? ultraWheelGeometry : wheelGeometry, rubber, pivot);
+          const wheel = addMesh(options.quality === 'ultra' ? ultraWheelGeometry : wheelGeometry, tireRubber, pivot);
           addMesh(hubGeometry, rubber, wheel);
           addMesh(spokeGeometry, alloy, wheel);
           const cross = addMesh(spokeGeometry, alloy, wheel);
@@ -424,11 +567,43 @@
       }
       const brakes = [];
       for (const z of [-2.5, 2.5]) {
-        addMesh(lampGeometry, white, group, [8.1, 3.4, z]);
+        addMesh(lampGeometry, headlights, group, [8.1, 3.4, z]);
         brakes.push(addMesh(lampGeometry, red, group, [-8.1, 3.4, z]));
       }
       scene.add(group);
       return { group, body, roof, frontWheels, wheels, brakes, stripes, playerPaint, playerStripe, lastX: null, lastY: null, spin: 0 };
+    }
+
+    function updateNameplate(model, car, isSelf) {
+      const visible = options.showNames && car.player && !car.disconnected;
+      if (!visible) { if (model.nameplate) model.nameplate.visible = false; return; }
+      if (!model.nameplate) {
+        const canvas = document.createElement('canvas');
+        canvas.width = 512; canvas.height = 96;
+        const context = canvas.getContext?.('2d');
+        if (!context) return;
+        const texture = new THREE.CanvasTexture(canvas);
+        texture.colorSpace = THREE.SRGBColorSpace;
+        textures.push(texture);
+        const label = new THREE.Sprite(new THREE.SpriteMaterial({ map: texture, depthWrite: false, toneMapped: false }));
+        label.position.set(0, 13, 0);
+        label.scale.set(31, 5.8, 1);
+        model.group.add(label);
+        model.nameplate = label;
+        model.nameContext = context;
+      }
+      model.nameplate.visible = true;
+      const name = Array.from(String(car.name || 'Piloto')).slice(0, 24).join('');
+      const key = `${isSelf}:${name}`;
+      if (model.nameKey === key) return;
+      model.nameKey = key;
+      const ctx = model.nameContext;
+      ctx.clearRect(0, 0, 512, 96);
+      ctx.fillStyle = '#101923e8'; ctx.fillRect(0, 0, 512, 96);
+      ctx.fillStyle = isSelf ? '#f5c758' : '#83cfff'; ctx.fillRect(0, 86, 512, 10);
+      ctx.font = 'bold 34px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      ctx.fillStyle = '#ffffff'; ctx.fillText(name, 256, 44, 480);
+      model.nameplate.material.map.needsUpdate = true;
     }
 
     // Um único conjunto de linhas reutilizado para os cinco sensores do líder.
@@ -464,6 +639,12 @@
 
       const mode = element('camera').value;
       const car = snapshot?.target;
+      pitRoofs.forEach((roof, index) => {
+        const cutaway = car?.pitExit && car.id === index + 1;
+        roof.visible = !cutaway;
+        roof.material.opacity = 1;
+        roof.material.depthWrite = !cutaway;
+      });
       if (options.quality === 'ultra') {
         const focus = car && mode !== 'overview';
         const x = focus ? car.x : 0, z = focus ? car.y : 0;
@@ -481,14 +662,22 @@
         camera.fov = fieldOfView;
         camera.updateProjectionMatrix();
       }
-      if (mode === 'chase' && car) {
+      if (mode === 'chase' && car?.pitExit) {
+        // Enquadra o carro pela frente aberta da garagem, não por trás da parede.
+        const nearest = track.nearest(car.x, car.y);
+        const tangent = Math.atan2(nearest.ty, nearest.tx);
+        const x = car.x + Math.cos(tangent) * 12 + Math.sin(tangent) * 40;
+        const z = car.y + Math.sin(tangent) * 12 - Math.cos(tangent) * 40;
+        camera.position.set(x, Math.max(track.heightAt(x, z) + 8, track.heightAt(car.x, car.y) + 17), z);
+        camera.lookAt(car.x, track.heightAt(car.x, car.y) + 3, car.y);
+      } else if (mode === 'chase' && car) {
         // Terceira pessoa: camera atras do carro, olhando adiante na pista.
         const behind = (raceCamera ? 30 + speedRatio * 4 : 42) * zoom;
         const angle = car.angle + chaseOrbit;
         camera.position.set(
           car.x - Math.cos(angle) * behind,
           Math.max(
-            track.heightAt(car.x, car.y) + (raceCamera ? 11 - speedRatio * 2.5 : 20) * zoom,
+            track.heightAt(car.x, car.y) + (car.pitExit ? 30 : raceCamera ? 11 - speedRatio * 2.5 : 20) * zoom,
             track.heightAt(car.x - Math.cos(angle) * behind, car.y - Math.sin(angle) * behind) + 8,
           ),
           car.y - Math.sin(angle) * behind,
@@ -558,7 +747,7 @@
       options.quality = quality;
       const light = quality === 'performance';
       const ultra = quality === 'ultra';
-      scene.environment = ultra ? getEnvironment() : null;
+      scene.environment = light ? null : getEnvironment();
       asphalt.bumpMap = ultra ? asphaltMap : null;
       asphalt.bumpScale = ultra ? 0.12 : 0;
       asphaltMap.anisotropy = ultra ? Math.min(8, renderer.capabilities?.getMaxAnisotropy?.() || 1) : 1;
@@ -575,7 +764,7 @@
         sun.shadow.camera.updateProjectionMatrix();
       }
       for (const surface of [...bodyMaterials, leaderMaterial, ...models.map((model) => model.playerPaint)]) {
-        surface.clearcoat = ultra ? 1 : 0;
+        surface.clearcoat = ultra ? 1 : 0.6;
         surface.clearcoatRoughness = 0.15;
         surface.envMapIntensity = ultra ? 1.4 : 1;
       }
@@ -615,8 +804,9 @@
         population.forEach((car, index) => {
           const model = models[index] || (models[index] = createCarModel(index));
           const original = car;
+          updateNameplate(model, car, car === target);
           // Animação somente visual: tempos, voltas, colisões e recompensas já estão fechados.
-          if (options.racePresentation && (finished || car.done)) {
+          if (options.racePresentation && !car.pitExit && (finished || car.done)) {
             if (!model.coast) {
               const nearest = track.nearest(car.x, car.y);
               if (Number.isFinite(nearest.distance)) {
@@ -679,10 +869,15 @@
             pivot.position.y = 2 + (height - contact.y) / up.y;
             wheel.rotation.z = model.spin;
           });
-          const customized = car.player && car.skin;
+          const customized = car.skin;
           if (customized) {
             model.playerPaint.color.set(car.skin.color);
             model.playerStripe.color.set(car.skin.accent);
+            const matte = car.skin.finish === 'matte';
+            const metallic = car.skin.finish === 'metallic';
+            model.playerPaint.roughness = matte ? 0.82 : metallic ? 0.27 : 0.4;
+            model.playerPaint.metalness = matte ? 0.08 : metallic ? 0.75 : 0.35;
+            model.playerPaint.clearcoat = matte ? 0.08 : options.quality === 'ultra' ? 1 : 0.6;
           }
           model.stripes.forEach((stripe) => { stripe.visible = Boolean(customized); });
           const surface = customized ? model.playerPaint : original === leader ? leaderMaterial

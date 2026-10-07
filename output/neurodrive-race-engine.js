@@ -9,6 +9,14 @@
   const gearLimits = [34, 66, 102, 140, 173, 205];
   const gearForce = [0.010, 0.009, 0.008, 0.006, 0.0045, 0.0041];
   const REV_LIMIT = 6800;
+  const drivers = [
+    { name: 'Luna Costa', style: 'Técnica', pace: 0.98, corner: 1.02, gap: 1, color: '#e45d89' },
+    { name: 'Rafa Torres', style: 'Ousado', pace: 1.02, corner: 1.06, gap: 0.94, color: '#f0a43c' },
+    { name: 'Bia Rocha', style: 'Constante', pace: 0.97, corner: 0.98, gap: 1.08, color: '#976de0' },
+    { name: 'Caio Lima', style: 'Velocista', pace: 1.04, corner: 0.96, gap: 1, color: '#48aadd' },
+    { name: 'Nico Alves', style: 'Cauteloso', pace: 0.94, corner: 0.94, gap: 1.15, color: '#d95948' },
+    { name: 'Dani Reis', style: 'Equilibrado', pace: 1, corner: 1, gap: 1.04, color: '#5aba89' },
+  ];
   function updatePowertrain(car, pedal, maximumSpeed) {
     const kmh = car.speed * 54;
     const coupledRpm = 900 + kmh / gearLimits[car.gear - 1] * 5900;
@@ -37,13 +45,14 @@
   }
 
   function advanceCar(track, car, steering, pedal, maximumSpeed) {
+    car.impact = (car.impact || 0) * 0.86;
     if (car.player) car.activations = [car.inputs, [], [steering, pedal]];
     // Menos curso em alta velocidade, entrada gradual e retorno mais rápido.
     const requestedSteering = car.player ? steering * (0.78 - 0.34 * car.speed / MAX_RACE_SPEED) : steering;
     const steeringRate = car.player ? (steering === 0 ? 0.055 : 0.025) : 0.06;
     car.steering += clamp(requestedSteering - car.steering, -steeringRate, steeringRate);
     updatePowertrain(car, pedal, maximumSpeed);
-    car.offRoad = !track.contains(car.x, car.y, 5);
+    car.offRoad = !track.contains(car.x, car.y);
     // Em alta, pequenos comandos fazem ajustes suaves; o giro cresce
     // progressivamente ao segurar o volante para uma curva mais fechada.
     const highSpeedBlend = clamp((car.speed * 54 - 60) / 100, 0, 1);
@@ -53,40 +62,54 @@
     // 1 unidade/quadro = 15 m/s. Pneus têm aderência finita, não giro ilimitado.
     const lateralDemand = Math.abs(requestedYaw) * car.speed * 900;
     // Margem arcade no asfalto: curvas suaves e médias são mais tolerantes.
-    const grip = (car.offRoad ? 0.48 : 2.1) * 9.81;
+    const grip = (car.offRoad ? 1.55 : 2.6) * 9.81;
     const brakeLoad = Math.min(0.6, car.brake * 0.6);
     const lateralGrip = grip * Math.sqrt(1 - brakeLoad * brakeLoad);
     car.gripUsage = lateralDemand / lateralGrip;
-    car.sliding = car.gripUsage > 1.05 && car.speed > 0.4;
+    car.sliding = car.gripUsage > 1.15 && car.speed > 0.4;
     const maximumYaw = lateralGrip / Math.max(1, car.speed * 900);
     const yaw = clamp(requestedYaw, -maximumYaw, maximumYaw);
     car.angle = wrap(car.angle + yaw);
     car.bodyRoll += (clamp(yaw * car.speed * 900 / 9.81, -1.2, 1.2) * 0.075 - car.bodyRoll) * 0.1;
     // Arrasto dos pneus e do gramado; não há correção automática para o traçado.
-    if (car.sliding) car.speed = Math.max(0, car.speed - Math.min(0.018, (car.gripUsage - 1) * 0.0025));
-    if (car.offRoad) car.speed = Math.max(0, car.speed - 0.007 - car.speed * 0.003);
+    // Na grama usa só a resistência do terreno, sem somar outra frenagem por derrapagem.
+    if (car.sliding && !car.offRoad) car.speed = Math.max(0, car.speed - Math.min(0.008, (car.gripUsage - 1.15) * 0.001));
+    if (car.offRoad) car.speed = Math.max(0, car.speed - 0.0009 - car.speed * 0.00034);
     const x = car.x + Math.cos(car.angle) * car.speed;
     const y = car.y + Math.sin(car.angle) * car.speed;
-    if (track.contains(x, y, -30)) {
+    const edge = track.nearest(x, y);
+    const lateral = (x - edge.x) * -edge.ty + (y - edge.y) * edge.tx;
+    const normalHeading = Math.cos(car.angle) * -edge.ty + Math.sin(car.angle) * edge.tx;
+    const tangentHeading = Math.cos(car.angle) * edge.tx + Math.sin(car.angle) * edge.ty;
+    // Barreira visual a 40 unidades da pista, com 1 de espessura para dentro.
+    // Considera o comprimento e a largura do carro, inclusive numa batida de frente.
+    const clearance = 8.2 * Math.abs(normalHeading) + 4.7 * Math.abs(tangentHeading);
+    const wallLimit = track.halfWidth + 39 - clearance - 0.3;
+    if (Number.isFinite(edge.distance) && Math.abs(lateral) <= wallLimit) {
       car.x = x;
       car.y = y;
       car.wallContact = false;
     } else {
       // Desliza pela tangente da borda em vez de rejeitar todo o movimento.
-      const edge = track.nearest(x, y);
       if (Number.isFinite(edge.distance)) {
-        const lateral = (x - edge.x) * -edge.ty + (y - edge.y) * edge.tx;
-        const offset = clamp(lateral, -track.halfWidth - 29, track.halfWidth + 29);
+        const offset = clamp(lateral, -wallLimit, wallLimit);
         car.x = edge.x - edge.ty * offset;
         car.y = edge.y + edge.tx * offset;
         let tangent = Math.atan2(edge.ty, edge.tx);
         if (Math.cos(car.angle - tangent) < 0) tangent = wrap(tangent + Math.PI);
-        car.angle = wrap(car.angle + wrap(tangent - car.angle) * 0.45);
-        car.steering *= 0.7;
+        // Giro limitado por passo evita o tranco de alinhar 45% de uma vez.
+        const correction = wrap(tangent - car.angle);
+        car.angle = wrap(car.angle + clamp(correction * 0.12, -0.055, 0.055));
+        car.steering *= 0.85;
       }
       // Um toque tira um pouco de velocidade; contato contínuo não a zera.
-      if (car.wallCooldown > 0) car.speed = Math.max(0, car.speed - 0.002);
-      else { car.speed *= 0.85; car.wallCooldown = 45; }
+      if (car.wallContact || car.wallCooldown > 0) car.speed = Math.max(0, car.speed - 0.003);
+      else {
+        const impact = Number.isFinite(normalHeading) ? Math.abs(normalHeading) : 1;
+        car.impact = Math.min(1, car.speed * impact / 3);
+        car.speed *= 0.94 - 0.54 * impact * impact;
+        car.wallCooldown = 45;
+      }
       car.wallContact = true;
     }
   }
@@ -110,6 +133,8 @@
 
   window.createNeuroRace = function createNeuroRace(track, difficulty = 'normal', options = {}) {
     const qualifying = options.session === 'qualifying';
+    const pitStart = qualifying && options.pitStart === true;
+    const pitRoutes = pitStart ? Array.from({ length: 6 }, (_, index) => track.pit.route(index)) : [];
     const requestedGrid = options.grid || [];
     const grid = [...new Set(requestedGrid.filter((id) => Number.isInteger(id) && id >= 1 && id <= 6))];
     for (let id = 1; id <= 6; id++) if (!grid.includes(id)) grid.push(id);
@@ -140,11 +165,17 @@
       // Grid escalonado: nenhum adversário larga lado a lado com o jogador.
       const slot = grid.indexOf(id + 1);
       const distance = qualifying ? 0 : startDistance - slot * 30;
-      const point = pointAt(distance, qualifying ? 0 : slot % 2 ? 11 : -11);
+      const garage = pitStart ? track.pit.garage(id) : null;
+      const point = garage ? pointAt(garage.distance, garage.lane) : pointAt(distance, qualifying ? 0 : slot % 2 ? 11 : -11);
+      if (garage) point.angle = wrap(point.angle - Math.PI / 2);
       const human = options.online ? options.humans.includes(id + 1) : id === 0;
+      const driver = drivers[(id + drivers.length - 1) % drivers.length];
       return {
-        id: id + 1, name: id === 0 ? 'Você' : `IA ${id}`, player: human,
+        id: id + 1, name: human ? 'Você' : driver.name, player: human,
+        driver: human ? null : driver,
+        skin: human ? null : { color: driver.color, accent: '#172333' },
         ...point, speed: 0, maxSpeed: MAX_RACE_SPEED, steering: 0, gear: 1, rpm: 900, shiftTicks: 0, alive: true, done: false,
+        pitExit: pitStart, pitWait: id * 120, pitNode: 1,
         throttle: 0, brake: 0, manual: human && options.transmission === 'manual', limiter: false, cutTicks: 0, launchTicks: 0,
         gripUsage: 0, sliding: false, offRoad: false, bodyRoll: 0,
         progress: distance - startDistance, checkpoint: 0,
@@ -174,16 +205,54 @@
       let steering = Math.tanh(-1.5 * hidden[0] - 3 * hidden[1] + 3 * hidden[3] + 1.5 * hidden[4]);
       let pedal = Math.tanh(2.5 * hidden[2] - 2 * hidden[5] + 0.2);
       // Antecipação da curva: assistência de trajetória combinada à rede neural.
-      const aheadPoint = pointAt(car.progress + 38 + car.speed * 12);
+      car.tacticTicks = Math.max(0, (car.tacticTicks || 0) - 1);
+      let lane = car.targetLane || 0;
+      const nearby = qualifying ? [] : cars.filter((other) => other !== car && !other.done && !other.cooldown && !other.pitExit)
+        .map((other) => {
+          const dx = other.x - car.x, dy = other.y - car.y;
+          return { other, ahead: dx * Math.cos(car.angle) + dy * Math.sin(car.angle),
+            side: -dx * Math.sin(car.angle) + dy * Math.cos(car.angle) };
+        });
+      const nearest = track.nearest(car.x, car.y);
+      const currentLane = (car.x - nearest.x) * -nearest.ty + (car.y - nearest.y) * nearest.tx;
+      const clearLane = (candidate) => nearby.every(({ ahead, side }) =>
+        ahead < -35 || ahead > 95 || Math.abs(currentLane + side - candidate) > 21);
+      const previewBend = Math.abs(wrap(pointAt(car.progress + 145).angle - pointAt(car.progress + 40).angle));
+      if (!car.tacticTicks) {
+        lane = 0;
+        const slower = nearby.filter(({ other, ahead, side }) => ahead > 20 && ahead < 100 && Math.abs(side) < 20 && car.speed > other.speed + 0.08)
+          .sort((a, b) => a.ahead - b.ahead)[0];
+        const laneWidth = Math.min(26, track.halfWidth - 18);
+        if (previewBend < 0.32 && slower) {
+          const choices = [-laneWidth, laneWidth].sort((a, b) => Math.abs(a - currentLane) - Math.abs(b - currentLane));
+          lane = choices.find(clearLane) ?? 0;
+          if (lane) car.tacticTicks = 150;
+        } else if (previewBend < 0.2 && nearby.some(({ other, ahead, side }) => ahead < -30 && ahead > -85 && Math.abs(side) < 18 && other.speed > car.speed + 0.12)) {
+          // Uma defesa antecipada; nunca fecha a porta com outro carro ao lado.
+          const candidate = Math.min(14, laneWidth);
+          if (clearLane(candidate)) { lane = candidate; car.tacticTicks = 100; }
+        }
+      }
+      if (previewBend > 0.65) { lane *= 0.9; car.tacticTicks = 0; }
+      // Preserva espaço lateral durante uma disputa, inclusive quando volta ao centro.
+      for (const { ahead, side } of nearby) {
+        if (Math.abs(ahead) < 22 && Math.abs(side) < 24) {
+          lane = clamp(currentLane - Math.sign(side || 1) * 10, -track.halfWidth + 16, track.halfWidth - 16);
+          car.tacticTicks = Math.max(car.tacticTicks, 35);
+        }
+      }
+      car.targetLane = lane;
+      car.racingLane = (car.racingLane || 0) + clamp(lane - (car.racingLane || 0), -0.35, 0.35);
+      const aheadPoint = pointAt(car.progress + 38 + car.speed * 12, car.racingLane);
       const angleError = wrap(Math.atan2(aheadPoint.y - car.y, aheadPoint.x - car.x) - car.angle);
       const pathSteering = clamp(angleError * 2.1, -1, 1);
       steering = steering * 0.55 + pathSteering * 0.45;
       const laterPoint = pointAt(car.progress + 115 + car.speed * 18);
       const bend = Math.abs(wrap(laterPoint.angle - aheadPoint.angle));
-      const driverPace = 0.93 + (car.id - 2) * 0.015;
+      const driverPace = car.driver.pace;
       // Limita a velocidade pela curvatura prevista, usando a mesma escala da física.
       const curvature = bend / Math.max(20, Math.hypot(laterPoint.x - aheadPoint.x, laterPoint.y - aheadPoint.y));
-      const cornerGrip = { easy: 1.05, normal: 1.35, hard: 1.6 }[difficulty] || 1.35;
+      const cornerGrip = ({ easy: 1.05, normal: 1.35, hard: 1.6 }[difficulty] || 1.35) * car.driver.corner;
       const safeSpeed = Math.sqrt(9.81 * cornerGrip * 0.25 / Math.max(curvature, 0.0001)) / 15;
       const targetCornerSpeed = Math.min(aiSpeed * driverPace, Math.max(0.7, safeSpeed));
       pedal = Math.max(pedal, clamp((targetCornerSpeed - car.speed) * 1.8, -1, 1));
@@ -194,29 +263,56 @@
         const dx = other.x - car.x, dy = other.y - car.y;
         const ahead = dx * Math.cos(car.angle) + dy * Math.sin(car.angle);
         const lateral = Math.abs(-dx * Math.sin(car.angle) + dy * Math.cos(car.angle));
-        const gap = 23 + car.speed * 10;
+        const gap = (23 + car.speed * 10) * car.driver.gap;
         if (ahead > 0 && ahead < gap && lateral < 20) {
           const targetSpeed = Math.max(0, other.speed - (gap - ahead) * 0.08);
           if (car.speed > targetSpeed) pedal = Math.min(pedal, -0.7);
-          // Só prepara ultrapassagem em trecho pouco curvo e com espaço livre.
-          if (bend < 0.35 && ahead > 20 && car.speed > other.speed + 0.1) {
-            const side = car.inputs[0] > car.inputs[4] ? -1 : 1;
-            const pass = pointAt(car.progress + 48, side * 22);
-            const clear = cars.every((candidate) => candidate === car || candidate === other
-              || candidate.done || Math.hypot(candidate.x - pass.x, candidate.y - pass.y) > 25);
-            if (clear && track.contains(pass.x, pass.y, 12)) {
-              const passError = wrap(Math.atan2(pass.y - car.y, pass.x - car.x) - car.angle);
-              steering = clamp(passError * 2, -0.65, 0.65);
-            }
-          }
         }
       }
       car.activations = [car.inputs, hidden, [steering, pedal]];
       return [steering, pedal];
     }
 
+    function exitPit(car) {
+      car.throttle = 0; car.brake = 0; car.limiter = false; car.shiftTicks = 0;
+      if (car.pitWait > 0) { car.pitWait--; car.speed = 0; car.rpm = 900; return; }
+      const route = pitRoutes[car.id - 1];
+      const next = route[car.pitNode];
+      const heading = Math.atan2(next.y - car.y, next.x - car.x);
+      const blocked = cars.some((other) => other !== car && !other.done
+        && Math.hypot(other.x - car.x, other.y - car.y) < 22
+        && Math.abs(-(other.x - car.x) * Math.sin(heading) + (other.y - car.y) * Math.cos(heading)) < 13
+        && (other.x - car.x) * Math.cos(heading) + (other.y - car.y) * Math.sin(heading) > 4);
+      if (blocked) { car.speed = 0; car.rpm = 900; return; }
+      car.speed = Math.min(track.pit.limit, car.speed + 0.018);
+      car.throttle = 0.35; car.gear = 2; car.rpm = 1500 + car.speed * 2200;
+      let remaining = car.speed;
+      while (remaining > 0 && car.pitNode < route.length) {
+        const point = route[car.pitNode];
+        const distance = Math.hypot(point.x - car.x, point.y - car.y);
+        const step = Math.min(remaining, distance);
+        if (distance > 0.0001) {
+          const angle = Math.atan2(point.y - car.y, point.x - car.x);
+          car.angle = wrap(car.angle + clamp(wrap(angle - car.angle), -0.08, 0.08));
+          car.x += (point.x - car.x) * step / distance;
+          car.y += (point.y - car.y) * step / distance;
+        }
+        remaining -= step;
+        if (distance <= step + 0.0001) car.pitNode++;
+      }
+      car.activations = [car.inputs, [], [0, 0.35]];
+      if (car.pitNode >= route.length) {
+        car.pitExit = false;
+        car.angle = pointAt(track.pit.exit).angle;
+        car.progress = track.pit.exit;
+        car.checkpoint = Math.floor(car.progress / checkpointLength);
+        car.lapStart = elapsed;
+        car.pitReleasedAt = elapsed;
+      }
+    }
+
     function recover(car) {
-      if (car.done || phase !== 'racing') return;
+      if (car.done || car.pitExit || phase !== 'racing') return;
       car.invalidLap = true;
       const point = pointAt(startDistance + car.progress, car.id % 2 ? -10 : 10);
       Object.assign(car, point, { speed: 0, steering: 0, gear: 1, rpm: 900, shiftTicks: 0,
@@ -242,7 +338,7 @@
       const command = options.online ? input[player.id] || {} : input;
       const shift = command.shiftUp ? 1 : command.shiftDown ? -1 : 0;
       const previousShift = previousShifts.get(player.id) || 0;
-      if (player.manual && phase === 'racing' && shift && shift !== previousShift && !player.shiftTicks && !player.cooldown) {
+      if (player.manual && !player.pitExit && phase === 'racing' && shift && shift !== previousShift && !player.shiftTicks && !player.cooldown) {
         const gear = clamp(player.gear + shift, 1, 6);
         // Bloqueia reduções que ultrapassariam o corte do motor.
         if (gear !== player.gear && (shift > 0 || player.speed * 54 <= gearLimits[gear - 1])) {
@@ -270,9 +366,10 @@
         return;
       }
       elapsed += 1 / 60;
-      const before = cars.map((car) => ({ x: car.x, y: car.y, s: track.nearest(car.x, car.y).progress }));
+      const before = cars.map((car) => ({ x: car.x, y: car.y, s: track.nearest(car.x, car.y).progress, pit: car.pitExit }));
       for (const car of cars) {
         if (car.done) continue;
+        if (car.pitExit) { exitPit(car); continue; }
         if (car.wallCooldown > 0) car.wallCooldown--;
         if (car.cooldown > 0) { car.cooldown--; continue; }
         const command = options.online ? input[car.id] || {} : input;
@@ -296,6 +393,8 @@
           const aNormal = Math.cos(a.angle) * nx + Math.sin(a.angle) * ny;
           const bNormal = Math.cos(b.angle) * nx + Math.sin(b.angle) * ny;
           const closingSpeed = Math.max(0, a.speed * aNormal - b.speed * bNormal);
+          a.impact = Math.max(a.impact || 0, Math.min(1, closingSpeed / 2));
+          b.impact = Math.max(b.impact || 0, Math.min(1, closingSpeed / 2));
           for (const [car, sign] of [[a, -1], [b, 1]]) {
             const x = car.x + nx * push * sign, y = car.y + ny * push * sign;
             if (track.contains(x, y, -30)) { car.x = x; car.y = y; }
@@ -307,7 +406,7 @@
       }
 
       for (const [index, car] of cars.entries()) {
-        if (car.done || car.cooldown) continue;
+        if (car.done || car.cooldown || before[index].pit) continue;
         let delta = track.nearest(car.x, car.y).progress - before[index].s;
         if (delta > track.length / 2) delta -= track.length;
         if (delta < -track.length / 2) delta += track.length;

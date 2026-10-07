@@ -8,6 +8,7 @@ const nodes = Object.fromEntries([...read('corrida.html').matchAll(/id="([^"]+)"
 const events = {};
 let frame;
 let lastCars;
+let clock = 0;
 const host = {
   addEventListener(type, handler) { events[type] = handler; },
   createNeuroTrack3D: () => ({ update(cars) { lastCars = cars; } }),
@@ -18,8 +19,8 @@ const documentMock = {
   addEventListener(type, handler) { events[type] = handler; },
 };
 for (const file of ['neuro-pista-track.js', 'neurodrive-race-engine.js', 'neurodrive-hud.js']) new Function('window', read(file))(host);
-new Function('window', 'document', 'requestAnimationFrame', read('neurodrive-race.js'))(
-  host, documentMock, (callback) => { frame = callback; },
+new Function('window', 'document', 'requestAnimationFrame', 'Date', read('neurodrive-race.js'))(
+  host, documentMock, (callback) => { frame = callback; }, { now: () => clock },
 );
 assert.equal(nodes['race-menu'].open, true, 'Menu inicial deve abrir antes da largada');
 assert.equal(nodes['race-developer'].hidden, true, 'Ferramentas técnicas devem ficar ocultas para o jogador');
@@ -40,7 +41,7 @@ for (let i = 0; i < 240; i++) frame(i * 17);
 assert(lastCars[0].speed > 0);
 events.keydown({ code: 'Escape', target: {}, preventDefault() {} });
 assert.equal(nodes['race-menu'].open, true);
-assert.equal(nodes['menu-recover'].hidden, false);
+assert.equal(nodes['menu-recover'].hidden, true, 'Recuperação fica indisponível durante saída automática');
 assert.equal(nodes['menu-end-qualifying'].hidden, false);
 const menuX = lastCars[0].x;
 events.keydown({ code: 'KeyP', target: {}, preventDefault() {} });
@@ -58,7 +59,7 @@ frame(270 * 17);
 assert.notEqual(nodes['race-banner'].textContent, 'Pausado');
 nodes['race-start'].onclick();
 assert.equal(lastCars[0].speed, 0);
-assert(nodes['race-banner'].innerHTML.includes('1 de 5 luzes acesas'));
+assert(nodes['race-banner'].textContent.includes('boxes'));
 lastCars[0].bestLap = 70;
 lastCars[1].bestLap = 65;
 nodes['race-menu-open'].onclick();
@@ -116,6 +117,43 @@ nodes['race-menu-play'].onclick();
 assert(nodes['race-session'].textContent.includes('Técnico'));
 assert.equal(nodes['race-difficulty'].value, 'hard');
 assert.equal(nodes['race-laps'].value, '10');
-assert(nodes['race-banner'].innerHTML.includes('1 de 5 luzes acesas'));
+assert(nodes['race-banner'].textContent.includes('boxes'));
 assert.equal(nodes['race-menu'].open, false);
 console.log('OK: menu inicial, configurações, pausa pelo menu, retomada, resultados, teclado e reinício.');
+nodes['race-menu-open'].onclick();
+nodes['menu-mode'].value = 'championship';
+nodes['menu-laps'].value = '1';
+nodes['race-menu-play'].onclick();
+let championshipTime = 10000;
+for (const [index, name] of ['Serra Verde', 'Autódromo Veloz', 'Vale Técnico'].entries()) {
+  assert(nodes['race-session'].textContent.includes(name));
+  nodes['race-end-qualifying'].onclick();
+  nodes['race-results-continue'].onclick();
+  for (let i = 0; i < 195; i++) frame(championshipTime += 17);
+  lastCars.forEach((car, i) => Object.assign(car, { done: true, place: i + 1, finishTime: 90 + i }));
+  frame(championshipTime += 34);
+  assert.equal(nodes['championship-results'].hidden, false);
+  assert(nodes['championship-results'].innerHTML.includes(`${25 * (index + 1)} pontos`));
+  nodes['race-show-results'].onclick();
+  assert(nodes['championship-results'].innerHTML.includes(`${25 * (index + 1)} pontos`));
+  if (index < 2) {
+    assert.equal(nodes['championship-next'].hidden, false);
+    nodes['championship-next'].onclick();
+  } else {
+    assert.equal(nodes['championship-next'].hidden, true);
+    assert(nodes['championship-results'].innerHTML.includes('Campeão: Você'));
+  }
+}
+console.log('OK: fluxo completo de campeonato com classificação, três pistas, pontuação e campeão.');
+lastCars[0].bestLap = 30;
+frame(championshipTime += 17);
+assert(nodes['race-personal-best'].textContent.includes('Novo recorde pessoal!'));
+clock = 9999;
+frame(championshipTime += 17);
+assert(nodes['race-personal-best'].textContent.includes('0:30.00'));
+clock = 10000;
+frame(championshipTime += 17);
+assert.equal(nodes['race-personal-best'].textContent, '');
+frame(championshipTime += 17);
+assert.equal(nodes['race-personal-best'].textContent, '', 'Recorde já registrado não pode reabrir o aviso');
+console.log('OK: notificação de recorde expira após dez segundos sem reaparecer.');

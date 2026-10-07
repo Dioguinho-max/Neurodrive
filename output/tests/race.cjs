@@ -118,12 +118,13 @@ console.log(`Motor: 1 s = ${oneSecond.toFixed(0)} km/h; 0–100 em ${hundred.toF
 const edgeRace = host.createNeuroRace(track, 'normal', { session: 'qualifying' });
 for (let i = 0; i < 180; i++) edgeRace.step();
 const edgeCar = edgeRace.cars[0];
-const edgePoint = edgeRace.pointAt(150, track.halfWidth + 29.1);
+const edgePoint = edgeRace.pointAt(150, track.halfWidth + 31.4);
 Object.assign(edgeCar, edgePoint, { progress: 150, speed: 2.5, gear: 4, angle: edgePoint.angle + 0.4 });
 edgeRace.step({ accelerate: true });
 assert(edgeCar.speed < 2.5 && edgeCar.speed > 1.8);
+assert(edgeCar.wallContact);
 assert.equal(edgeCar.invalidLap, false);
-assert(track.contains(edgeCar.x, edgeCar.y, -30));
+assert(track.contains(edgeCar.x, edgeCar.y, -35));
 const touchedProgress = edgeCar.progress;
 for (let i = 0; i < 120; i++) edgeRace.step({ accelerate: true, right: true });
 assert(edgeCar.progress > touchedProgress + 30, 'Contato contínuo não pode prender o carro');

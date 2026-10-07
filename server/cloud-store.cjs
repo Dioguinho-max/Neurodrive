@@ -80,14 +80,15 @@ class CloudStore {
     const row = await this.pool.query('UPDATE neurodrive.players SET coins=coins+100,last_bonus=$1 WHERE id=$2 AND last_bonus<=$3', [Date.now(), id, Date.now() - 86400000]);
     if (!row.rowCount) throw fail(409, 'Bônus já resgatado. Aguarde 24 horas.');
   }
-  async award(id, raceId, laps, place) {
+  async award(id, raceId, laps, place, mode = 'race') {
     return this.transaction(async (db) => {
       await db.query('SELECT id FROM neurodrive.players WHERE id=$1 FOR UPDATE', [id]);
       const existing = (await db.query('SELECT reward FROM neurodrive.results WHERE id=$1 AND player_id=$2', [raceId, id])).rows[0];
       if (existing) return existing.reward;
       const now = Date.now();
       const paid = (await db.query('SELECT COALESCE(sum(reward),0)::int AS total FROM neurodrive.results WHERE player_id=$1 AND finished>=$2', [id, Math.floor(now / 86400000) * 86400000])).rows[0].total;
-      const reward = Math.max(0, Math.min(200, 50 + 20 * laps, 500 - paid));
+      const podiumBonus = mode === 'tournament' ? ({ 1: 90, 2: 60, 3: 30 }[place] || 0) : 0;
+      const reward = Math.max(0, Math.min(200, 50 + 20 * laps + podiumBonus, 500 - paid));
       await db.query('INSERT INTO neurodrive.results VALUES($1,$2,$3,$4,$5)', [raceId, id, reward, place, now]);
       await db.query('UPDATE neurodrive.players SET coins=coins+$1 WHERE id=$2', [reward, id]);
       return reward;

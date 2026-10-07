@@ -30,6 +30,9 @@
   let lastTimingUpdate = -1;
   let lastTimingPhase = '';
   let resultsPresented = false;
+  const career = window.createNeuroCareer();
+  let championship = null;
+  let recordNoticeUntil = 0;
   const announcedLaps = new Map();
   const heldKeys = new Set();
   const touches = new Map();
@@ -114,10 +117,26 @@
     }).join('');
     get('race-results-continue').hidden = false;
     get('race-results-continue').textContent = race.qualifying ? 'Ir para a corrida' : 'Ver classificação completa';
+    get('championship-next').hidden = !championship || race.qualifying || championship.stage >= 2;
+    get('championship-results').hidden = !championship || race.qualifying;
+    if (championship && !race.qualifying) {
+      const standings = championship.standings();
+      const title = championship.stage === 2 ? `Campeão: ${standings[0].name}` : `Campeonato · etapa ${championship.stage + 1} de 3`;
+      get('championship-results').innerHTML = `<h3>${title}</h3><ol>${standings.map((entry) => `<li>${entry.name} — ${entry.points} pontos · ${entry.wins} vitórias</li>`).join('')}</ol><p>Empates: vitórias, depois ordem inicial dos pilotos.</p>`;
+    }
     if (!get('race-results').open) get('race-results').showModal();
   }
 
   get('race-show-results').onclick = showResults;
+  get('championship-next').onclick = () => {
+    if (!championship || race.qualifying || race.phase !== 'finished' || championship.stage >= 2) return;
+    const series = championship;
+    series.stage++;
+    get('race-track').value = series.tracks[series.stage];
+    get('race-track').onchange();
+    championship = series;
+    startSession(true);
+  };
   get('race-results-close').onclick = () => get('race-results').close();
   get('race-results-continue').onclick = () => {
     if (race.qualifying) {
@@ -143,6 +162,8 @@
   }
 
   function openMenu() {
+    get('race-menu').setAttribute('data-state', started ? 'pause' : 'home');
+    get('menu-state-title').textContent = started ? 'PAUSA · RESPIRE. VOLTE MAIS FORTE.' : 'SEU PRÓXIMO DESAFIO COMEÇA AQUI';
     setPause(true);
     clearInput();
     audio?.silence();
@@ -154,8 +175,10 @@
     get('race-menu-status').textContent = !renderer ? 'Não foi possível iniciar o 3D. Use um navegador com WebGL ou explore o Laboratório de IA.'
       : started ? `${track.name} · ${race.phase === 'finished' ? 'Sessão encerrada' : 'Sessão pausada — seu progresso está salvo nesta página'}` : 'Seu próximo grid começa aqui.';
     get('race-menu-play').disabled = !renderer;
+    get('menu-records').textContent = 'Recordes deste navegador: ' + window.NeuroTracks.map((circuit) =>
+      `${circuit.name}: ${career.records[circuit.id] ? timeLabel(career.records[circuit.id]) : 'sem volta registrada'}`).join(' · ');
     get('menu-end-qualifying').hidden = !started || !race.qualifying || race.phase === 'finished';
-    get('menu-recover').hidden = !started || race.phase !== 'racing';
+    get('menu-recover').hidden = !started || race.phase !== 'racing' || race.cars[0].pitExit;
     if (!get('race-menu').open) get('race-menu').showModal();
     get(started ? 'race-menu-resume' : 'race-menu-play').focus();
   }
@@ -169,6 +192,16 @@
     else get('race-menu-open').focus();
   }
   get('race-menu-open').onclick = openMenu;
+  get('menu-new-event').onclick = () => {
+    get('race-menu').setAttribute('data-state', 'home');
+    get('menu-state-title').textContent = 'ESCOLHA SEU PRÓXIMO DESAFIO';
+    get('menu-page-race').click?.();
+  };
+  get('menu-pause-settings').onclick = () => {
+    get('menu-new-event').onclick();
+    get('menu-driving-settings').open = true;
+    get('menu-driving-settings').scrollIntoView?.({ block: 'center', behavior: 'smooth' });
+  };
   get('menu-end-qualifying').onclick = () => {
     get('race-menu').close();
     get('race-end-qualifying').onclick();
@@ -182,13 +215,19 @@
   get('race-menu-play').onclick = () => {
     if (!renderer) return;
     for (const name of ['track', 'difficulty', 'laps']) get(`race-${name}`).value = get(`menu-${name}`).value;
+    const series = get('menu-mode').value === 'championship' ? career.championship() : null;
+    if (series) get('race-track').value = series.tracks[0];
     get('race-track').onchange();
+    championship = series;
     if (renderer) startSession(true);
     else openMenu();
   };
 
   function refresh() {
     const player = race.cars[0];
+    if (started && career.record(track.id, player.bestLap)) recordNoticeUntil = Date.now() + 10000;
+    const recordNotice = Date.now() < recordNoticeUntil ? `Novo recorde pessoal! ${timeLabel(career.records[track.id])}` : '';
+    if (get('race-personal-best').textContent !== recordNotice) get('race-personal-best').textContent = recordNotice;
     player.skin = window.NeuroGarage?.getSkin() || null;
     renderer?.update(race.cars, player, false, player, race.phase === 'finished');
     const ranking = race.standings();
@@ -204,15 +243,18 @@
     get('race-session').textContent = `${track.name} · ${(track.length / 4000).toFixed(2)} km · ${phaseLabel}`
       + (qualifying ? ` · ${lapLabel} · melhor: ${playerBest}${player.invalidLap ? ' · VOLTA INVALIDADA' : ''}` : ` · ${race.laps} voltas`);
     const banner = !started ? 'Pronto para largar?' : paused ? 'Pausado'
+      : player.pitExit ? (player.pitWait > 0 ? 'Aguardando liberação dos boxes' : 'Saída automática dos boxes · limite 60 km/h')
+      : player.pitReleasedAt !== undefined && race.elapsed - player.pitReleasedAt < 3 ? 'Você está no controle · volta de aquecimento'
       : race.phase === 'countdown' ? String(race.countdown)
       : race.phase === 'finished' ? (qualifying ? 'Grid definido · pronto para a corrida' : `${player.place}º lugar · ${timeLabel(player.finishTime)}`)
       : qualifying && player.done ? 'Aguardando os tempos dos adversários…'
       : player.cooldown ? 'Retornando à pista…' : race.elapsed < 1 ? 'VAI!' : '';
-    const signaling = started && !paused && (race.phase === 'countdown' || player.done && player.place);
+    const signaling = started && !paused && !player.pitExit && (race.phase === 'countdown' || player.done && player.place);
     if (!signaling && get('race-banner').textContent !== banner) get('race-banner').textContent = banner;
-    updateSignals(player, race, started && !paused);
+    updateSignals(player, race, started && !paused && !player.pitExit);
     refreshTiming(ranking);
     get('race-end-qualifying').disabled = !started || !qualifying || race.phase === 'finished';
+    get('race-recover').disabled = !started || player.pitExit || race.phase === 'finished';
     get('race-next').disabled = !qualifying || race.phase !== 'finished';
     if (qualifying && race.phase === 'finished') qualifyingGrid = race.gridOrder();
     get('race-show-results').hidden = race.phase !== 'finished';
@@ -221,6 +263,7 @@
       get('race-recover').disabled = true;
       if (!resultsPresented) {
         resultsPresented = true;
+        if (!qualifying && championship) championship.score(ranking);
         if (!qualifying) window.NeuroGarage?.finishRace({ elapsed: race.elapsed, completedLaps: player.completedLaps, place: player.place });
         showResults();
       }
@@ -228,6 +271,7 @@
   }
 
   function startSession(qualifying) {
+    recordNoticeUntil = 0;
     get('race-menu').close();
     unlockAudio();
     get('race-results').close();
@@ -238,7 +282,7 @@
     }
     race = window.createNeuroRace(track, sessionDifficulty, {
       session: qualifying ? 'qualifying' : 'race', grid: qualifyingGrid, laps: Number(get('race-laps').value),
-      transmission: get('race-transmission').value,
+      transmission: get('race-transmission').value, pitStart: qualifying,
     });
     get('race-reward').textContent = qualifying ? 'A classificação define o grid. As moedas são concedidas na corrida.' : '';
     get('race-reward-retry').hidden = true;
@@ -276,6 +320,8 @@
     if (race.qualifying && race.phase === 'finished') startSession(false);
   };
   get('race-track').onchange = () => {
+    championship = null;
+    recordNoticeUntil = 0;
     get('race-results').close();
     resultsPresented = false;
     track = window.createNeuroTrack(get('race-track').value);

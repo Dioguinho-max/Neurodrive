@@ -34,6 +34,8 @@
     <p id="online-connection">Conexão ainda não medida.</p>
     <button class="btn btn-primary" id="online-connect">Conectar</button>
     <div id="online-options" hidden>
+      <label class="form-label">Disputa<select class="form-select" id="online-mode"><option value="race">Corrida com amigos</option><option value="tournament">Copa Neuro · torneio de 3 voltas</option></select></label>
+      <p class="tournament-rules">Copa Neuro: entrada gratuita, 2–6 jogadores e três voltas. Quem terminar recebe 110 moedas; bônus de pódio: +90 / +60 / +30. Limites: 200 por prova e 500 por dia UTC. Abandono não premia. Saldo validado pelo servidor e salvo na conta.</p>
       <div class="viz-controls"><label class="form-label">Circuito<select class="form-select" id="online-track"><option value="serra">Serra Verde</option><option value="veloz">Autódromo Veloz</option><option value="tecnico">Vale Técnico</option></select></label>
       <label class="form-label">Voltas<select class="form-select" id="online-laps"><option value="1">1 volta</option><option value="3" selected>3 voltas</option><option value="5">5 voltas</option></select></label><button class="btn" id="online-create">Criar sala</button></div>
       <form id="online-join"><label class="form-label">Código da sala<input id="online-code" maxlength="6" minlength="6" pattern="[a-fA-F0-9]{6}" required autocomplete="off" placeholder="ABC123"></label><button class="btn" type="submit">Entrar na sala</button></form>

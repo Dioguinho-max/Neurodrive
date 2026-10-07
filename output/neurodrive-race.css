@@ -44,6 +44,9 @@
 .race-results { width: min(960px, calc(100% - 24px)); max-height: 88vh; padding: 28px; border: 1px solid var(--border); border-radius: 14px; background: var(--background); color: var(--foreground); }
 .race-results::backdrop { background: #07101acc; }
 .race-results h2 { font-size: 26px; margin-top: 0; }
+.personal-best { position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%); margin: 0; padding: 6px 12px; border-radius: 6px; background: #101923d9; color: #f5c758; font-size: 12px; pointer-events: none; }
+.personal-best:empty { display: none; }
+#championship-results { margin-top: 20px; padding: 14px; border: 1px solid var(--border); border-radius: 8px; }
 .race-results-eyebrow { text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted-foreground); }
 .race-results-actions { margin-top: 24px; }
 .race-podium { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; align-items: end; margin: 28px 0; }
@@ -122,9 +125,20 @@ body { overflow: hidden; }
 .garage-skin { display: flex; flex-direction: column; gap: 8px; padding: 12px; border: 1px solid #3b4c5d; border-radius: 10px; background: #172534; }
 .garage-skin > span { color: #b7c8d6; font-size: 12px; }
 .garage-skin .btn { margin-top: auto; font-size: 12px; white-space: normal; }
-.garage-preview { height: 58px; position: relative; margin: 8px 0; }
-.garage-preview::before { content: ''; position: absolute; inset: 9px 6px; border-radius: 15px 22px 12px 12px; background: linear-gradient(0deg, var(--paint) 43%, var(--stripe) 43% 57%, var(--paint) 57%); box-shadow: 0 9px 12px #0006; transform: skewX(-8deg); }
-.garage-preview::after { content: ''; position: absolute; width: 36%; height: 18px; top: 0; left: 30%; background: #385a70; border: 4px solid var(--paint); border-radius: 14px 18px 0 0; }
+.garage-preview { position: relative; margin: 0 0 8px; overflow: hidden; border-radius: 8px; border: 1px solid #ffffff12; background: radial-gradient(ellipse at 50% 25%, #49607155, transparent 72%), linear-gradient(160deg, #192c3c, #0b141e); }
+.garage-preview-art { aspect-ratio: 400 / 230; display: grid; align-items: center; }
+.garage-preview-art svg { width: 100%; height: auto; display: block; }
+.garage-preview[data-view="perspective"] .skin-overhead, .garage-preview[data-view="overhead"] .skin-perspective { display: none; }
+.garage-preview[data-finish="matte"] .skin-paint-shine { opacity: .035; }
+.garage-preview[data-finish="metallic"] .skin-paint-shine { opacity: .32; }
+.garage-preview-controls { display: flex; justify-content: center; gap: 4px; padding: 10px 6px; border-top: 1px solid #ffffff0d; }
+.garage-preview-controls button { flex: 1; min-height: 36px; padding: 6px; border: 1px solid transparent; border-radius: 4px; background: transparent; color: #aabcc9; font: inherit; font-size: 11px; cursor: pointer; }
+.garage-preview-controls button[aria-pressed="true"] { background: #ffffff0e; border-color: #ffffff26; color: #f0f8fc; }
+.garage-preview-controls button:hover { background: #ffffff18; }
+.garage-preview-controls button:focus-visible { outline: 2px solid #78ebba; outline-offset: -2px; }
+.garage-preview-palette { display: flex; align-items: center; justify-content: center; gap: 6px; color: #9cb0bd; font-size: 8px; letter-spacing: .1em; padding: 0 6px 8px; }
+.garage-preview-palette::before, .garage-preview-palette::after { content: ''; width: 13px; height: 13px; border-radius: 50%; border: 1px solid #ffffff55; background: var(--paint); }
+.garage-preview-palette::after { background: var(--stripe); }
 .garage-panel [hidden] { display: none !important; }
 @media (pointer: coarse) {
   .race-touch { display: flex; }
@@ -163,4 +177,45 @@ body { overflow: hidden; }
 #garage-status { min-height: 44px; border-radius: 8px; padding: 10px; background: #172534; }
 #garage-store-balance, #race-reward { color: #8bf0ba; font-weight: 600; }
 .race-touch [hidden] { display: none; }
+.race-menu { padding: clamp(20px, 4vw, 60px); background: linear-gradient(105deg, #071018f2 0%, #081321ec 50%, #071018c9 100%); }
+.race-menu[open] { grid-template-columns: minmax(260px, .9fr) minmax(360px, 1.1fr); gap: clamp(24px, 5vw, 80px); align-content: start; }
+.menu-hero { border-radius: 0; background: radial-gradient(ellipse at 50% 65%, #2d7d6340, transparent 65%); padding: 32px 0; justify-content: center; min-height: 550px; }
+.menu-hero::after { display: none; }
+.menu-hero h2 { font-size: clamp(56px, 7vw, 100px); line-height: .85; letter-spacing: -.07em; margin: 25px 0; text-shadow: 0 8px 30px #0006; }
+.menu-showcar { width: 100%; height: auto; filter: drop-shadow(0 15px 30px #0008); margin: 20px 0; }
+.menu-content { border-radius: 0; background: transparent; padding: 0; }
+.menu-content .btn, .race-menu .form-select, .race-menu input { border-radius: 4px; }
+.menu-pages { gap: 0; border-bottom: 1px solid #ffffff30; margin: 18px 0 24px; }
+.menu-pages .btn { background: transparent; border: 0; border-bottom: 3px solid transparent; min-height: 56px; text-transform: uppercase; letter-spacing: .12em; font-size: 12px; }
+.menu-pages [aria-pressed="true"] { border-bottom-color: #8bf0ba; background: #8bf0ba10; }
+.event-cards { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.event-card { display: flex; flex-direction: column; gap: 14px; min-height: 145px; padding: 20px; color: #fff; text-decoration: none; background: linear-gradient(125deg, #213e55, #132132); border: 1px solid #7092ad50; border-left: 3px solid #83cfff; }
+.event-card span { letter-spacing: .18em; font-size: 10px; color: #a1d8ff; }
+.event-card strong { font-size: 23px; line-height: 1.1; }
+.event-card small { margin-top: auto; font-size: 11px; color: #c5d2db; }
+.cup-card { background: linear-gradient(125deg, #4b4027, #211f1b); border-left-color: #f5c758; }
+.cup-card span { color: #f5c758; }
+.event-card:hover, .event-card:focus-visible { border-color: #fff; background-color: #25475e; }
+#race-menu-play, #race-menu-resume { min-height: 58px; text-transform: uppercase; font-weight: 800; letter-spacing: .12em; background: #98f1be; color: #092018; border: 0; }
+.race-menu .beta-notice { font-size: 11px; max-width: 350px; background: transparent; border: 0; padding: 0; opacity: .8; }
+.race-menu .menu-lights { display: none; }
+.race-menu[data-state="home"] .pause-action { display: none; }
+.race-menu[data-state="pause"] #menu-race-screen { display: none; }
+.race-menu[data-state="pause"] .menu-hero h2 { font-size: clamp(48px, 6vw, 80px); }
+.race-menu[data-state="pause"] .menu-showcar { max-height: 160px; }
+.race-menu[data-state="pause"] .menu-content > .pause-action { display: block; min-height: 56px; text-align: left; padding-left: 24px; background: #ffffff0b; border: 1px solid #ffffff22; }
+.race-menu .garage-skins { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.race-menu .garage-skin { background: linear-gradient(140deg, #253547, #101c2a); border-radius: 5px; padding: 20px; }
+.tournament-rules { padding: 14px; border-left: 3px solid #f5c758; background: #f5c7580b; line-height: 1.6; font-size: 13px; }
+@media (max-width: 850px) {
+  .race-menu[open] { display: block; padding: 20px; }
+  .menu-hero { min-height: 0; padding: 10px 0 20px; }
+  .menu-hero h2 { font-size: 48px; margin: 12px 0; }
+  .menu-hero h2 span { display: inline; }
+  .menu-showcar { display: none; }
+  .menu-hero > p:not(.menu-eyebrow) { display: none; }
+  .event-card { padding: 14px; min-height: 120px; }
+  .event-card strong { font-size: 19px; }
+}
 @media (pointer: coarse) { .race-touch { gap: 5px; flex-wrap: wrap; } .race-touch button { flex: 1; padding: 8px; font-size: 12px; } }
+@media (max-width: 540px) { .race-menu .garage-skins { grid-template-columns: 1fr; } .race-menu .garage-skin { padding: 12px; } }

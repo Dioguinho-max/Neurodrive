@@ -11,6 +11,82 @@
   let attempt = null;
   let identity = 0;
   let capabilities = { localRewards: true, online: false };
+  // Ilustrações leves: cores vêm das variáveis CSS do catálogo, nunca de HTML interpolado.
+  function createSkinPreview(skin) {
+    const preview = document.createElement('div');
+    preview.className = 'garage-preview';
+    preview.setAttribute('data-finish', skin.finish || 'gloss');
+    preview.setAttribute('data-view', 'perspective');
+    preview.style.setProperty('--paint', skin.color);
+    preview.style.setProperty('--stripe', skin.accent);
+    const art = document.createElement('div');
+    art.className = 'garage-preview-art';
+    art.innerHTML = `<svg class="skin-perspective" viewBox="0 0 400 220" aria-hidden="true">
+      <ellipse cx="200" cy="185" rx="164" ry="15" fill="#000" opacity=".32"/>
+      <path d="M28 193 H372" stroke="#b9d7e8" opacity=".12"/>
+      <g fill="#111820" stroke="#394450" stroke-width="2">
+        <circle cx="110" cy="157" r="26"/><circle cx="292" cy="157" r="26"/>
+      </g>
+      <path d="M42 124 Q45 113 65 110 L118 102 L153 73 Q159 68 170 68 H232 Q242 68 250 78 L276 105 L337 114 Q353 118 355 135 L351 157 H321 A29 29 0 0 0 263 157 H139 A29 29 0 0 0 81 157 H43 Q36 150 38 139 Z" fill="var(--paint)" stroke="#172630" stroke-width="2"/>
+      <path d="M126 103 L158 77 H187 V103 Z M194 77 H231 Q237 77 242 83 L260 103 H194 Z" fill="#182d3c" stroke="#96b8c8" stroke-width="1.5"/>
+      <path d="M141 99 L162 81 H180 L157 99 Z M201 81 H229 L246 98 H233 Z" fill="#b1dae8" opacity=".2"/>
+      <path d="M49 122 L119 112 H271 L341 123 V131 H45 Z" fill="var(--stripe)"/>
+      <path d="M46 134 H80 M140 134 H262 M323 134 H349" stroke="#000" stroke-width="2" opacity=".16"/>
+      <path d="M145 143 H256 V155 H145 Z M42 145 H76 V155 H44 Z M326 146 H352 L350 157 H326 Z" fill="#18232c"/>
+      <path d="M150 111 V139 Q150 144 157 144 H234 Q240 144 241 136 L247 112" fill="none" stroke="#182d3c" stroke-width="1" opacity=".5"/>
+      <path d="M213 116 H226" stroke="#25333d" stroke-width="3" stroke-linecap="round"/>
+      <path d="M126 105 L143 103 L148 108 L130 111 Z" fill="var(--paint)" stroke="#273a46"/>
+      <path d="M44 123 H67 L63 132 H41 Z" fill="#edfaff"/>
+      <path d="M335 121 L350 125 L352 134 H335 Z" fill="#f14552"/>
+      <path d="M39 137 H55" stroke="#111c24" stroke-width="5"/>
+      <path d="M312 111 V100 M337 115 V100" stroke="#1a2630" stroke-width="4"/>
+      <path d="M300 94 H351 V101 H300 Z" fill="#202d38" stroke="#576976"/>
+      <g fill="#243541" stroke="#a8bdcc" stroke-width="2.5">
+        <circle cx="110" cy="157" r="18"/><circle cx="292" cy="157" r="18"/>
+        <path d="M110 139 V175 M92 157 H128 M97 144 L123 170 M97 170 L123 144 M292 139 V175 M274 157 H310 M279 144 L305 170 M279 170 L305 144" fill="none"/>
+      </g>
+      <g fill="#14212b" stroke="#c0d0db"><circle cx="110" cy="157" r="5"/><circle cx="292" cy="157" r="5"/></g>
+      <path class="skin-paint-shine" d="M62 113 L120 106 H268 L331 116 H120 L50 124 Z M158 71 H233 L239 75 H158 Z" fill="#fff" opacity=".24"/>
+    </svg>
+    <svg class="skin-overhead" viewBox="0 0 400 220" aria-hidden="true">
+      <ellipse cx="202" cy="178" rx="138" ry="18" fill="#000" opacity=".3"/>
+      <g transform="translate(200 110) rotate(-90)">
+        <g fill="#121922" stroke="#56616b"><rect x="-55" y="-92" width="17" height="34" rx="5"/><rect x="38" y="-92" width="17" height="34" rx="5"/><rect x="-55" y="61" width="17" height="34" rx="5"/><rect x="38" y="61" width="17" height="34" rx="5"/></g>
+        <rect x="-47" y="-135" width="94" height="270" rx="27" fill="var(--paint)" stroke="#182530" stroke-width="3"/>
+        <path d="M-10 -132 H10 V132 H-10 Z" fill="var(--stripe)"/>
+        <path d="M-39 -49 L-32 -68 H32 L39 -49 L33 -24 H-33 Z" fill="#203846" stroke="#9bbac6"/>
+        <path d="M-34 54 L-30 83 H30 L34 54 Z" fill="#203846" stroke="#9bbac6"/>
+        <path d="M-40 -35 L-35 -22 V50 L-40 63 Z M40 -35 L35 -22 V50 L40 63 Z" fill="#172a38"/>
+        <path class="skin-paint-shine" d="M-42 -109 Q-42 -129 -22 -129 H-14 V-49 H-42 Z M-42 -20 H-34 V78 H-42 Z" fill="#fff" opacity=".24"/>
+        <path d="M-37 -118 H-17 M17 -118 H37" stroke="#e7fbff" stroke-width="7"/>
+        <path d="M-37 121 H-17 M17 121 H37" stroke="#ed4a58" stroke-width="6"/>
+        <path d="M-38 105 H38" stroke="#0d1720" stroke-width="5"/><rect x="-56" y="101" width="112" height="10" rx="2" fill="#222e39" stroke="#657482"/>
+        <path d="M-38 -128 H38" stroke="#101b25" stroke-width="3"/>
+      </g>
+    </svg>`;
+    const controls = document.createElement('div');
+    controls.className = 'garage-preview-controls';
+    controls.setAttribute('role', 'group');
+    controls.setAttribute('aria-label', `Vista da pintura ${skin.name}`);
+    const buttons = [];
+    for (const [view, label] of [['perspective', 'Lateral'], ['overhead', 'De cima']]) {
+      const button = document.createElement('button');
+      button.type = 'button';
+      button.textContent = label;
+      button.setAttribute('aria-pressed', String(view === 'perspective'));
+      button.onclick = () => {
+        preview.setAttribute('data-view', view);
+        buttons.forEach(([other, key]) => other.setAttribute('aria-pressed', String(key === view)));
+      };
+      buttons.push([button, view]);
+      controls.append(button);
+    }
+    const palette = document.createElement('span');
+    palette.className = 'garage-preview-palette';
+    palette.textContent = 'CARROCERIA / FAIXAS';
+    preview.append(art, palette, controls);
+    return preview;
+  }
   window.NeuroGarage = { getSkin: () => skins.find((skin) => skin.id === player?.equipped) || null, beginRace, finishRace };
 
   function showPage(value) {
@@ -88,7 +164,7 @@
     get('garage-store-login').hidden = Boolean(player);
     get('garage-password-form').hidden = !player || !capabilities.online;
     get('garage-change-password').disabled = busy;
-    get('garage-rewards-info').textContent = `${capabilities.online ? 'Conclua corridas nas salas online' : 'Conclua corridas conectado'}: 50 moedas + 20 por volta, até 200 por corrida e 500 por dia (UTC). A classificação não dá moedas.`;
+    get('garage-rewards-info').textContent = `${capabilities.online ? 'Conclua corridas nas salas online' : 'Conclua corridas conectado'}: 50 moedas + 20 por volta, até 200 por corrida e 500 por dia (UTC). Copa Neuro online: bônus de 90, 60 ou 30 moedas para o pódio, dentro dos mesmos limites. A classificação não dá moedas.`;
     get('garage-store-balance').textContent = player ? `Seu saldo: ${player.coins} moedas` : 'Entre na conta para guardar suas compras.';
     if (player) {
       get('garage-name').textContent = player.username;
@@ -106,15 +182,13 @@
       if (get('garage-filter').value === 'owned' && !owned) continue;
       const card = document.createElement('article');
       card.className = 'garage-skin';
-      const preview = document.createElement('div');
-      preview.className = 'garage-preview';
-      preview.style.setProperty('--paint', skin.color);
-      preview.style.setProperty('--stripe', skin.accent);
-      preview.setAttribute('aria-hidden', 'true');
+      const preview = createSkinPreview(skin);
       const name = document.createElement('strong');
       name.textContent = skin.name;
+      name.title = skin.finish === 'matte' ? 'Pintura fosca' : skin.finish === 'metallic' ? 'Pintura metálica' : 'Pintura brilhante';
       const price = document.createElement('span');
       price.textContent = owned ? 'Na sua garagem' : `${skin.price} moedas`;
+      price.textContent += ` · ${skin.finish === 'matte' ? 'Fosca' : skin.finish === 'metallic' ? 'Metálica' : 'Brilhante'}`;
       const button = document.createElement('button');
       button.className = 'btn';
       button.type = 'button';

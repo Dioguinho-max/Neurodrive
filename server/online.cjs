@@ -13,7 +13,7 @@ function attachOnline(server, { origin, store, tickMs = 1000 / 60 }) {
     if (peer.ws.readyState === WebSocket.OPEN && peer.ws.bufferedAmount < 256000) peer.ws.send(JSON.stringify(data));
   };
   function lobby(room) {
-    const data = { type: 'lobby', code: room.code, track: room.track, laps: room.laps, owner: room.owner,
+    const data = { type: 'lobby', code: room.code, track: room.track, laps: room.laps, mode: room.mode, owner: room.owner,
       players: [...room.peers].map((p) => ({ id: p.id, name: p.profile.username, ready: p.ready })) };
     room.peers.forEach((p) => send(p, data));
   }
@@ -36,7 +36,7 @@ function attachOnline(server, { origin, store, tickMs = 1000 / 60 }) {
     const cars = race.cars.map((car) => ({ ...car, checkpointTimes: undefined, accountId: undefined,
       reward: room.rewards.get(car.id)?.amount, rewardPending: car.done && !car.disconnected && car.player && !room.rewards.get(car.id)?.saved }));
     for (const peer of room.peers) send(peer, { type: 'state', cars, phase: race.phase, countdown: race.countdown,
-      startLights: race.startLights, elapsed: race.elapsed, laps: race.laps, track: room.track, self: peer.carId });
+      startLights: race.startLights, mode: room.mode, elapsed: race.elapsed, laps: race.laps, track: room.track, self: peer.carId });
   }
   function start(room) {
     if (room.race) throw new Error('A prova já começou.');
@@ -62,7 +62,7 @@ function attachOnline(server, { origin, store, tickMs = 1000 / 60 }) {
         if (status.saved || status.pending || Date.now() < (status.retry || 0)) continue;
         status.pending = true;
         room.rewards.set(car.id, status);
-        store.award(car.accountId, room.raceId, room.laps, car.place).then((amount) => {
+        store.award(car.accountId, room.raceId, room.laps, car.place, room.mode).then((amount) => {
           Object.assign(status, { amount, saved: true });
         }).catch(() => { status.retry = Date.now() + 5000; }).finally(() => { status.pending = false; });
       }
@@ -114,7 +114,8 @@ function attachOnline(server, { origin, store, tickMs = 1000 / 60 }) {
           if (!['serra', 'veloz', 'tecnico'].includes(msg.track) || ![1, 3, 5].includes(msg.laps)) throw new Error('Circuito ou voltas inválidos.');
           let code;
           do { code = crypto.randomBytes(3).toString('hex').toUpperCase(); } while (rooms.has(code));
-          const room = { code, owner: peer.id, track: msg.track, laps: msg.laps, peers: new Set([peer]) };
+          const mode = msg.mode === 'tournament' ? 'tournament' : 'race';
+          const room = { code, owner: peer.id, track: msg.track, mode, laps: mode === 'tournament' ? 3 : msg.laps, peers: new Set([peer]) };
           peer.room = room; peer.ready = false; rooms.set(code, room); lobby(room);
         } else if (msg.type === 'join') {
           if (peer.room) throw new Error('Saia da sala atual primeiro.');

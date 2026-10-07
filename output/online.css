@@ -1,8 +1,12 @@
 #online-ranking { position: absolute; top: 80px; left: 20px; background: #081320e6; padding: 16px 16px 16px 36px; color: #fff; z-index: 1; }
 #online-ranking li { padding: 6px; }
 #online-ranking li[data-self="true"] { color: #8bf0ba; font-weight: 700; }
-#online-lobby { max-width: 780px; }
-#online-lobby h1 { font-size: 28px; }
+#online-lobby { width: min(880px, calc(100% - 32px)); max-width: 880px; max-height: 90dvh; padding: clamp(20px, 4vw, 44px); border-radius: 6px; background: linear-gradient(130deg, #102735f5, #080f1af5); border: 1px solid #8bf0ba55; border-top: 4px solid #8bf0ba; box-shadow: 0 30px 100px #000b; }
+#online-lobby::backdrop { background: #040b14b8; backdrop-filter: blur(5px); }
+#online-lobby h1 { font-size: clamp(26px, 4vw, 42px); font-weight: 850; letter-spacing: -.04em; }
+#online-lobby .btn { border-radius: 4px; min-height: 44px; }
+#online-lobby .btn-primary { background: #98f1be; color: #092018; font-weight: 800; }
+#online-lobby .form-select { background: #172838; color: #fff; border-color: #597083; min-height: 44px; }
 #online-lobby [hidden] { display: none; }
 #online-lobby input:not([type="checkbox"]) { min-height: 42px; padding: 8px; background: #182a37; color: #fff; border: 1px solid #617483; border-radius: 6px; }
 #online-join { display: flex; align-items: end; gap: 12px; margin: 20px 0; }

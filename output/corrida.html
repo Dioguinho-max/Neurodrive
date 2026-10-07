@@ -42,6 +42,7 @@
         <canvas id="np-track-3d" role="img" aria-label="Corrida 3D, seu carro usa a pintura escolhida na garagem"></canvas>
         <div id="race-speed-lines" aria-hidden="true"></div>
         <div id="race-banner" role="status" aria-live="polite">Pronto para largar?</div>
+        <p id="race-personal-best" class="personal-best" role="status"></p>
         <aside class="race-tower" aria-label="Posições e tempos ao vivo">
           <div id="race-tower-title" class="race-tower-title">CLASSIFICAÇÃO</div>
           <ol id="race-tower-list"></ol>
@@ -59,23 +60,39 @@
       </div>
       <dialog id="race-menu" class="race-menu" aria-labelledby="race-menu-title">
         <div class="menu-hero">
-          <p class="menu-eyebrow">CORRIDA NO NAVEGADOR · 3 CIRCUITOS</p>
+          <p class="menu-eyebrow" id="menu-state-title">SEU PRÓXIMO DESAFIO COMEÇA AQUI</p>
           <h2 id="race-menu-title">NEURO<span>DRIVE</span></h2>
-          <div class="beta-notice"><strong class="beta-badge">BETA</strong> Jogo em desenvolvimento. Você pode encontrar bugs e mudanças durante os testes.</div>
+          <svg class="menu-showcar" viewBox="0 0 520 240" aria-hidden="true">
+            <defs><linearGradient id="showcar-paint" x2="0" y2="1"><stop stop-color="#b8ffdd"/><stop offset=".45" stop-color="#46c993"/><stop offset="1" stop-color="#174e44"/></linearGradient></defs>
+            <ellipse cx="267" cy="195" rx="217" ry="22" fill="#000" opacity=".45"/>
+            <path d="M38 153 73 129 175 112 217 65 335 69 392 118 468 140 490 173 466 186 53 186Z" fill="url(#showcar-paint)" stroke="#a1f9cd" stroke-width="2"/>
+            <path d="m188 112 38-38 101 4 42 39Z" fill="#142a3d"/><path d="m276 75 5 41" stroke="#74bba4" stroke-width="6"/>
+            <path d="m62 155 393 1M174 126l-7 46m181-48 9 48" stroke="#143d38" stroke-width="3"/>
+            <g fill="#0c1420" stroke="#506276" stroke-width="5"><circle cx="128" cy="180" r="34"/><circle cx="401" cy="180" r="34"/></g>
+            <g fill="#b6c9d6"><circle cx="128" cy="180" r="18"/><circle cx="401" cy="180" r="18"/></g>
+            <path d="m49 146 42-5-7 12-35 5m347-28 47 12-5 7-39-9" fill="#effaff"/>
+          </svg>
+          <div class="beta-notice"><strong class="beta-badge">BETA</strong> Temporada de estreia.</div>
           <p>Encontre o traçado. Conquiste a pole.<br>Dispute cada posição.</p>
           <div class="menu-lights" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
         </div>
         <div class="menu-content">
           <p id="race-menu-status" role="status">Seu próximo grid começa aqui.</p>
           <button class="btn btn-primary" id="race-menu-resume" hidden>Continuar sessão</button>
+          <button class="btn pause-action" id="menu-new-event">Nova disputa</button>
+          <button class="btn pause-action" id="menu-pause-settings">Configurações</button>
 
           <nav class="menu-pages" aria-label="Menu principal">
-            <button class="btn" id="menu-page-race" aria-pressed="true">Corrida</button>
+            <button class="btn" id="menu-page-race" aria-pressed="true">Jogar</button>
             <button class="btn" id="menu-page-account" aria-pressed="false">Conta</button>
-            <button class="btn" id="menu-page-store" aria-pressed="false">Loja</button>
+            <button class="btn" id="menu-page-store" aria-pressed="false">Garagem · skins</button>
           </nav>
           <div id="menu-race-screen">
-          <h3>Nova disputa</h3>
+          <div class="event-cards"><a class="event-card" href="online.html"><span>MULTIPLAYER</span><strong>Encontre seus rivais</strong><small>Crie uma sala com amigos →</small></a><a class="event-card cup-card" href="online.html?mode=tournament"><span>COPA NEURO</span><strong>Corra por moedas</strong><small>Torneio online · 3 voltas · entrada grátis →</small></a></div>
+          <h3>Escolha sua próxima corrida</h3>
+          <label class="form-label">Modo<select class="form-select" id="menu-mode"><option value="single">Corrida avulsa</option><option value="championship">Campeonato · 3 etapas</option></select></label>
+          <details class="menu-help"><summary>Regras do campeonato</summary><p class="text-small">Serra Verde → Autódromo Veloz → Vale Técnico. Pontos: 25, 18, 15, 12, 10 e 8. Desempate por vitórias e ordem inicial dos pilotos. Progresso válido nesta sessão; as moedas da Copa Neuro são disputadas no online.</p></details>
+          <p class="text-small" id="menu-records"></p>
           <div class="menu-settings">
             <label class="form-label">Circuito
               <select class="form-select" id="menu-track"><option value="serra">Serra Verde</option><option value="veloz">Autódromo Veloz</option><option value="tecnico">Vale Técnico</option></select>
@@ -87,10 +104,10 @@
               <select class="form-select" id="menu-laps"><option value="1">1 volta</option><option value="3" selected>3 voltas</option><option value="5">5 voltas</option><option value="10">10 voltas</option><option value="20">20 voltas</option><option value="50">50 voltas</option></select>
             </label>
           </div>
-          <p class="text-small">Classifique com sua melhor volta e dispute a corrida contra cinco adversários.</p>
+          <p class="text-small">Na classificação, aguarde a saída automática dos boxes a até 60 km/h. Assuma o controle ao entrar na pista: uma volta de aquecimento e duas tentativas cronometradas. A corrida larga no grid.</p>
           <button class="btn btn-primary" id="race-menu-play">Iniciar classificação</button>
           <p class="text-small" id="race-menu-restart-note" hidden>Uma nova disputa substitui o progresso da sessão atual.</p>
-          <details class="menu-help"><summary>Configurações de pilotagem, som e câmera</summary>
+          <details class="menu-help" id="menu-driving-settings"><summary>Configurações de pilotagem, som e câmera</summary>
           <label class="form-label">Câmbio<select class="form-select" id="race-transmission"><option value="automatic">Automático</option><option value="manual">Manual · E sobe / Q reduz</option></select></label>
           <p class="text-small">No manual, cada toque troca uma marcha. Reduções acima do corte são bloqueadas.</p>
         <label class="form-label">Qualidade gráfica <select class="form-select" id="race-quality"><option value="performance">Desempenho · recomendado</option><option value="high">Mais detalhes</option><option value="ultra">Super alto · exige mais da GPU</option></select></label>
@@ -170,7 +187,9 @@
             <tbody id="race-results-rows"></tbody>
           </table>
         </div>
+        <div id="championship-results" hidden></div>
         <div class="viz-controls race-results-actions">
+          <button class="btn btn-primary" id="championship-next" hidden>Próxima etapa</button>
           <button class="btn btn-primary" id="race-results-continue">Ver classificação completa</button>
           <button class="btn" id="race-results-close">Fechar</button>
         </div>

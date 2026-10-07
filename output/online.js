@@ -51,7 +51,7 @@
         else if (message.type === 'left') { resetRoom(); say('Você saiu da sala.'); menu(); }
         else if (message.type === 'lobby') {
           room = message; get('online-options').hidden = true; get('online-room').hidden = false;
-          get('online-room-code').textContent = `Sala ${room.code} · ${room.laps} volta(s)`;
+          get('online-room-code').textContent = `${room.mode === 'tournament' ? 'Copa Neuro' : 'Sala'} ${room.code} · ${room.laps} volta(s)`;
           ready = room.players.find((p) => p.id === self)?.ready || false;
           get('online-ready').textContent = ready ? 'Cancelar pronto' : 'Pronto';
           get('online-start').disabled = room.owner !== self || room.players.length < 2 || room.players.some((p) => !p.ready);
@@ -63,7 +63,7 @@
           latest = message; motion.push(message, performance.now());
           if (trackId !== message.track) {
             renderer?.dispose(); trackId = message.track;
-            try { renderer = window.createNeuroTrack3D((id) => get('np-' + id), { track: window.createNeuroTrack(trackId), racePresentation: true, quality: get('online-quality').value || 'performance', speedEffects: !window.matchMedia('(prefers-reduced-motion: reduce)').matches }); }
+            try { renderer = window.createNeuroTrack3D((id) => get('np-' + id), { track: window.createNeuroTrack(trackId), racePresentation: true, showNames: true, quality: get('online-quality').value || 'performance', speedEffects: !window.matchMedia('(prefers-reduced-motion: reduce)').matches }); }
             catch { renderer = null; say('Não foi possível iniciar WebGL.'); menu(); send({ type: 'leave' }); }
           }
           const player = latest.cars.find((car) => car.id === latest.self);
@@ -90,7 +90,15 @@
       socket.onerror = () => say('Falha na conexão online. Verifique se o backend está ativo.');
     } catch (error) { say(error.message || 'Servidor indisponível.'); get('online-connect').disabled = false; }
   };
-  get('online-create').onclick = () => send({ type: 'create', track: get('online-track').value, laps: Number(get('online-laps').value) });
+  get('online-mode').value = new URLSearchParams(window.location?.search || '').get('mode') === 'tournament' ? 'tournament' : 'race';
+  get('online-mode').onchange = () => {
+    const tournament = get('online-mode').value === 'tournament';
+    get('online-laps').disabled = tournament;
+    if (tournament) get('online-laps').value = '3';
+  };
+  get('online-mode').onchange();
+  get('online-create').onclick = () => send({ type: 'create', track: get('online-track').value,
+    mode: get('online-mode').value, laps: Number(get('online-laps').value) });
   get('online-join').onsubmit = (event) => { event.preventDefault(); send({ type: 'join', code: get('online-code').value.trim().toUpperCase() }); };
   get('online-ready').onclick = () => { audio?.unlock(); send({ type: 'ready', ready: !ready, manual: get('online-manual').checked }); };
   get('online-manual').onchange = () => { if (room) send({ type: 'ready', ready: false, manual: get('online-manual').checked }); };

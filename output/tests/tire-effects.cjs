@@ -43,7 +43,7 @@ function emitted(speed, pedal, sliding = false) {
   renderer.setQuality('performance');
   assert.equal(scene.environment, null);
   assert.equal(sun.castShadow, false);
-  assert(wheels.every((pivot) => pivot.children[0].geometry.parameters.radialSegments === 10));
+  assert(wheels.every((pivot) => pivot.children[0].geometry.parameters.radialSegments === 16));
   return count;
 }
 assert.equal(emitted(135, -1), 2, 'Frenagem forte ativa as duas marcas antes da força do freio atingir 90%');

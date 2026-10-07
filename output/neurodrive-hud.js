@@ -1,6 +1,39 @@
 /* Mesmo painel de pilotagem nos modos local e online. */
 (() => {
   'use strict';
+  window.createNeuroCareer = () => {
+    const key = 'neurodrive-personal-laps-v1';
+    let records = {};
+    try {
+      const saved = JSON.parse(window.localStorage?.getItem(key) || '{}');
+      for (const id of ['serra', 'veloz', 'tecnico']) if (Number.isFinite(saved?.[id]) && saved[id] > 0) records[id] = saved[id];
+    } catch {}
+    return {
+      records,
+      record(track, time) {
+        if (!['serra', 'veloz', 'tecnico'].includes(track) || !Number.isFinite(time) || time <= 0 || records[track] <= time) return false;
+        records[track] = time;
+        try { window.localStorage?.setItem(key, JSON.stringify(records)); } catch {}
+        return true;
+      },
+      championship() {
+        const totals = new Map(), scored = new Set();
+        return { stage: 0, tracks: ['serra', 'veloz', 'tecnico'],
+          score(ranking) {
+            if (scored.has(this.stage)) return;
+            scored.add(this.stage);
+            ranking.forEach((car, index) => {
+              const entry = totals.get(car.id) || { id: car.id, name: car.name, points: 0, wins: 0 };
+              entry.points += [25, 18, 15, 12, 10, 8][index] || 0;
+              if (index === 0) entry.wins++;
+              totals.set(car.id, entry);
+            });
+          },
+          standings: () => [...totals.values()].sort((a, b) => b.points - a.points || b.wins - a.wins || a.id - b.id),
+        };
+      },
+    };
+  };
   // Preferência do dispositivo compartilhada pelos modos local e online.
   window.bindNeuroQuality = (select, apply) => {
     let quality = 'performance';

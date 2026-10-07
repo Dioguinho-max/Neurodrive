@@ -3,7 +3,8 @@ const fs = require('node:fs');
 const path = require('node:path');
 const read = (file) => fs.readFileSync(path.join(__dirname, '..', file), 'utf8');
 function node() {
-  return { value: '', children: [], style: { setProperty() {} }, setAttribute() {},
+  return { value: '', children: [], attributes: {}, style: { setProperty() {} },
+    setAttribute(key, value) { this.attributes[key] = value; },
     append(...items) { this.children.push(...items); }, replaceChildren() { this.children = []; } };
 }
 function setup(protocol, fetcher) {
@@ -41,7 +42,16 @@ const tick = () => new Promise((resolve) => setImmediate(resolve));
       : route === 'catalog' ? { skins } : { player } };
   });
   await tick();
-  assert.equal(ui['garage-skins'].children.length, 4);
+  assert.equal(ui['garage-skins'].children.length, 14);
+  const preview = ui['garage-skins'].children[1].children[0];
+  const views = preview.children[2].children;
+  assert.equal(preview.attributes['data-view'], 'perspective');
+  views[1].onclick();
+  assert.equal(preview.attributes['data-view'], 'overhead');
+  assert.equal(views[0].attributes['aria-pressed'], 'false');
+  assert.equal(views[1].attributes['aria-pressed'], 'true');
+  views[0].onclick();
+  assert.equal(preview.attributes['data-view'], 'perspective');
   assert(ui['garage-skins'].children[1].children[3].disabled);
   ui['garage-username'].value = 'piloto';
   ui['garage-password'].value = 'SenhaTeste_12345';
