@@ -10,6 +10,19 @@ Esta versão contém frontend para Vercel, backend para Render e persistência P
 
 No projeto Supabase novo, as tabelas do jogo serão criadas no esquema privado **`neurodrive`**. As URLs acima identificam os projetos; não comprovam que as tabelas, variáveis ou o deploy já estejam configurados.
 
+## Migrar o backend para Virginia
+
+O `render.yaml` de produção cria `neurodrive-api-virginia`, na região `virginia`, com `node server/cloud.cjs`. O plano Starter configurado é pago. Os arquivos e as contas temporárias do repositório de teste não são necessários.
+
+1. Mantenha o backend atual disponível até validar o novo. No Render, crie um novo Web Service do repositório `Dioguinho-max/neurodrive`, branch `main`, região **Virginia**. Use `npm ci`, start `node server/cloud.cjs`, health check `/health`, Node 22 e uma única instância.
+2. No painel privado do novo serviço, copie do backend atual `DATABASE_URL`, `DATABASE_CA` e `FRONTEND_ORIGIN`. Continue usando o mesmo projeto e esquema Supabase: não importe contas nem recrie o banco.
+3. Configure `BACKEND_ORIGIN` no novo Render com a URL HTTPS do próprio serviço, sem barra final. Aguarde o deploy e confirme `/health`. Se o Supabase tiver restrições de rede, permita os endereços de saída do novo serviço.
+4. Anote o valor anterior de `BACKEND_ORIGIN` da Vercel. Quando não houver corridas em andamento, substitua-o pela nova URL de Virginia no ambiente Production e publique novamente o frontend.
+5. Pelo site da Vercel, teste login com uma conta existente, saldo, inventário, loja e uma corrida com dois jogadores. Confira a recompensa ao terminar e o ping. Não espere que as salas em andamento migrem: elas ficam na memória do backend antigo.
+6. Se houver problemas, restaure `BACKEND_ORIGIN` anterior na Vercel e publique novamente. Após validar Virginia, remova o serviço antigo pelo painel. Encerre também os serviços de teste que não pretende usar, conferindo seus nomes antes de excluir.
+
+Apenas publicar no GitHub não muda a região do serviço existente nem a variável da Vercel. O Blueprint mantém deploy automático desativado. A mudança de região exige outro serviço, conforme a [documentação do Render](https://render.com/docs/regions).
+
 ## 1. Supabase: conexão privada
 
 No painel do projeto `wryrfqagknlrghwobopo`, clique em **Connect → Session pooler** e copie a conexão PostgreSQL para o backend. A URL pública `https://wryrfqagknlrghwobopo.supabase.co` não é a conexão do banco. Não coloque a senha no repositório, no frontend ou no chat.

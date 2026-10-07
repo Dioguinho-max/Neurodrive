@@ -1,6 +1,7 @@
 services:
   - type: web
-    name: neurodrive-api
+    name: neurodrive-api-virginia
+    region: virginia
     runtime: node
     plan: starter
     numInstances: 1

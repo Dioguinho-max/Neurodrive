@@ -4,6 +4,7 @@
   const updateHUD = window.createRaceHUD(get);
   let socket, self, room, latest, renderer, trackId, ready = false;
   let prediction, rtt = 0, playerPosition = 1;
+  let frames = 0, fps = 0, measuredAt = performance.now();
   const motion = window.createOnlineBuffer();
   let rankingKey = '', lastInput = '', lastInputAt = 0;
   let displayedFinish = false;
@@ -44,7 +45,7 @@
         } else if (message.type === 'pong') {
           const measured = Math.max(0, performance.now() - message.time);
           rtt = rtt ? rtt * 0.7 + measured * 0.3 : measured;
-          get('online-connection').textContent = `Conexão: ${Math.round(rtt)} ms${rtt > 250 ? ' · atraso alto na rede' : ''}`;
+          get('online-connection').textContent = `Conexão: ${Math.round(rtt)} ms · Imagem: ${fps} FPS${rtt > 250 ? ' · atraso alto na rede' : ''}`;
         } else if (message.type === 'error') say(message.message);
         else if (message.type === 'left') { resetRoom(); say('Você saiu da sala.'); menu(); }
         else if (message.type === 'lobby') {
@@ -61,7 +62,7 @@
           latest = message; motion.push(message, performance.now());
           if (trackId !== message.track) {
             renderer?.dispose(); trackId = message.track;
-            try { renderer = window.createNeuroTrack3D((id) => get('np-' + id), { track: window.createNeuroTrack(trackId), speedEffects: !window.matchMedia('(prefers-reduced-motion: reduce)').matches }); }
+            try { renderer = window.createNeuroTrack3D((id) => get('np-' + id), { track: window.createNeuroTrack(trackId), quality: get('online-quality').value || 'performance', speedEffects: !window.matchMedia('(prefers-reduced-motion: reduce)').matches }); }
             catch { renderer = null; say('Não foi possível iniciar WebGL.'); menu(); send({ type: 'leave' }); }
           }
           const player = latest.cars.find((car) => car.id === latest.self);
@@ -97,6 +98,7 @@
   get('online-back').onclick = () => get('online-lobby').close();
   get('online-lobby').oncancel = (event) => { event.preventDefault(); if (latest) get('online-lobby').close(); };
   get('online-sound').onchange = () => audio?.setEnabled(get('online-sound').checked);
+  get('online-quality').onchange = () => renderer?.setQuality(get('online-quality').value);
   window.addEventListener('keydown', (event) => {
     if (get('online-lobby').open || ['INPUT', 'SELECT'].includes(event.target.tagName)) return;
     if (actions[event.code]) { event.preventDefault(); keys.add(event.code); }
@@ -124,6 +126,9 @@
   }, 16);
   setInterval(() => { if (socket?.readyState === WebSocket.OPEN && self) send({ type: 'ping', time: performance.now() }); }, 1000);
   function draw() {
+    const now = performance.now();
+    frames++;
+    if (now - measuredAt >= 1000) { fps = Math.round(frames * 1000 / (now - measuredAt)); frames = 0; measuredAt = now; }
     if (latest && renderer && !document.hidden) {
       const cars = motion.sample(performance.now());
       const index = cars.findIndex((car) => car.id === latest.self);

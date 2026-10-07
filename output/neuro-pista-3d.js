@@ -16,7 +16,7 @@
       canvas.addEventListener(type, handler, settings);
       listeners.push([type, handler, settings]);
     }
-    const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+    const renderer = new THREE.WebGLRenderer({ canvas, antialias: options.quality !== 'performance' });
     renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
     renderer.shadowMap.enabled = true;
     renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -277,7 +277,19 @@
       render();
     };
 
+    function setQuality(quality) {
+      const light = quality === 'performance';
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, light ? 1 : 2));
+      renderer.shadowMap.enabled = !light;
+      sun.castShadow = !light;
+      scene.traverse((object) => {
+        const materials = Array.isArray(object.material) ? object.material : [object.material];
+        materials.forEach((material) => { if (material) material.needsUpdate = true; });
+      });
+    }
+    setQuality(options.quality);
     return {
+      setQuality,
       dispose() {
         listeners.forEach(([type, handler, settings]) => canvas.removeEventListener(type, handler, settings));
         const geometries = new Set(), materials = new Set();
