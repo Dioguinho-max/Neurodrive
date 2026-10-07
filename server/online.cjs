@@ -36,7 +36,7 @@ function attachOnline(server, { origin, store, tickMs = 1000 / 60 }) {
     const cars = race.cars.map((car) => ({ ...car, checkpointTimes: undefined, accountId: undefined,
       reward: room.rewards.get(car.id)?.amount, rewardPending: car.done && !car.disconnected && car.player && !room.rewards.get(car.id)?.saved }));
     for (const peer of room.peers) send(peer, { type: 'state', cars, phase: race.phase, countdown: race.countdown,
-      elapsed: race.elapsed, laps: race.laps, track: room.track, self: peer.carId });
+      startLights: race.startLights, elapsed: race.elapsed, laps: race.laps, track: room.track, self: peer.carId });
   }
   function start(room) {
     if (room.race) throw new Error('A prova já começou.');

@@ -353,6 +353,7 @@
       recoverPlayer: () => recover(cars[0]),
       get phase() { return phase; },
       get countdown() { return Math.ceil(countdown / 60); },
+      get startLights() { return phase === 'countdown' ? Math.min(5, 1 + Math.floor((180 - countdown) / 36)) : 0; },
       get elapsed() { return elapsed; },
     };
   };

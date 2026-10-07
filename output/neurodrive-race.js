@@ -3,6 +3,7 @@
   'use strict';
   const get = (id) => document.getElementById(id);
   const updateHUD = window.createRaceHUD(get);
+  const updateSignals = window.createRaceSignals(get);
   // Ferramentas de inspeção são opt-in e não aparecem para o jogador.
   get('race-developer').hidden = !new URLSearchParams(window.location?.search || '').has('dev');
   const audio = window.createNeuroAudio?.();
@@ -21,6 +22,7 @@
   let qualifyingGrid = null;
   let sessionDifficulty = 'normal';
   let renderer;
+  window.bindNeuroQuality(get('race-quality'), (quality) => renderer?.setQuality(quality));
   let started = false;
   let paused = false;
   let accumulator = 0;
@@ -98,7 +100,7 @@
     if (race.phase !== 'finished') return;
     clearInput();
     const ranking = race.standings();
-    get('race-results-stage').textContent = `${track.name} · ${race.qualifying ? 'Classificação encerrada' : 'Bandeirada'}`;
+    get('race-results-stage').textContent = `${track.name} · ${race.qualifying ? 'Classificação encerrada' : `🏁 Bandeirada · ${race.cars[0].place}º lugar`}`;
     get('race-results-title').textContent = race.qualifying ? 'Grid de largada definido' : 'Os três primeiros';
     get('race-results-note').textContent = race.qualifying
       ? 'A melhor volta válida de cada piloto define a ordem da largada. Pilotos sem tempo ficam no fim do grid.'
@@ -188,7 +190,7 @@
   function refresh() {
     const player = race.cars[0];
     player.skin = window.NeuroGarage?.getSkin() || null;
-    renderer?.update(race.cars, player, false, player);
+    renderer?.update(race.cars, player, false, player, race.phase === 'finished');
     const ranking = race.standings();
     updateHUD(player, ranking.indexOf(player) + 1, ranking.length, race.laps, race.elapsed);
     get('race-laps').disabled = started && !race.qualifying && race.phase !== 'finished';
@@ -206,7 +208,9 @@
       : race.phase === 'finished' ? (qualifying ? 'Grid definido · pronto para a corrida' : `${player.place}º lugar · ${timeLabel(player.finishTime)}`)
       : qualifying && player.done ? 'Aguardando os tempos dos adversários…'
       : player.cooldown ? 'Retornando à pista…' : race.elapsed < 1 ? 'VAI!' : '';
-    if (get('race-banner').textContent !== banner) get('race-banner').textContent = banner;
+    const signaling = started && !paused && (race.phase === 'countdown' || player.done && player.place);
+    if (!signaling && get('race-banner').textContent !== banner) get('race-banner').textContent = banner;
+    updateSignals(player, race, started && !paused);
     refreshTiming(ranking);
     get('race-end-qualifying').disabled = !started || !qualifying || race.phase === 'finished';
     get('race-next').disabled = !qualifying || race.phase !== 'finished';
@@ -334,6 +338,8 @@
     try {
     renderer = window.createNeuroTrack3D((id) => get(`np-${id}`), {
       track,
+      racePresentation: true,
+      quality: get('race-quality').value,
       speedEffects: !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches,
     });
     get('race-start').disabled = false;

@@ -23,3 +23,8 @@
 @media (pointer: coarse) { .drive-hud { bottom: max(94px, calc(env(safe-area-inset-bottom) + 80px)); } }
 @media (max-height: 520px) { .drive-hud { width: 200px; } .drive-dial { height: 145px; } .drive-speed { top: 45px; left: 21px; width: 95px; } .drive-speed strong { font-size: 43px; } .drive-gear { top: 45px; right: 25px; min-width: 40px; padding-left: 8px; } .drive-gear strong { font-size: 31px; } .drive-rpm { top: 116px; font-size: 9px; } .drive-session { padding: 7px 10px; } .drive-time { display: none; } }
 @media (prefers-reduced-motion: reduce) { .drive-arc-fill { transition: none; } }
+.start-lights { display: inline-flex; gap: 10px; padding: 14px 18px; background: #10141eee; border: 2px solid #59616e; border-radius: 14px; box-shadow: 0 6px 20px #0008; }
+.start-light { display: block; width: clamp(24px, 5vw, 42px); aspect-ratio: 1; border-radius: 50%; background: #391b20; border: 2px solid #080b10; }
+.start-light.lit { background: #ff3939; box-shadow: 0 0 16px #ff2929aa, inset 0 0 8px #ffaaaacc; }
+.finish-signal { display: inline-flex; align-items: center; gap: 12px; padding: 12px 18px; background: #10141ee8; border-radius: 10px; color: #fff; font-size: clamp(15px, 2.5vw, 26px); }
+.chequered-flag { display: inline-block; width: 48px; height: 32px; background: conic-gradient(#fff 25%, #151515 0 50%, #fff 0 75%, #151515 0) 0 0 / 16px 16px; transform: rotate(-8deg); flex-shrink: 0; }

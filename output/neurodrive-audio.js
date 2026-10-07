@@ -4,7 +4,7 @@
   window.createNeuroAudio = function createNeuroAudio() {
     let context, master, engineGain, filter, low, high;
     let enabled = true, volume = 0.3;
-    let lastCountdown = null, lastSession = null;
+    let lastCountdown = null;
 
     async function unlock() {
       if (!enabled) return;
@@ -81,7 +81,6 @@
         silence();
         return;
       }
-      if (lastSession !== race) { lastSession = race; lastCountdown = null; }
       const now = context.currentTime;
       master.gain.setTargetAtTime(volume, now, 0.02);
       const combustionFrequency = car.rpm / 60 * 2;
@@ -92,7 +91,7 @@
       const cut = car.limiter && now % 0.12 < 0.04;
       const level = cut ? 0.04 : car.shiftTicks ? 0.045 : 0.11 + car.throttle * 0.10;
       engineGain.gain.setTargetAtTime(level, now, car.limiter ? 0.008 : 0.02);
-      const countdown = race.phase === 'countdown' ? race.countdown : 0;
+      const countdown = race.phase === 'countdown' ? (race.startLights ? 6 - race.startLights : race.countdown) : 0;
       if (countdown !== lastCountdown) {
         if (countdown > 0) beep(540, 0.13);
         else if (lastCountdown !== null && lastCountdown > 0) beep(1080, 0.3);

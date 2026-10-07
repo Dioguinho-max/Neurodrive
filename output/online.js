@@ -2,6 +2,7 @@
   'use strict';
   const get = (id) => document.getElementById(id);
   const updateHUD = window.createRaceHUD(get);
+  const updateSignals = window.createRaceSignals(get);
   let socket, self, room, latest, renderer, trackId, ready = false;
   let prediction, rtt = 0, playerPosition = 1;
   let frames = 0, fps = 0, measuredAt = performance.now();
@@ -62,7 +63,7 @@
           latest = message; motion.push(message, performance.now());
           if (trackId !== message.track) {
             renderer?.dispose(); trackId = message.track;
-            try { renderer = window.createNeuroTrack3D((id) => get('np-' + id), { track: window.createNeuroTrack(trackId), quality: get('online-quality').value || 'performance', speedEffects: !window.matchMedia('(prefers-reduced-motion: reduce)').matches }); }
+            try { renderer = window.createNeuroTrack3D((id) => get('np-' + id), { track: window.createNeuroTrack(trackId), racePresentation: true, quality: get('online-quality').value || 'performance', speedEffects: !window.matchMedia('(prefers-reduced-motion: reduce)').matches }); }
             catch { renderer = null; say('Não foi possível iniciar WebGL.'); menu(); send({ type: 'leave' }); }
           }
           const player = latest.cars.find((car) => car.id === latest.self);
@@ -79,8 +80,10 @@
           playerPosition = ranking.indexOf(player) + 1;
           updateHUD(player, playerPosition, ranking.length, latest.laps, latest.elapsed);
           get('race-banner').textContent = latest.phase === 'countdown' ? latest.countdown : latest.phase === 'finished' ? 'Prova encerrada' : '';
+          updateSignals(player, latest);
           if (player.done && !displayedFinish || latest.phase === 'finished' && !displayedFinish) { displayedFinish = true; menu(); }
           get('online-reward').textContent = player.rewardPending ? 'Salvando recompensa…' : player.reward !== undefined ? `Recompensa: ${player.reward} moedas. Seu saldo foi salvo na conta.` : latest.phase === 'finished' && !player.done ? 'Prova encerrada pelo limite de tempo. Sem recompensa.' : '';
+          if (player.done && player.place && !player.disconnected) get('online-reward').textContent = `🏁 Bandeirada · ${player.place}º lugar. ${get('online-reward').textContent}`;
         }
       };
       socket.onclose = () => { clear(); audio?.silence(); resetRoom(); get('online-options').hidden = true; get('online-connect').hidden = false; get('online-connect').disabled = false; say('Conexão encerrada. Reconecte para entrar em uma nova sala.'); menu(); };
@@ -98,7 +101,7 @@
   get('online-back').onclick = () => get('online-lobby').close();
   get('online-lobby').oncancel = (event) => { event.preventDefault(); if (latest) get('online-lobby').close(); };
   get('online-sound').onchange = () => audio?.setEnabled(get('online-sound').checked);
-  get('online-quality').onchange = () => renderer?.setQuality(get('online-quality').value);
+  window.bindNeuroQuality(get('online-quality'), (quality) => renderer?.setQuality(quality));
   window.addEventListener('keydown', (event) => {
     if (get('online-lobby').open || ['INPUT', 'SELECT'].includes(event.target.tagName)) return;
     if (actions[event.code]) { event.preventDefault(); keys.add(event.code); }
@@ -135,7 +138,7 @@
       const player = prediction?.sample(performance.now()) || cars[index];
       cars[index] = player;
       updateHUD(player, playerPosition, cars.length, latest.laps, latest.elapsed);
-      renderer.update(cars, player, false, player); audio?.update(player, latest, !player.done && !document.hidden);
+      renderer.update(cars, player, false, player, latest.phase === 'finished'); audio?.update(player, latest, !player.done && !document.hidden);
     }
     requestAnimationFrame(draw);
   }

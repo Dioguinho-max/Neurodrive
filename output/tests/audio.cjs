@@ -70,6 +70,14 @@ new Function('window', read('neurodrive-audio.js'))(host);
   assert(Math.abs(oscillators[1].frequency.value - 6800 / 30) < 0.001);
   for (const count of [2, 1, 0]) { race.countdown = count; if (!count) race.phase = 'racing'; audio.update(car, race, true); }
   assert.equal(oscillators.length, 6, 'Dois osciladores de motor e quatro bipes');
+  const beforeLights = oscillators.length;
+  for (let stage = 1; stage <= 5; stage++) {
+    for (let snapshot = 0; snapshot < 3; snapshot++) {
+      audio.update(car, { phase: 'countdown', startLights: stage, countdown: 3 }, true);
+    }
+  }
+  audio.update(car, { phase: 'racing', elapsed: 0 }, true);
+  assert.equal(oscillators.length - beforeLights, 6, 'Cinco luzes e sinal de largada, sem repetir bipes em snapshots online');
   audio.setEnabled(false);
   audio.update(car, race, true);
   assert.equal(gains[0].gain.value, 0);

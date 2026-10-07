@@ -31,6 +31,7 @@ function setup(with3D) {
   };
   let lastRender;
   let frame;
+  let clock = 0;
   class Renderer {
     constructor() { this.shadowMap = {}; }
     setPixelRatio() {}
@@ -38,7 +39,8 @@ function setup(with3D) {
     render(scene, camera) { lastRender = { scene, camera }; }
   }
   const sandbox = {
-    document: { getElementById: () => root, createElement: () => ({ style: {}, remove() {} }) },
+    Date: { now: () => clock },
+    document: { getElementById: () => root, createElement: () => ({ style: {}, remove() {}, getContext: () => context2D }) },
     window: { THREE: with3D ? { ...THREE, WebGLRenderer: Renderer } : undefined, devicePixelRatio: 1, addEventListener() {} },
     getComputedStyle: () => ({ color: 'rgb(100, 100, 100)' }),
     ResizeObserver: class { observe() {} },
@@ -49,8 +51,35 @@ function setup(with3D) {
   vm.runInContext(read('neuro-pista-track.js'), sandbox);
   vm.runInContext(read('neuro-pista-3d.js'), sandbox);
   vm.runInContext(read('neuro-pista.js'), sandbox);
-  return { elements, track: sandbox.window.NeuroTrack, render: () => lastRender, advance: (time) => frame(time) };
+  return { elements, track: sandbox.window.NeuroTrack, render: () => lastRender, advance: (time) => frame(time),
+    setTime: (time) => { clock = time; },
+    raceRenderer: () => sandbox.window.createNeuroTrack3D((id) => elements[`np-${id}`], { track: sandbox.window.NeuroTrack, racePresentation: true }) };
 }
+
+// O pós-prova move somente a apresentação, preservando o estado autoritativo.
+const ending = setup(true);
+const endingRenderer = ending.raceRenderer();
+const finisher = { ...ending.track.start, speed: 2, maxSpeed: 3.2, steering: 0, alive: true,
+  done: false, inputs: [0, 0, 0, 0, 0], activations: [[], [], [0, 0]] };
+endingRenderer.update([finisher], finisher, false);
+assert.equal(ending.render().scene.children.filter((object) => object.name.startsWith('starting-grid-slot-')).length, 6);
+finisher.done = true; finisher.speed = 0;
+const frozenResult = JSON.stringify(finisher);
+endingRenderer.update([finisher], finisher, false, finisher, true);
+const visualCar = ending.render().scene.children.find((object) => object.isGroup);
+const finishPosition = visualCar.position.clone();
+ending.setTime(1000);
+endingRenderer.update([finisher], finisher, false, finisher, true);
+assert(visualCar.position.distanceTo(finishPosition) > 1);
+assert.equal(JSON.stringify(finisher), frozenResult);
+ending.setTime(6000); endingRenderer.update([finisher], finisher, false, finisher, true);
+const stoppedPosition = visualCar.position.clone();
+ending.setTime(8000); endingRenderer.update([finisher], finisher, false, finisher, true);
+assert(visualCar.position.equals(stoppedPosition));
+finisher.done = false;
+endingRenderer.update([finisher], finisher, false);
+assert(Math.abs(visualCar.position.x - finisher.x) < 1e-6);
+console.log('OK: grid de seis vagas, desaceleração visual, parada e reinício sem modificar resultados.');
 
 const app = setup(true);
 const ui = app.elements;
@@ -58,8 +87,19 @@ assert.equal(ui['np-track'].hidden, true);
 assert.equal(ui['np-track-3d'].hidden, false);
 const cars = app.render().scene.children.filter((object) => object.isGroup);
 assert.equal(cars.length, 40);
-assert(cars.every((car) => car.children.length === 14));
-assert(Math.abs(cars[0].position.y - app.track.heightAt(app.track.start.x, app.track.start.y) - 0.3) < 1e-6);
+assert(cars.every((car) => car.children.filter((part) => part.isGroup).length === 4));
+assert(!app.render().scene.children.some((object) => object.geometry?.type === 'RingGeometry'));
+assert(Math.abs(cars[0].position.y - app.track.heightAt(app.track.start.x, app.track.start.y) - 0.15) < 1e-6);
+function checkWheels() {
+  for (const car of cars) {
+    car.updateMatrixWorld(true);
+    for (const pivot of car.children.filter((part) => part.isGroup)) {
+      const center = pivot.getWorldPosition(new THREE.Vector3());
+      assert(Math.abs(center.y - 2 - app.track.heightAt(center.x, center.z) - 0.15) < 0.02);
+    }
+  }
+}
+checkWheels();
 const heights = app.track.points.map((point) => app.track.heightAt(point.x, point.y));
 assert(Math.max(...heights) - Math.min(...heights) > 20);
 assert(cars[0].rotation.toArray().slice(0, 3).every(Number.isFinite));
@@ -67,6 +107,8 @@ assert(cars[0].rotation.toArray().slice(0, 3).every(Number.isFinite));
 ui['np-play'].onclick();
 for (let i = 1; i <= 90; i++) app.advance(i * 17);
 assert(cars.some((car) => car.position.z !== app.track.start.y));
+checkWheels();
+assert(cars.some((car) => car.children.some((part) => part.isGroup && Math.abs(part.children[0].rotation.z) > 0.01)));
 ui['np-play'].onclick();
 assert.equal(ui['np-inspect'].hidden, false);
 assert.equal((ui['np-terms'].innerHTML.match(/<tr>/g) || []).length, 7);
