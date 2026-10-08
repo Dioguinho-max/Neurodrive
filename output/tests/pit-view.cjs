@@ -26,6 +26,20 @@ for (const config of host.NeuroTracks) {
   const car = race.cars[0];
   renderer.update(race.cars, car, false);
   scene.updateMatrixWorld(true); camera.updateMatrixWorld(true);
+  const paved = (distance, lane) => {
+    const point = track.pointAt(distance, lane);
+    const down = new THREE.Raycaster(new THREE.Vector3(point.x, track.heightAt(point.x, point.y) + 1, point.y), new THREE.Vector3(0, -1, 0), 0, 2);
+    assert(down.intersectObjects(scene.children, true).some(hit => hit.object.userData.pitPavement), `${config.id}: falta asfalto em ${distance}, ${lane}`);
+  };
+  for (let bay = 0; bay < 6; bay++) {
+    const garage = track.pit.garage(bay);
+    for (const along of [-9, 0, 9]) for (const lane of [78, 90, 102]) paved(garage.distance + along, track.halfWidth + lane);
+  }
+  for (const distance of [.6, .75, .9].map(t => track.pit.entry + t * (track.pit.entryEnd - track.pit.entry))) {
+    const t = (distance - track.pit.entry) / (track.pit.entryEnd - track.pit.entry);
+    const lane = track.pit.lane(distance) * t * t * (3 - 2 * t);
+    for (const edge of [-12, 12]) if (lane + edge > track.halfWidth) paved(distance, lane + edge);
+  }
   const target = new THREE.Vector3(car.x, track.heightAt(car.x, car.y) + 3, car.y);
   const screen = target.clone().project(camera);
   assert(Math.abs(screen.x) < 0.01 && Math.abs(screen.y) < 0.01, 'Carro deve estar no centro do enquadramento');

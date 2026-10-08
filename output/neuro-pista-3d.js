@@ -179,8 +179,8 @@
     if (options.racePresentation && track.pit) {
       function pitSurface(from, to, left, right, surface) {
         const vertices = [], uv = [];
-        for (let d = from; d < to; d += 3) {
-          const end = Math.min(to, d + 3);
+        for (let d = from; d < to; d += 1) {
+          const end = Math.min(to, d + 1);
           // O asfalto principal já ocupa toda a largura da pista: o pit só preenche o lado externo.
           const edgeLeft = (s) => Math.max(track.halfWidth, left(s));
           const edgeRight = (s) => Math.max(edgeLeft(s), right(s));
@@ -202,18 +202,38 @@
         geometry.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
         geometry.computeVertexNormals();
         const mesh = addMesh(geometry, surface, scene); mesh.receiveShadow = true;
+        mesh.userData.pitPavement = surface === asphalt;
       }
       const pitBegin = track.pit.garage(0).distance - 20;
+      const entryLane = (s) => {
+        const t = clamp((s - track.pit.entry) / (track.pit.entryEnd - track.pit.entry), 0, 1);
+        return track.pit.lane(s) * t * t * (3 - 2 * t);
+      };
+      pitSurface(track.pit.entry, pitBegin, () => track.halfWidth, (s) => {
+        const apron = clamp((s - (pitBegin - 20)) / 20, 0, 1);
+        return entryLane(s) + 18 + apron * 40;
+      }, asphalt);
       const apronEnd = track.pit.garage(5).distance + 20;
       // Uma superfície contínua, com a mesma textura e escala do asfalto principal.
       pitSurface(pitBegin, track.pit.exit, (d) => Math.min(track.halfWidth - 0.8, track.pit.lane(d) - 10), (d) => {
         const blend = Math.max(0, Math.min(1, (d - apronEnd) / 50));
-        return (track.halfWidth + 86) * (1 - blend) + (track.pit.lane(d) + 10) * blend;
+        // Inclui o piso inteiro das garagens (fundo em halfWidth + 103), não só a área de troca.
+        return (track.halfWidth + 110) * (1 - blend) + (track.pit.lane(d) + 10) * blend;
       }, asphalt);
       const pitLine = material('#f4cf67', { side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -1 });
+      for (const side of [-1, 1]) {
+        pitSurface(track.pit.entry, pitBegin, (d) => entryLane(d) + side * 9 - .3,
+          (d) => entryLane(d) + side * 9 + .3, pitLine);
+      }
       pitSurface(pitBegin, track.pit.exit, (d) => track.pit.lane(d) - 9, (d) => track.pit.lane(d) - 8.4, pitLine);
       pitSurface(pitBegin, track.pit.exit, (d) => track.pit.lane(d) + 8.4, (d) => track.pit.lane(d) + 9, pitLine);
       const paint = material('#e2e8e9', { side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -2 });
+      pitSurface(track.pit.entry, pitBegin, (d) => entryLane(d) + 13,
+        (d) => entryLane(d) + 13.6, paint);
+      // Faixas de aproximação acompanham o mesmo corredor usado pelo piloto automático.
+      for (let d = track.pit.entryEnd - 80; d < pitBegin; d += 12) {
+        pitSurface(d, d + 4, (s) => entryLane(s) - .35, (s) => entryLane(s) + .35, paint);
+      }
       for (let bay = 0; bay < 6; bay++) {
         const garage = track.pit.garage(bay);
         for (const side of [-1, 1]) pitSurface(garage.distance + side * 9, garage.distance + side * 9 + 0.6,
@@ -311,7 +331,7 @@
       // Garagens abertas: paredes laterais, fundo, bancada e porta recolhida.
       for (let bay = 0; bay < 6; bay++) {
         const distance = track.pit.garage(bay).distance;
-        const lane = track.halfWidth + 72;
+        const lane = track.halfWidth + 90;
         buildingPart(distance, lane + 13, 9, [24, 18, 1], concrete);
         for (const side of [-1, 1]) buildingPart(distance + side * 11.5, lane, 9, [1, 18, 26], concrete);
         buildingPart(distance, lane - 14, 14, [24, 2, 2], seatPaint[bay % 3]);
@@ -407,8 +427,9 @@
     const boardGeometry = new THREE.BoxGeometry(2, 16, 14);
     for (let i = 0; i < track.points.length; i += 3) {
       for (const side of [-1, 1]) {
-        if (options.racePresentation && side === 1 && track.segments[i].start >= track.pit.mergeStart - 20
-          && track.segments[i].start <= track.pit.exit + 20) continue;
+        if (options.racePresentation && side === 1 && ((track.segments[i].start >= track.pit.mergeStart - 20
+          && track.segments[i].start <= track.pit.exit + 20) || (track.segments[i].start >= track.pit.entry - 15
+          && track.segments[i].start <= track.pit.entryEnd + 20))) continue;
         const point = track.offset(i, side * (track.halfWidth + 40));
         const barrier = addMesh(barrierGeometry, white, scene, [point.x, track.heightAt(point.x, point.y) + 2.5, point.y]);
         barrier.rotation.y = -point.angle;
@@ -439,7 +460,19 @@
       }
       return geometry;
     }
-    const bodyGeometry = roundedBox(16, 3.2, 8, 0.65);
+    // Recortes reais na carroceria: a roda cabe dentro da caixa sem atravessar a lataria.
+    const bodyOutline = new THREE.Shape();
+    const archRadius = 2.05, archAngle = Math.asin(0.25 / archRadius);
+    bodyOutline.moveTo(-8, -1.6); bodyOutline.lineTo(-5 - Math.cos(archAngle) * archRadius, -1.6);
+    bodyOutline.absarc(-5, -1.35, archRadius, Math.PI + archAngle, -archAngle, true);
+    bodyOutline.lineTo(5 - Math.cos(archAngle) * archRadius, -1.6);
+    bodyOutline.absarc(5, -1.35, archRadius, Math.PI + archAngle, -archAngle, true);
+    bodyOutline.lineTo(8, -1.6); bodyOutline.lineTo(8, 1.2);
+    bodyOutline.quadraticCurveTo(8, 1.6, 7.6, 1.6); bodyOutline.lineTo(-7.6, 1.6);
+    bodyOutline.quadraticCurveTo(-8, 1.6, -8, 1.2); bodyOutline.closePath();
+    const bodyGeometry = new THREE.ExtrudeGeometry(bodyOutline, { depth: 7.8, bevelEnabled: true,
+      bevelSize: 0.1, bevelThickness: 0.1, bevelSegments: 2, curveSegments: 16, steps: 1 });
+    bodyGeometry.translate(0, 0, -3.9);
     const cabinGeometry = new THREE.BoxGeometry(7.5, 2.7, 6.5);
     const cabinVertices = cabinGeometry.attributes.position;
     for (let i = 0; i < cabinVertices.count; i++) {
@@ -450,9 +483,10 @@
     }
     cabinGeometry.computeVertexNormals();
     const roofGeometry = roundedBox(5.5, 0.5, 5.8, 0.2);
-    const wheelGeometry = new THREE.CylinderGeometry(2, 2, 1.4, 16);
+    const wheelRadius = 1.65;
+    const wheelGeometry = new THREE.CylinderGeometry(wheelRadius, wheelRadius, 1.2, 16);
     wheelGeometry.rotateX(Math.PI / 2);
-    const ultraWheelGeometry = new THREE.CylinderGeometry(2, 2, 1.4, 32);
+    const ultraWheelGeometry = new THREE.CylinderGeometry(wheelRadius, wheelRadius, 1.2, 32);
     ultraWheelGeometry.rotateX(Math.PI / 2);
     const treadPixels = new Uint8Array(128 * 64 * 4);
     for (let y = 0; y < 64; y++) for (let x = 0; x < 128; x++) {
@@ -465,9 +499,11 @@
     treadMap.magFilter = THREE.LinearFilter; treadMap.minFilter = THREE.LinearMipmapLinearFilter;
     treadMap.generateMipmaps = true; treadMap.needsUpdate = true; textures.push(treadMap);
     const tireRubber = material('#292c30', { map: treadMap, bumpMap: treadMap, bumpScale: 0.035, roughness: 0.98 });
-    const hubGeometry = new THREE.CylinderGeometry(1.25, 1.25, 1.48, 10);
+    const hubGeometry = new THREE.CylinderGeometry(1.05, 1.05, 1.24, 24);
     hubGeometry.rotateX(Math.PI / 2);
-    const spokeGeometry = new THREE.BoxGeometry(2.6, 0.28, 1.52);
+    const spokeGeometry = roundedBox(1.9, 0.16, 1.28, 0.06);
+    const rimGeometry = new THREE.TorusGeometry(1.05, 0.07, 6, 24);
+    const sidewallGeometry = new THREE.TorusGeometry(1.46, 0.09, 6, 24);
     const alloy = material('#c5ced8', { metalness: 0.8, roughness: 0.3 });
     const headlights = material('#e8f6ff', { emissive: '#b9ddff', emissiveIntensity: 0.6, roughness: 0.18 });
     const grilleGeometry = new THREE.BoxGeometry(0.2, 0.9, 4.6);
@@ -510,6 +546,93 @@
       }
     }
 
+    function updatePitCrew(model, active, time, lift) {
+      if (!active) { if (model.crew) model.crew.visible = false; return; }
+      if (!model.crew) {
+        const crew = new THREE.Object3D(); crew.userData.pitCrew = true; model.group.add(crew);
+        const suit = material('#c92d42', { roughness: .82 }), helmet = material('#f5f2e3', { roughness: .28 }),
+          visor = material('#102432', { metalness: .45, roughness: .15 }), trim = material('#233344');
+        model.mechanics = [];
+        for (const x of [-5, 5]) for (const side of [-1, 1]) {
+          const person = new THREE.Object3D(); crew.add(person);
+          addMesh(roundedBox(1.45, 1.8, 1, 0.28), suit, person, [0, 2.45, 0]);
+          addMesh(roundedBox(1.4, .18, 1.02, .06), trim, person, [0, 1.65, 0]);
+          addMesh(roundedBox(.1, 1.35, .06, .02), helmet, person, [0, 2.45, -side * .52]);
+          addMesh(roundedBox(.42, .24, .06, .04), helmet, person, [-.4, 2.85, -side * .52]);
+          addMesh(new THREE.CylinderGeometry(.28, .32, .35, 12), trim, person, [0, 3.45, 0]);
+          addMesh(new THREE.SphereGeometry(.69, 20, 14), helmet, person, [0, 3.98, 0]);
+          addMesh(roundedBox(1.08, .43, .34, .15), visor, person, [0, 4.04, -side * .51]);
+          addMesh(roundedBox(.78, .15, .27, .06), trim, person, [0, 3.69, -side * .52]);
+          for (const leg of [-1, 1]) {
+            addMesh(roundedBox(.55, 1.4, .6, .18), suit, person, [leg * .4, .95, 0]);
+            addMesh(roundedBox(.48, .42, .22, .08), trim, person, [leg * .4, .85, -side * .31]);
+            addMesh(roundedBox(.6, .38, .95, .13), rubber, person, [leg * .4, .21, -side * .2]);
+            addMesh(roundedBox(.48, .42, .9, .15), helmet, person, [leg * .76, 3, 0]);
+          }
+          const arms = new THREE.Object3D(); person.add(arms); arms.position.y = 2.65;
+          for (const arm of [-1, 1]) {
+            const mesh = addMesh(roundedBox(.4, .46, 1.3, .16), suit, arms, [arm * .68, -.15, -side * .5]);
+            mesh.rotation.x = side * 0.2;
+            addMesh(roundedBox(.43, .4, .42, .13), rubber, arms, [arm * .63, -.23, -side * 1.12]);
+          }
+          // Um auxiliar por roda: mesmo acabamento, uniforme azul e mãos livres para transportá-la.
+          const helper = person.clone(true);
+          helper.userData.tyreAssistant = true;
+          const helperSuit = material('#28658c', { roughness: .82 });
+          helper.traverse((part) => { if (part.material === suit) part.material = helperSuit; });
+          crew.add(helper);
+          const tool = new THREE.Object3D(); arms.add(tool); tool.position.set(.55, -.16, -side * 1.25);
+          addMesh(roundedBox(.48, .48, .64, .13), helmet, tool);
+          const barrel = addMesh(new THREE.CylinderGeometry(.17, .21, .52, 16), alloy, tool, [0, 0, -side * .42]);
+          barrel.rotation.x = Math.PI / 2;
+          const socket = addMesh(new THREE.CylinderGeometry(.13, .13, .24, 6), trim, tool, [0, 0, -side * .78]);
+          socket.rotation.x = Math.PI / 2;
+          addMesh(roundedBox(.23, .58, .27, .07), rubber, tool, [0, -.4, .05]);
+          const hose = new THREE.CatmullRomCurve3([new THREE.Vector3(.55, 1.9, -side * 1.2),
+            new THREE.Vector3(1.25, .7, -side * .3), new THREE.Vector3(1.2, .15, side * 1),
+            new THREE.Vector3(-.3, .12, side * 1.7)]);
+          addMesh(new THREE.TubeGeometry(hose, 16, .055, 6, false), rubber, person);
+          const spare = addMesh(wheelGeometry, tireRubber, person, [-0.8, 1.3, -side * 0.8]);
+          addMesh(hubGeometry, rubber, spare);
+          for (let spoke = 0; spoke < 3; spoke++) addMesh(spokeGeometry, alloy, spare).rotation.z = spoke * Math.PI / 3;
+          for (const face of [-1, 1]) addMesh(rimGeometry, alloy, spare, [0, 0, face * .64]);
+          const delivery = spare.clone(true); crew.add(delivery);
+          delivery.userData.deliveryWheel = true;
+          model.mechanics.push({ person, arms, tool, socket, spare, helper, delivery, x, side });
+        }
+        addMesh(roundedBox(3, 0.4, 2.5, 0.15), suit, crew, [9.2, 0.3, 0]);
+        model.jack = addMesh(new THREE.BoxGeometry(0.6, 1, 0.6), alloy, crew, [8, 0.6, 0]);
+        const handle = addMesh(new THREE.CylinderGeometry(0.13, 0.13, 4, 8), helmet, crew, [10.5, 1.5, 0]);
+        handle.rotation.z = -0.6;
+        model.crew = crew;
+      }
+      model.crew.visible = true; model.crew.position.y = -lift;
+      model.jack.scale.y = 0.7 + lift; model.jack.position.y = 0.6 + lift / 2;
+      const arrival = Math.min(1, time / 0.8, Math.max(0, 8 - time));
+      for (const mechanic of model.mechanics) {
+        mechanic.person.position.set(mechanic.x, 0, mechanic.side * (9 - arrival * 2.4));
+        const working = time > 1.5 && time < 6.5;
+        mechanic.arms.rotation.x = mechanic.side * Math.sin(time * 24) * (working ? .015 : 0);
+        mechanic.socket.rotation.y = working ? time * 24 : 0;
+        const approach = clamp((time - .8) / 1.6, 0, 1);
+        const retreat = clamp((time - 6) / 1.5, 0, 1);
+        const travel = approach * (1 - retreat);
+        mechanic.helper.position.set(mechanic.x + 2.3, 0, mechanic.side * (12 - travel * 3.2));
+        // Entrega contínua, em coordenadas da equipe, sem teletransportar a roda entre as mãos.
+        const handoff = clamp((time - 2.8) / .8, 0, 1);
+        const from = mechanic.helper.position.clone().add(new THREE.Vector3(-.8, 1.7, -mechanic.side * .8));
+        const to = mechanic.person.position.clone().add(new THREE.Vector3(-.8, 1.7, -mechanic.side * .8));
+        mechanic.delivery.position.copy(from).lerp(to, handoff);
+        mechanic.delivery.visible = time < 4.2;
+        mechanic.spare.visible = false;
+        // Após montar o pneu novo, o auxiliar recolhe o usado e se afasta.
+        if (time >= 4.5) {
+          mechanic.delivery.visible = true;
+          mechanic.delivery.position.copy(to).lerp(from, clamp((time - 4.5) / .8, 0, 1));
+        }
+      }
+    }
+
     function createCarModel(index) {
       const group = new THREE.Group();
       const playerPaint = material('#48e6a4', { metalness: 0.35, roughness: 0.4,
@@ -529,7 +652,7 @@
       addMesh(grilleGeometry, rubber, group, [8.03, 2.8, 0]);
       for (const side of [-1, 1]) {
         addMesh(exhaustGeometry, alloy, group, [-8.3, 1.9, side * 2.5]);
-        addMesh(new THREE.BoxGeometry(9.5, 0.3, 0.15), rubber, group, [-0.6, 1.9, side * 4]);
+        addMesh(new THREE.BoxGeometry(5, 0.3, 0.15), rubber, group, [0, 1.9, side * 4]);
       }
       const decalCanvas = document.createElement('canvas');
       decalCanvas.width = 512; decalCanvas.height = 128;
@@ -545,7 +668,7 @@
         const map = new THREE.CanvasTexture(decalCanvas); map.colorSpace = THREE.SRGBColorSpace; textures.push(map);
         const surface = new THREE.MeshStandardMaterial({ map, roughness: 0.35 });
         for (const side of [-1, 1]) {
-          const panel = addMesh(new THREE.PlaneGeometry(6.4, 1.3), surface, group, [-1, 3, side * 4.015]);
+          const panel = addMesh(new THREE.PlaneGeometry(4.4, 1.3), surface, group, [0, 3, side * 4.015]);
           if (side < 0) panel.rotation.y = Math.PI;
         }
       }
@@ -557,13 +680,33 @@
       const frontWheels = [], wheels = [];
       for (const x of [-5, 5]) {
         for (const z of [-4, 4]) {
+          // Fundo e revestimento da caixa permanecem no carro quando a roda é removida.
+          const side = Math.sign(z);
+          const lining = material('#171d23', { roughness: .96, side: THREE.DoubleSide });
+          const well = new THREE.Shape(), angle = Math.asin(.25 / 1.98);
+          well.moveTo(-Math.cos(angle) * 1.98, -.25);
+          well.absarc(0, 0, 1.98, Math.PI + angle, -angle, true);
+          well.closePath();
+          const back = addMesh(new THREE.ExtrudeGeometry(well, { depth: .65, bevelEnabled: false, curveSegments: 16 }),
+            lining, group, [x, wheelRadius, side * 3.05]);
+          if (side < 0) back.rotation.y = Math.PI;
+          back.userData.wheelWell = true;
+          const disc = addMesh(new THREE.CylinderGeometry(.82, .82, .14, 24), alloy,
+            group, [x, wheelRadius, side * 3.72]);
+          disc.rotation.x = Math.PI / 2;
+          addMesh(roundedBox(.3, .65, .24, .08), red, group, [x + .65, wheelRadius, side * 3.76]);
+          const hub = addMesh(new THREE.CylinderGeometry(.2, .2, .3, 12), alloy,
+            group, [x, wheelRadius, side * 3.85]);
+          hub.rotation.x = Math.PI / 2;
           const pivot = new THREE.Group();
-          pivot.position.set(x, 2, z); group.add(pivot);
+          pivot.position.set(x, wheelRadius, z); group.add(pivot);
           const wheel = addMesh(options.quality === 'ultra' ? ultraWheelGeometry : wheelGeometry, tireRubber, pivot);
           addMesh(hubGeometry, rubber, wheel);
-          addMesh(spokeGeometry, alloy, wheel);
-          const cross = addMesh(spokeGeometry, alloy, wheel);
-          cross.rotation.z = Math.PI / 2;
+          for (let spoke = 0; spoke < 3; spoke++) addMesh(spokeGeometry, alloy, wheel).rotation.z = spoke * Math.PI / 3;
+          for (const face of [-1, 1]) {
+            addMesh(rimGeometry, alloy, wheel, [0, 0, face * 0.64]);
+            addMesh(sidewallGeometry, tireRubber, wheel, [0, 0, face * 0.56]);
+          }
           wheels.push({ pivot, wheel, x, z });
           if (x > 0) frontWheels.push(pivot);
         }
@@ -626,7 +769,7 @@
     let dragging = null;
     let viewportWidth = 0;
     let viewportHeight = 0;
-    const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
+    function clamp(value, min, max) { return Math.max(min, Math.min(max, value)); }
 
     let finishCameraAt = null;
     function render() {
@@ -644,7 +787,7 @@
       const mode = finishCameraAt !== null ? 'finish' : element('camera').value;
       const car = snapshot?.target;
       pitRoofs.forEach((roof, index) => {
-        const cutaway = car?.pitExit && car.id === index + 1;
+        const cutaway = (car?.pitExit || car?.pitState) && car.id === index + 1;
         roof.visible = !cutaway;
         roof.material.opacity = 1;
         roof.material.depthWrite = !cutaway;
@@ -666,7 +809,12 @@
         camera.fov = fieldOfView;
         camera.updateProjectionMatrix();
       }
-      if (mode === 'finish' && car && !car.pitExit) {
+      if (car?.pitState === 'service') {
+        const x = car.x + Math.cos(car.angle) * 15 + Math.sin(car.angle) * 24;
+        const z = car.y + Math.sin(car.angle) * 15 - Math.cos(car.angle) * 24;
+        camera.position.set(x, Math.max(track.heightAt(x, z) + 8, track.heightAt(car.x, car.y) + 13), z);
+        camera.lookAt(car.x, track.heightAt(car.x, car.y) + 3, car.y);
+      } else if (mode === 'finish' && car && !car.pitExit) {
         const elapsed = Math.min(6, Math.max(0, (Date.now() - finishCameraAt) / 1000));
         const orbit = car.angle + 0.7 + (options.speedEffects === false ? 0 : elapsed * 0.09);
         const x = car.x + Math.cos(orbit) * 32, z = car.y + Math.sin(orbit) * 32;
@@ -808,10 +956,14 @@
         const view = new THREE.PerspectiveCamera(38, 1, 0.1, 200);
         const model = source.group.clone(true);
         model.position.set(0, 0, 0); model.rotation.set(0, 0, 0); model.visible = true;
-        model.children.filter((part) => part.isGroup).forEach((pivot) => { pivot.position.y = 2; pivot.rotation.y = 0; });
+        model.children.filter((part) => part.isGroup).forEach((pivot) => {
+          pivot.position.y = wheelRadius; pivot.position.z = Math.sign(pivot.position.z) * 4;
+          pivot.rotation.y = 0; pivot.children[0].visible = true;
+        });
         const geometries = new Set(), surfaces = new Set();
         model.traverse((part) => {
           if (part.isSprite) part.visible = false;
+          if (part.userData.pitCrew) part.visible = false;
           if (part.geometry) { part.geometry = part.geometry.clone(); geometries.add(part.geometry); }
           if (part.material) { part.material = part.material.clone(); surfaces.add(part.material); }
         });
@@ -901,7 +1053,11 @@
             model.lastSpeed = car.speed;
           }
           model.group.visible = true;
-          model.group.position.set(car.x, track.heightAt(car.x, car.y) + 0.15, car.y);
+          const service = car.pitState === 'service';
+          const serviceTime = service ? (480 - car.pitTimer) / 60 : 0;
+          const lift = service ? Math.min(1, Math.max(0, serviceTime - 0.7), Math.max(0, 7.7 - serviceTime)) * 0.9 : 0;
+          model.group.position.set(car.x, track.heightAt(car.x, car.y) + 0.15 + lift, car.y);
+          updatePitCrew(model, service, serviceTime, lift);
           const forwardX = Math.cos(car.angle), forwardY = Math.sin(car.angle);
           const pitch = Math.atan2(track.heightAt(car.x + forwardX * 8, car.y + forwardY * 8)
             - track.heightAt(car.x - forwardX * 8, car.y - forwardY * 8), 16);
@@ -929,14 +1085,17 @@
           // O giro acompanha o deslocamento, sem depender do FPS ou girar durante a pausa.
           if (distance < 30) {
             const direction = (car.x - (model.lastX ?? car.x)) * forwardX + (car.y - (model.lastY ?? car.y)) * forwardY;
-            model.spin = (model.spin - Math.sign(direction) * distance / 2) % (Math.PI * 2);
+            model.spin = (model.spin - Math.sign(direction) * distance / wheelRadius) % (Math.PI * 2);
           }
           model.lastX = car.x; model.lastY = car.y;
           const up = new THREE.Vector3(0, 1, 0).applyQuaternion(model.group.quaternion);
           model.wheels.forEach(({ pivot, wheel, x, z }) => {
-            const contact = model.group.localToWorld(new THREE.Vector3(x, 2, z));
-            const height = track.heightAt(contact.x, contact.z) + 0.15 + 2;
-            pivot.position.y = 2 + (height - contact.y) / up.y;
+            const contact = model.group.localToWorld(new THREE.Vector3(x, wheelRadius, z));
+            const height = track.heightAt(contact.x, contact.z) + 0.15 + wheelRadius + lift;
+            pivot.position.y = wheelRadius + (height - contact.y) / up.y;
+            const removal = service ? Math.min(1, Math.max(0, serviceTime - 2), Math.max(0, 6 - serviceTime)) : 0;
+            pivot.position.z = z + Math.sign(z) * removal * 1.5;
+            wheel.visible = !(service && serviceTime > 3.2 && serviceTime < 4.2);
             wheel.rotation.z = model.spin;
           });
           const customized = car.skin;

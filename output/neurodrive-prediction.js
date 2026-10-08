@@ -12,7 +12,7 @@
     function simulate(now) {
       if (!state) return null;
       const car = { ...state };
-      if (phase !== 'racing' || car.done || car.cooldown) return car;
+      if (phase !== 'racing' || car.done || car.cooldown || car.pitState) return car;
       const end = Math.min(now, received + 200);
       for (let time = baseTime + 1000 / 60; time <= end; time += 1000 / 60) window.predictNeuroCar(track, car, commandAt(time));
       return car;
@@ -23,7 +23,7 @@
         while (history.length > 2 && history[1].time < now - 1000) history.shift();
       },
       receive(car, nextPhase, now, rtt = 0) {
-        const reset = !state || nextPhase !== phase || car.done || car.cooldown || Math.hypot(car.x - state.x, car.y - state.y) > 40;
+        const reset = !state || nextPhase !== phase || car.done || car.cooldown || car.pitState !== state.pitState || Math.hypot(car.x - state.x, car.y - state.y) > 40;
         state = { ...car }; phase = nextPhase; received = now;
         baseTime = now - Math.min(120, Math.max(0, rtt / 2));
         const corrected = simulate(now);

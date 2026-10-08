@@ -37,4 +37,8 @@ predictor.receive({ ...source, x: source.x + 150, cooldown: 30 }, 'racing', 5100
 assert.equal(predictor.sample(5100).x, source.x + 150, 'Recovery must snap without crossing the track');
 predictor.receive({ ...source, done: true, speed: 0 }, 'finished', 5200, 120);
 assert.equal(predictor.sample(5300).speed, 0, 'Server finish overrides prediction');
+predictor.receive({ ...source, pitState: 'service', pitTimer: 240, speed: 0 }, 'racing', 5400, 120);
+predictor.input({ accelerate: true, left: true }, 5400);
+assert.equal(predictor.sample(5500).speed, 0, 'Piloto não acelera durante a troca');
+assert.equal(predictor.sample(5500).x, source.x, 'Servidor controla o atendimento');
 console.log('OK: identical driving physics, instant input, braking, no authoritative mutation, outage limit, recovery and finish.');

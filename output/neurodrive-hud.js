@@ -62,7 +62,22 @@
       banner.textContent = 'VAI!';
     }
   };
-  window.createRaceHUD = (get) => (car, position, total, laps, elapsed) => {
+  window.createRaceHUD = (get) => (car, position, total, laps, elapsed, phase = 'racing') => {
+    const panel = get('race-pit-panel');
+    if (panel) {
+      panel.hidden = !car.tyreWearEnabled || car.done || phase === 'finished';
+      const life = Math.round((car.tyreLife ?? 1) * 100);
+      get('race-tyres').textContent = `Pneus · ${life}%`;
+      get('race-tyre-life').value = life;
+      get('race-pit-status').textContent = car.pitState === 'service'
+        ? `Troca de pneus · ${Math.ceil(car.pitTimer / 60)} s`
+        : car.pitState ? 'Piloto automático · limite 60 km/h'
+        : car.pitRequested ? 'Parada solicitada · entrada após a largada'
+        : `${car.pitStops || 0} parada(s) · desgaste ativo`;
+      const button = get('race-pit-request');
+      button.disabled = phase !== 'racing' || Boolean(car.pitState || car.cooldown || car.done);
+      button.textContent = car.pitState ? 'Equipe trabalhando' : car.pitRequested ? 'Cancelar parada (B)' : 'Chamar boxes (B)';
+    }
     const rpm = Math.max(0, Math.min(8000, Number(car.rpm) || 0));
     get('race-rpm-fill').setAttribute('stroke-dashoffset', String(100 - rpm / 80));
     get('race-instruments').setAttribute('data-redline', String(rpm >= 6300));

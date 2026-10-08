@@ -28,3 +28,10 @@
 .start-light.lit { background: #ff3939; box-shadow: 0 0 16px #ff2929aa, inset 0 0 8px #ffaaaacc; }
 .finish-signal { display: inline-flex; align-items: center; gap: 12px; padding: 12px 18px; background: #10141ee8; border-radius: 10px; color: #fff; font-size: clamp(15px, 2.5vw, 26px); }
 .chequered-flag { display: inline-block; width: 48px; height: 32px; background: conic-gradient(#fff 25%, #151515 0 50%, #fff 0 75%, #151515 0) 0 0 / 16px 16px; transform: rotate(-8deg); flex-shrink: 0; }
+
+.race-pit-panel { position: absolute; top: 100px; right: 20px; z-index: 3; width: 210px; padding: 14px; border: 1px solid #8bafbe44; border-radius: 12px; background: #101b24ed; color: #edf6ff; font-size: 13px; box-shadow: 0 8px 24px #0004; }
+.race-pit-panel[hidden], #neuro-race:has(.race-finale:not([hidden])) .race-pit-panel { display: none; }
+.race-pit-panel progress { width: 100%; height: 8px; margin-top: 10px; accent-color: #48e6a4; }
+.race-pit-panel p { color: #beced9; line-height: 1.4; margin: 10px 0; }
+.race-pit-panel .btn { width: 100%; font-size: 12px; }
+@media(max-width:700px) { .race-pit-panel { top: 80px; right: 10px; width: 155px; padding: 10px; font-size: 11px; } }

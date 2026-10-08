@@ -21,6 +21,7 @@
     if (!get('online-lobby').open) get('online-lobby').showModal();
   }
   function resetRoom() {
+    get('race-pit-panel').hidden = true;
     get('online-hud').hidden = true;
     room = null; latest = null; ready = false; displayedFinish = false;
     motion.clear(); rankingKey = ''; lastInput = ''; lastInputAt = 0;
@@ -77,7 +78,7 @@
           const player = latest.cars.find((car) => car.id === latest.self);
           get('online-ready').hidden = get('online-start').hidden = true;
           get('online-manual').disabled = true;
-          get('online-recover').disabled = latest.phase !== 'racing' || player.done || Boolean(player.cooldown);
+          get('online-recover').disabled = latest.phase !== 'racing' || player.done || Boolean(player.cooldown || player.pitState);
           get('online-leave').textContent = latest.phase === 'finished' || player.done ? 'Voltar às salas' : 'Abandonar corrida';
           prediction ||= window.createOnlinePrediction(window.createNeuroTrack(trackId));
           prediction.receive(player, latest.phase, performance.now(), rtt);
@@ -90,7 +91,7 @@
           }
           get('online-hud').hidden = false;
           playerPosition = ranking.indexOf(player) + 1;
-          updateHUD(player, playerPosition, ranking.length, latest.laps, latest.elapsed);
+          updateHUD(player, playerPosition, ranking.length, latest.laps, latest.elapsed, latest.phase);
           get('race-banner').textContent = latest.phase === 'countdown' ? latest.countdown : latest.phase === 'finished' ? 'Prova encerrada' : '';
           updateSignals(player, latest);
           if (player.done && !displayedFinish || latest.phase === 'finished' && !displayedFinish) { displayedFinish = true; menu(); }
@@ -116,6 +117,7 @@
   get('online-manual').onchange = () => { if (room) send({ type: 'ready', ready: false, manual: get('online-manual').checked }); };
   get('online-start').onclick = () => send({ type: 'start' });
   get('online-leave').onclick = () => send({ type: 'leave' });
+  get('race-pit-request').onclick = () => send({ type: 'pit' });
   get('online-recover').onclick = () => send({ type: 'recover' });
   get('online-menu').onclick = menu;
   get('online-back').onclick = () => get('online-lobby').close();
@@ -126,6 +128,7 @@
     if (get('online-lobby').open || ['INPUT', 'SELECT'].includes(event.target.tagName)) return;
     if (actions[event.code]) { event.preventDefault(); keys.add(event.code); }
     if (event.code === 'Escape') menu();
+    if (event.code === 'KeyB' && !event.repeat) send({ type: 'pit' });
     if (event.code === 'KeyR' && !event.repeat) send({ type: 'recover' });
   });
   window.addEventListener('keyup', (event) => keys.delete(event.code));
@@ -157,7 +160,7 @@
       const index = cars.findIndex((car) => car.id === latest.self);
       const player = prediction?.sample(performance.now()) || cars[index];
       cars[index] = player;
-      updateHUD(player, playerPosition, cars.length, latest.laps, latest.elapsed);
+      updateHUD(player, playerPosition, cars.length, latest.laps, latest.elapsed, latest.phase);
       renderer.update(cars, player, false, player, latest.phase === 'finished'); audio?.update(player, latest, !player.done && !document.hidden);
     }
     requestAnimationFrame(draw);

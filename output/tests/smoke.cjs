@@ -95,7 +95,7 @@ function checkWheels() {
     car.updateMatrixWorld(true);
     for (const pivot of car.children.filter((part) => part.isGroup)) {
       const center = pivot.getWorldPosition(new THREE.Vector3());
-      assert(Math.abs(center.y - 2 - app.track.heightAt(center.x, center.z) - 0.15) < 0.02);
+      assert(Math.abs(center.y - 1.65 - app.track.heightAt(center.x, center.z) - 0.15) < 0.02);
     }
   }
 }

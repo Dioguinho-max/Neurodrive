@@ -242,7 +242,7 @@
     get('menu-records').textContent = 'Recordes deste navegador: ' + window.NeuroTracks.map((circuit) =>
       `${circuit.name}: ${career.records[circuit.id] ? timeLabel(career.records[circuit.id]) : 'sem volta registrada'}`).join(' · ');
     get('menu-end-qualifying').hidden = !started || !race.qualifying || race.phase === 'finished';
-    get('menu-recover').hidden = !started || race.phase !== 'racing' || race.cars[0].pitExit;
+    get('menu-recover').hidden = !started || race.phase !== 'racing' || race.cars[0].pitExit || Boolean(race.cars[0].pitState);
     if (!get('race-menu').open) get('race-menu').showModal();
     get(started ? 'race-menu-resume' : 'race-menu-play').focus();
   }
@@ -297,7 +297,7 @@
       ? race.cars.find((car) => !car.done && !car.pitExit) || player : player;
     renderer?.update(race.cars, player, false, spectator, race.phase === 'finished');
     const ranking = race.standings();
-    updateHUD(player, ranking.indexOf(player) + 1, ranking.length, race.laps, race.elapsed);
+    updateHUD(player, ranking.indexOf(player) + 1, ranking.length, race.laps, race.elapsed, race.phase);
     get('race-laps').disabled = started && !race.qualifying && race.phase !== 'finished';
     audio?.update(player, race, started && !paused);
     get('race-speed-lines').style.opacity = String(Math.max(0, player.speed / player.maxSpeed - 0.55) * 0.5);
@@ -320,7 +320,7 @@
     updateSignals(player, race, started && !paused && !player.pitExit);
     refreshTiming(ranking);
     get('race-end-qualifying').disabled = !started || !qualifying || race.phase === 'finished';
-    get('race-recover').disabled = !started || player.pitExit || race.phase === 'finished';
+    get('race-recover').disabled = !started || player.pitExit || player.pitState || race.phase === 'finished';
     get('race-next').disabled = !qualifying || race.phase !== 'finished';
     if (qualifying && race.phase === 'finished') qualifyingGrid = race.gridOrder();
     get('race-show-results').hidden = race.phase !== 'finished';
@@ -417,6 +417,7 @@
     refresh();
   };
   get('race-pause').onclick = () => { if (paused) resumeFromMenu(); else openMenu(); refresh(); };
+  get('race-pit-request').onclick = () => { if (started && !paused) race.requestPit(1); };
   get('race-recover').onclick = () => { if (!paused) race.recoverPlayer(); };
 
   window.addEventListener('keydown', (event) => {
@@ -430,6 +431,7 @@
     }
     if (event.repeat) return;
     if (event.code === 'KeyP') get('race-pause').onclick();
+    if (event.code === 'KeyB' && !event.repeat && started && !paused) race.requestPit(1);
     if (event.code === 'KeyR' && started && !paused) race.recoverPlayer();
   });
   window.addEventListener('keyup', (event) => heldKeys.delete(event.code));

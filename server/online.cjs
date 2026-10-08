@@ -111,7 +111,7 @@ function attachOnline(server, { origin, store, tickMs = 1000 / 60 }) {
         if (msg.type === 'create') {
           if (peer.room) throw new Error('Saia da sala atual primeiro.');
           if (rooms.size >= 20) throw new Error('Servidor cheio. Tente mais tarde.');
-          if (!['serra', 'veloz', 'tecnico'].includes(msg.track) || ![1, 3, 5].includes(msg.laps)) throw new Error('Circuito ou voltas inválidos.');
+          if (!['serra', 'veloz', 'tecnico'].includes(msg.track) || ![1, 3, 5, 10].includes(msg.laps)) throw new Error('Circuito ou voltas inválidos.');
           let code;
           do { code = crypto.randomBytes(3).toString('hex').toUpperCase(); } while (rooms.has(code));
           const mode = msg.mode === 'tournament' ? 'tournament' : 'race';
@@ -129,6 +129,7 @@ function attachOnline(server, { origin, store, tickMs = 1000 / 60 }) {
           peer.input = Object.fromEntries(['accelerate', 'brake', 'left', 'right', 'shiftUp', 'shiftDown'].map((key) => [key, msg[key] === true]));
           peer.lastInput = Date.now();
         } else if (msg.type === 'recover' && peer.room?.race) peer.room.race.recoverCar(peer.carId);
+        else if (msg.type === 'pit' && peer.room?.race) peer.room.race.requestPit(peer.carId);
       } catch (error) { send(peer, { type: 'error', message: error.status ? error.message : ['SyntaxError'].includes(error.name) ? 'Mensagem inválida.' : error.message }); }
     });
     ws.on('error', () => {});

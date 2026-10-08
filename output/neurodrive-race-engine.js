@@ -62,7 +62,8 @@
     // 1 unidade/quadro = 15 m/s. Pneus têm aderência finita, não giro ilimitado.
     const lateralDemand = Math.abs(requestedYaw) * car.speed * 900;
     // Margem arcade no asfalto: curvas suaves e médias são mais tolerantes.
-    const grip = (car.offRoad ? 1.55 : 2.6) * 9.81;
+    const tyreGrip = car.tyreWearEnabled ? 0.82 + 0.18 * (car.tyreLife ?? 1) : 1;
+    const grip = (car.offRoad ? 1.55 : 2.6) * 9.81 * tyreGrip;
     const brakeLoad = Math.min(0.6, car.brake * 0.6);
     const lateralGrip = grip * Math.sqrt(1 - brakeLoad * brakeLoad);
     car.gripUsage = lateralDemand / lateralGrip;
@@ -75,6 +76,8 @@
     // Na grama usa só a resistência do terreno, sem somar outra frenagem por derrapagem.
     if (car.sliding && !car.offRoad) car.speed = Math.max(0, car.speed - Math.min(0.008, (car.gripUsage - 1.15) * 0.001));
     if (car.offRoad) car.speed = Math.max(0, car.speed - 0.0009 - car.speed * 0.00034);
+    if (car.tyreWearEnabled) car.tyreLife = Math.max(0, (car.tyreLife ?? 1) - car.speed / track.length * 0.16
+      * (1 + Math.min(1, Math.max(0, car.gripUsage - 1)) * 0.35 + car.brake * 0.1));
     const x = car.x + Math.cos(car.angle) * car.speed;
     const y = car.y + Math.sin(car.angle) * car.speed;
     const edge = track.nearest(x, y);
@@ -117,7 +120,7 @@
   // Visual prediction uses the same drivetrain, grip and wall response as the server.
   // Lap progress, collisions between cars and rewards remain server-authoritative.
   window.predictNeuroCar = (track, car, command) => {
-    if (car.done) return;
+    if (car.done || car.pitState) return;
     const shift = command.shiftUp ? 1 : command.shiftDown ? -1 : 0;
     if (car.manual && shift && shift !== (car.lastShift || 0) && !car.shiftTicks && !car.cooldown) {
       const gear = clamp(car.gear + shift, 1, 6);
@@ -147,6 +150,7 @@
     let countdown = 180;
     let elapsed = 0;
     let finishCount = 0;
+    const pitJourneys = new Map();
     const previousShifts = new Map();
 
     function pointAt(distance, lane = 0) {
@@ -180,6 +184,7 @@
         gripUsage: 0, sliding: false, offRoad: false, bodyRoll: 0,
         progress: distance - startDistance, checkpoint: 0,
         finishTime: null, place: null, cooldown: 0, stalled: 0, wallContact: false, wallCooldown: 0,
+        tyreWearEnabled: !qualifying && laps >= 5, tyreLife: 1, pitRequested: false, pitState: null, pitTimer: 0, pitStops: 0,
         bestLap: null, lastLap: null, lastLapKind: '', checkpointTimes: [],
         lapStart: 0, completedLaps: 0, invalidLap: false,
         inputs: [1, 1, 1, 1, 1, 0], activations: [[], [], [0, 0]],
@@ -255,7 +260,8 @@
       // Limita a velocidade pela curvatura prevista, usando a mesma escala da física.
       const curvature = bend / Math.max(20, Math.hypot(laterPoint.x - aheadPoint.x, laterPoint.y - aheadPoint.y));
       // Mais próximo da aderência de 2.6 g, com margem para tráfego e correções.
-      const cornerGrip = ({ easy: 1.65, normal: 2.05, hard: 2.3 }[difficulty] || 2.05) * car.driver.corner;
+      const cornerGrip = ({ easy: 1.65, normal: 2.05, hard: 2.3 }[difficulty] || 2.05) * car.driver.corner
+        * (car.tyreWearEnabled ? 0.82 + 0.18 * car.tyreLife : 1);
       const safeSpeed = Math.sqrt(9.81 * cornerGrip * 0.25 / Math.max(curvature, 0.0001)) / 15;
       const targetCornerSpeed = Math.min(aiSpeed * driverPace, Math.max(0.7, safeSpeed));
       pedal = Math.max(pedal, clamp((targetCornerSpeed - car.speed) * 1.8, -1, 1));
@@ -315,8 +321,88 @@
       }
     }
 
+    function requestPit(id) {
+      const car = cars.find((candidate) => candidate.id === id);
+      if (!car || !car.tyreWearEnabled || car.done || car.pitState || car.cooldown || phase !== 'racing') return false;
+      car.pitRequested = !car.pitRequested;
+      return true;
+    }
+    function startPitStop(car) {
+      const nearest = track.nearest(car.x, car.y);
+      const lane = (car.x - nearest.x) * -nearest.ty + (car.y - nearest.y) * nearest.tx;
+      const garage = track.pit.garage(car.id - 1);
+      const points = [{ x: car.x, y: car.y, s: nearest.progress }];
+      const smooth = (t) => { t = clamp(t, 0, 1); return t * t * (3 - 2 * t); };
+      for (let s = nearest.progress + 2; s < garage.distance; s += 2) {
+        const entry = smooth((s - nearest.progress) / (track.pit.entryEnd - nearest.progress));
+        const parking = smooth((s - (garage.distance - 45)) / 45);
+        const offset = lane + (track.pit.lane(s) - lane) * entry + 20 * parking;
+        points.push({ ...pointAt(s, offset), s });
+      }
+      points.push({ ...pointAt(garage.distance, garage.lane), s: garage.distance });
+      const stop = points.length - 1;
+      for (let s = garage.distance + 2; s < track.pit.exit; s += 2) {
+        points.push({ ...pointAt(s, track.pit.lane(s) + 20 * (1 - smooth((s - garage.distance) / 32))), s });
+      }
+      points.push({ ...pointAt(track.pit.exit), s: track.pit.exit });
+      pitJourneys.set(car.id, { points, node: 1, stop });
+      car.pitState = 'entry'; car.pitRequested = false; car.pitTrackProgress = nearest.progress;
+      car.steering = 0; car.bodyRoll = 0; car.sliding = false; car.offRoad = false; car.impact = 0;
+    }
+    function updatePitStop(car) {
+      const journey = pitJourneys.get(car.id);
+      car.throttle = 0; car.brake = 0; car.limiter = false; car.rpm = 1100;
+      car.activations = [car.inputs, [], [0, 0]];
+      if (car.pitState === 'service') {
+        car.speed = 0;
+        if (--car.pitTimer <= 0) {
+          car.tyreLife = 1; car.pitStops++; car.pitState = 'exit'; journey.node++;
+        }
+        return;
+      }
+      const next = journey.points[journey.node];
+      const stopPoint = journey.points[journey.stop];
+      const distanceToStop = Math.hypot(stopPoint.x - car.x, stopPoint.y - car.y);
+      const target = car.pitState === 'entry' ? Math.min(track.pit.limit, Math.sqrt(distanceToStop * 0.08)) : track.pit.limit;
+      car.speed = clamp(car.speed + clamp(target - car.speed, -0.08, 0.018), 0, track.pit.limit);
+      const heading = Math.atan2(next.y - car.y, next.x - car.x);
+      const blocked = cars.some((other) => other !== car && !other.done
+        // Ordem ao longo dos boxes evita espera circular entre quem entra e quem sai.
+        && (!other.pitState || other.pitTrackProgress > car.pitTrackProgress + 0.5)
+        && Math.hypot(other.x - car.x, other.y - car.y) < 22
+        && (other.x - car.x) * Math.cos(heading) + (other.y - car.y) * Math.sin(heading) > 3
+        && Math.abs(-(other.x - car.x) * Math.sin(heading) + (other.y - car.y) * Math.cos(heading)) < 12);
+      if (blocked) { car.speed = 0; return; }
+      car.gear = 2; car.rpm += car.speed * 2200;
+      let remaining = car.speed;
+      while (remaining > 0 && journey.node < journey.points.length) {
+        const p = journey.points[journey.node];
+        const distance = Math.hypot(p.x - car.x, p.y - car.y);
+        const step = Math.min(remaining, distance);
+        if (distance > 0.0001) {
+          car.angle = wrap(car.angle + clamp(wrap(Math.atan2(p.y - car.y, p.x - car.x) - car.angle), -0.08, 0.08));
+          car.x += (p.x - car.x) * step / distance; car.y += (p.y - car.y) * step / distance;
+          car.pitTrackProgress += (p.s - car.pitTrackProgress) * step / distance;
+        }
+        remaining -= step;
+        if (distance > step + 0.0001) break;
+        car.pitTrackProgress = p.s;
+        if (car.pitState === 'entry' && journey.node === journey.stop) {
+          car.pitState = 'service'; car.pitTimer = 480; car.speed = 0;
+          car.angle = pointAt(p.s).angle;
+          break;
+        }
+        journey.node++;
+      }
+      if (journey.node >= journey.points.length) {
+        car.pitState = null; car.pitTrackProgress = track.pit.exit;
+        car.angle = pointAt(track.pit.exit).angle; car.stalled = 0;
+        pitJourneys.delete(car.id);
+      }
+    }
+
     function recover(car) {
-      if (car.done || car.pitExit || phase !== 'racing') return;
+      if (car.done || car.pitExit || car.pitState || phase !== 'racing') return;
       car.invalidLap = true;
       const point = pointAt(startDistance + car.progress, car.id % 2 ? -10 : 10);
       Object.assign(car, point, { speed: 0, steering: 0, gear: 1, rpm: 900, shiftTicks: 0,
@@ -371,12 +457,18 @@
         return;
       }
       elapsed += 1 / 60;
-      const before = cars.map((car) => ({ x: car.x, y: car.y, s: track.nearest(car.x, car.y).progress, pit: car.pitExit }));
+      const before = cars.map((car) => ({ x: car.x, y: car.y, s: car.pitState ? car.pitTrackProgress : track.nearest(car.x, car.y).progress, pit: car.pitExit }));
       for (const car of cars) {
         if (car.done) continue;
         if (car.pitExit) { exitPit(car); continue; }
         if (car.wallCooldown > 0) car.wallCooldown--;
         if (car.cooldown > 0) { car.cooldown--; continue; }
+        if (!car.player && !car.pitState && car.tyreWearEnabled && car.tyreLife < 0.5 && laps - car.progress / track.length > 0.8) car.pitRequested = true;
+        if (car.pitRequested && !car.pitState) {
+          const s = track.nearest(car.x, car.y).progress;
+          if (s >= track.pit.entry && s < track.pit.entry + 18 && Math.cos(car.angle - pointAt(s).angle) > 0.7) startPitStop(car);
+        }
+        if (car.pitState) { updatePitStop(car); continue; }
         const command = options.online ? input[car.id] || {} : input;
         const [steering, pedal] = car.player
           ? [Number(Boolean(command.right)) - Number(Boolean(command.left)), command.brake ? -1 : command.accelerate ? 1 : 0]
@@ -388,7 +480,7 @@
       for (let i = 0; i < cars.length; i++) {
         for (let j = i + 1; j < cars.length; j++) {
           const a = cars[i], b = cars[j];
-          if (qualifying || a.done || b.done || a.cooldown || b.cooldown) continue;
+          if (qualifying || a.done || b.done || a.cooldown || b.cooldown || a.pitState || b.pitState) continue;
           const dx = b.x - a.x, dy = b.y - a.y;
           const distance = Math.hypot(dx, dy);
           if (distance >= 17) continue;
@@ -412,7 +504,7 @@
 
       for (const [index, car] of cars.entries()) {
         if (car.done || car.cooldown || before[index].pit) continue;
-        let delta = track.nearest(car.x, car.y).progress - before[index].s;
+        let delta = (car.pitState ? car.pitTrackProgress : track.nearest(car.x, car.y).progress) - before[index].s;
         if (delta > track.length / 2) delta -= track.length;
         if (delta < -track.length / 2) delta += track.length;
         // Rejeita saltos entre partes do circuito: só movimento local conta.
@@ -422,7 +514,7 @@
           car.checkpointTimes[car.checkpoint] = elapsed;
         }
         car.stalled = delta > 0.1 ? 0 : car.stalled + 1;
-        if (!car.player && car.stalled > 120) recover(car);
+        if (!car.player && !car.pitState && car.stalled > 120) recover(car);
         if (car.checkpoint >= laps * 12 && car.progress >= track.length * laps) {
           car.done = true;
           car.speed = 0;
@@ -449,7 +541,7 @@
     }
 
     return {
-      cars, laps, pointAt, step, standings, qualifying,
+      cars, laps, pointAt, step, standings, qualifying, requestPit,
       setTransmission: (mode) => { cars[0].manual = mode === 'manual'; previousShifts.clear(); },
       recoverCar: (id) => { const car = cars.find((item) => item.id === id); if (car) recover(car); },
       gridOrder: () => standings().map((car) => car.id),

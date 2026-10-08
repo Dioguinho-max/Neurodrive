@@ -74,6 +74,25 @@ assert(camera.position.distanceTo(initialCamera) > 1);
 preview.setSkin(catalog.find((skin) => skin.finish === 'matte'));
 assert.equal(previewModel.children[0].material.roughness, 0.82);
 preview.reset(); preview.dispose();
+player.speed = 0;
+player.pitState = 'service'; player.pitTimer = 240;
+renderer.update(race.cars, player, false);
+const crew = models[0].children.find(part => part.userData.pitCrew);
+assert(crew?.visible, 'Mecânicos aparecem durante o atendimento');
+assert.equal(crew.children.filter(part => part.userData.tyreAssistant).length, 4, 'Um auxiliar entrega cada roda');
+assert.equal(crew.children.filter(part => part.userData.deliveryWheel && part.visible).length, 4, 'Rodas entregues durante a troca');
+assert(models[0].position.y > groundedPosition.y + .8, 'Macaco levanta o carro');
+const wheels = models[0].children.filter(part => part.isGroup);
+assert.equal(wheels.length, 4);
+for (const pivot of wheels) {
+  assert.equal(pivot.children[0].geometry.parameters.radiusTop, 1.65);
+  assert.equal(pivot.children[0].visible, false, 'Pneu sai durante a troca');
+}
+player.pitState = 'exit'; player.pitTimer = 0;
+renderer.update(race.cars, player, false);
+assert.equal(crew.visible, false);
+assert(Math.abs(models[0].position.y - groundedPosition.y) < 1e-8);
+assert(wheels.every(pivot => pivot.children[0].visible && Math.abs(pivot.position.z) === 4));
 renderer.update(race.cars, player, false);
 renderer.dispose();
 console.log('OK: pintura e faixas no jogador, IA inalterada e retorno à pintura padrão.');

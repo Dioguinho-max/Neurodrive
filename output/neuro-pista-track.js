@@ -55,7 +55,8 @@
     const segment = { a, b, dx, dy, size, start: length };
     length += size;
     // Indexação espacial evita percorrer a pista inteira a cada sensor.
-    const padding = halfWidth + 60;
+    // Inclui as garagens e o pátio dos boxes nas consultas de posição e câmera.
+    const padding = halfWidth + 120;
     for (let x = Math.floor((Math.min(a.x, b.x) - padding) / cellSize); x <= Math.floor((Math.max(a.x, b.x) + padding) / cellSize); x++) {
       for (let y = Math.floor((Math.min(a.y, b.y) - padding) / cellSize); y <= Math.floor((Math.max(a.y, b.y) + padding) / cellSize); y++) {
         const cell = key(x, y);
@@ -98,8 +99,8 @@
       y: segment.a.y + segment.dy * t + Math.cos(angle) * lane, angle };
   }
   const pit = {
-    limit: 60 / 54, mergeStart: 480, exit: 650,
-    garage: (index) => ({ distance: 120 + index * 26, lane: halfWidth + 72 }),
+    limit: 60 / 54, entry: 20, entryEnd: 360, mergeStart: 640, exit: 810,
+    garage: (index) => ({ distance: 400 + index * 26, lane: halfWidth + 72 }),
     lane(distance) {
       const t = Math.max(0, Math.min(1, (distance - this.mergeStart) / (this.exit - this.mergeStart)));
       return (halfWidth + 52) * (1 - t * t * (3 - 2 * t));

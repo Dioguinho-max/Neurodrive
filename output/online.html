@@ -26,6 +26,12 @@
         </div>
         <div class="drive-session"><span>POS<strong id="race-position">1 / 6</strong></span><span>VOLTA<strong id="race-lap">1 / 3</strong></span><span class="drive-time">TEMPO<strong id="race-time">0:00.00</strong></span></div>
       </aside>
+<aside id="race-pit-panel" class="race-pit-panel" hidden aria-label="Pneus e boxes">
+<strong id="race-tyres">Pneus ? 100%</strong>
+<progress id="race-tyre-life" max="100" value="100" aria-label="Condi??o dos pneus"></progress>
+<p id="race-pit-status" role="status"></p>
+<button class="btn" id="race-pit-request" type="button">Chamar boxes (B)</button>
+</aside>
   <ol id="online-ranking" aria-label="Posições da corrida"></ol>
   <div class="viz-controls race-touch" aria-label="Controles"><button class="btn" data-drive="left">←</button><button class="btn" data-drive="right">→</button><button class="btn" data-drive="brake">Frear</button><button class="btn" data-drive="accelerate">Acelerar</button><button class="btn" data-drive="shiftDown">Q −</button><button class="btn" data-drive="shiftUp">E +</button></div>
   <dialog id="online-lobby" class="race-results" aria-labelledby="online-title">
@@ -39,7 +45,7 @@
       <label class="form-label">Disputa<select class="form-select" id="online-mode"><option value="race">Corrida com amigos</option><option value="tournament">Copa Neuro · torneio de 3 voltas</option></select></label>
       <p class="tournament-rules">Copa Neuro: entrada gratuita, 2–6 jogadores e três voltas. Quem terminar recebe 110 moedas; bônus de pódio: +90 / +60 / +30. Limites: 200 por prova e 500 por dia UTC. Abandono não premia. Saldo validado pelo servidor e salvo na conta.</p>
       <div class="viz-controls"><label class="form-label">Circuito<select class="form-select" id="online-track"><option value="serra">Serra Verde</option><option value="veloz">Autódromo Veloz</option><option value="tecnico">Vale Técnico</option></select></label>
-      <label class="form-label">Voltas<select class="form-select" id="online-laps"><option value="1">1 volta</option><option value="3" selected>3 voltas</option><option value="5">5 voltas</option></select></label><button class="btn" id="online-create">Criar sala</button></div>
+      <label class="form-label">Voltas<select class="form-select" id="online-laps"><option value="1">1 volta</option><option value="3" selected>3 voltas</option><option value="5">5 voltas</option><option value="10">10 voltas</option></select></label><button class="btn" id="online-create">Criar sala</button></div>
       <form id="online-join"><label class="form-label">Código da sala<input id="online-code" maxlength="6" minlength="6" pattern="[a-fA-F0-9]{6}" required autocomplete="off" placeholder="ABC123"></label><button class="btn" type="submit">Entrar na sala</button></form>
     </div>
     <section id="online-room" hidden><h2 id="online-room-code"></h2><ul id="online-players"></ul>
@@ -52,6 +58,7 @@
       <label class="form-check"><input type="checkbox" id="online-sound" checked>Som do motor</label>
       <label class="form-label">Câmera<select class="form-select" id="np-camera"><option value="chase">Terceira pessoa</option><option value="overview">Visão da pista</option><option value="follow">Orbital</option></select></label>
       <div class="viz-controls"><button class="btn" id="np-rotate">Girar</button><button class="btn" id="np-zoom-in">+</button><button class="btn" id="np-zoom-out">−</button><button class="btn" id="np-camera-reset">Restaurar câmera</button><button class="btn" id="online-recover" disabled>Voltar à pista (R)</button></div>
+<p class="pit-help">Corridas de 5 voltas ou mais t?m desgaste dos pneus. Pressione <strong>B</strong> ou use ?Chamar boxes?: a equipe assume na pr?xima entrada e troca os pneus em 8 segundos.</p>
       <p>WASD ou setas para dirigir. Q/E para trocar no manual. R reposiciona. Esc abre a sala.</p>
     </details>
     <p id="online-reward" role="status"></p>
