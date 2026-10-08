@@ -550,7 +550,10 @@
         }
       }
       const mirrorGeometry = new THREE.BoxGeometry(1.4, 0.65, 1.4);
-      for (const side of [-1, 1]) addMesh(mirrorGeometry, body.material, group, [2, 4.7, side * 4.4]);
+      for (const side of [-1, 1]) {
+        const mirror = addMesh(mirrorGeometry, body.material, group, [2, 4.7, side * 4.4]);
+        mirror.userData.paint = true;
+      }
       const frontWheels = [], wheels = [];
       for (const x of [-5, 5]) {
         for (const z of [-4, 4]) {
@@ -672,7 +675,9 @@
         camera.lookAt(car.x, track.heightAt(car.x, car.y) + 3, car.y);
       } else if (mode === 'chase' && car) {
         // Terceira pessoa: camera atras do carro, olhando adiante na pista.
-        const behind = (raceCamera ? 30 + speedRatio * 4 : 42) * zoom;
+        const brakeMotion = raceCamera ? Math.max(0, -(car.activations?.[2]?.[1] || 0)) * speedRatio : 0;
+        const impactMotion = raceCamera ? (car.impact || 0) : 0;
+        const behind = (raceCamera ? 30 + speedRatio * 4 - brakeMotion * 1.2 : 42) * zoom;
         const angle = car.angle + chaseOrbit;
         camera.position.set(
           car.x - Math.cos(angle) * behind,
@@ -685,6 +690,7 @@
         const lookX = car.x + Math.cos(car.angle) * 32;
         const lookY = car.y + Math.sin(car.angle) * 32;
         camera.lookAt(lookX, track.heightAt(lookX, lookY) + 4, lookY);
+        camera.position.y += brakeMotion * 0.4 + Math.sin(Date.now() * 0.065) * impactMotion * 0.35;
       } else {
         const follow = mode === 'follow' && car;
         const bounds = track.bounds;
@@ -782,6 +788,63 @@
     setQuality(options.quality);
     return {
       setQuality,
+      createPreview(previewCanvas) {
+        // Uma única vitrine, com cópia do mesmo modelo e recursos próprios.
+        const source = models[0] || (models[0] = createCarModel(0));
+        const previewScene = new THREE.Scene();
+        previewScene.background = new THREE.Color('#101e2b');
+        previewScene.environment = getEnvironment();
+        const previewRenderer = new THREE.WebGLRenderer({ canvas: previewCanvas, antialias: true });
+        previewRenderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.75));
+        previewRenderer.outputColorSpace = THREE.SRGBColorSpace;
+        previewRenderer.toneMapping = THREE.ACESFilmicToneMapping;
+        const view = new THREE.PerspectiveCamera(38, 1, 0.1, 200);
+        const model = source.group.clone(true);
+        model.position.set(0, 0, 0); model.rotation.set(0, 0, 0); model.visible = true;
+        model.children.filter((part) => part.isGroup).forEach((pivot) => { pivot.position.y = 2; pivot.rotation.y = 0; });
+        const geometries = new Set(), surfaces = new Set();
+        model.traverse((part) => {
+          if (part.isSprite) part.visible = false;
+          if (part.geometry) { part.geometry = part.geometry.clone(); geometries.add(part.geometry); }
+          if (part.material) { part.material = part.material.clone(); surfaces.add(part.material); }
+        });
+        model.children[3].visible = model.children[4].visible = true;
+        previewScene.add(model);
+        previewScene.add(new THREE.HemisphereLight('#e2f2ff', '#34414f', 2.4));
+        const key = new THREE.DirectionalLight('#fff3df', 3); key.position.set(15, 25, 15); previewScene.add(key);
+        const rim = new THREE.DirectionalLight('#93cfff', 2); rim.position.set(-15, 12, -20); previewScene.add(rim);
+        const platform = new THREE.Mesh(new THREE.CylinderGeometry(13, 13, 0.35, 64),
+          new THREE.MeshStandardMaterial({ color: '#273948', roughness: 0.65 }));
+        platform.position.y = -0.3; previewScene.add(platform);
+        geometries.add(platform.geometry); surfaces.add(platform.material);
+        let azimuth = 0.7, elevation = 0.4, disposed = false;
+        function draw() {
+          if (disposed) return;
+          const width = Math.max(1, previewCanvas.clientWidth || 600), height = Math.max(1, previewCanvas.clientHeight || 300);
+          previewRenderer.setSize(width, height, false); view.aspect = width / height; view.updateProjectionMatrix();
+          const radius = view.aspect < 1.4 ? 44 : 35;
+          view.position.set(Math.cos(azimuth) * radius * Math.cos(elevation), 3 + Math.sin(elevation) * radius, Math.sin(azimuth) * radius * Math.cos(elevation));
+          view.lookAt(0, 3, 0); previewRenderer.render(previewScene, view);
+        }
+        return {
+          draw,
+          rotate(x, y = 0) { azimuth += x; elevation = Math.max(0.12, Math.min(1.35, elevation + y)); draw(); },
+          reset() { azimuth = 0.7; elevation = 0.4; draw(); },
+          setSkin(skin) {
+            const matte = skin.finish === 'matte', metallic = skin.finish === 'metallic';
+            for (const part of model.children.filter((part, index) => index === 0 || index === 2 || part.userData.paint)) {
+              const paint = part.material;
+              paint.color.set(skin.color); paint.emissive?.set('#000000');
+              paint.roughness = matte ? 0.82 : metallic ? 0.27 : 0.4;
+              paint.metalness = matte ? 0.08 : metallic ? 0.75 : 0.35;
+              paint.clearcoat = matte ? 0.08 : 0.6;
+            }
+            for (const index of [3, 4]) model.children[index].material.color.set(skin.accent);
+            draw();
+          },
+          dispose() { disposed = true; geometries.forEach((item) => item.dispose()); surfaces.forEach((item) => item.dispose()); previewRenderer.dispose(); },
+        };
+      },
       dispose() {
         listeners.forEach(([type, handler, settings]) => canvas.removeEventListener(type, handler, settings));
         const geometries = new Set(), materials = new Set();
@@ -884,6 +947,7 @@
             : car.alive ? bodyMaterials[index % 3] : crashedMaterial;
           model.body.material = surface;
           model.roof.material = surface;
+          model.group.children.filter((part) => part.userData.paint).forEach((part) => { part.material = surface; });
           model.frontWheels.forEach((wheel) => { wheel.rotation.y = -car.steering * 0.4; });
           model.brakes.forEach((lamp) => { lamp.material = car.activations[2][1] < 0 && car.alive ? brakeMaterial : red; });
         });

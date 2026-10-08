@@ -11,6 +11,26 @@
   let attempt = null;
   let identity = 0;
   let capabilities = { localRewards: true, online: false };
+  let previewFactory, showroom, previewSkin, previewDrag;
+  function inspectSkin(skin, scroll = false) {
+    previewSkin = skin;
+    get('garage-preview-name').textContent = skin.name;
+    if (previewFactory && page === 'store') {
+      try {
+        showroom ||= previewFactory(get('garage-preview-canvas'));
+        showroom.setSkin(skin);
+        get('garage-preview-note').textContent = 'Arraste para girar • Setas do teclado também funcionam • Prévia sem compra';
+      } catch {
+        showroom?.dispose(); showroom = null;
+        get('garage-preview-note').textContent = 'Prévia 3D indisponível neste navegador. As pinturas continuam disponíveis abaixo.';
+      }
+    }
+    if (scroll) get('garage-preview-canvas').scrollIntoView?.({ block: 'center', behavior: 'auto' });
+  }
+  function setPreviewFactory(factory) {
+    showroom?.dispose(); showroom = null; previewFactory = factory;
+    if (factory && page === 'store' && previewSkin) inspectSkin(previewSkin);
+  }
   // Ilustrações leves: cores vêm das variáveis CSS do catálogo, nunca de HTML interpolado.
   function createSkinPreview(skin) {
     const preview = document.createElement('div');
@@ -82,12 +102,16 @@
       controls.append(button);
     }
     const palette = document.createElement('span');
+    const inspect = document.createElement('button');
+    inspect.type = 'button'; inspect.textContent = 'Ver em 3D';
+    inspect.onclick = () => inspectSkin(skin, true);
+    controls.append(inspect);
     palette.className = 'garage-preview-palette';
     palette.textContent = 'CARROCERIA / FAIXAS';
     preview.append(art, palette, controls);
     return preview;
   }
-  window.NeuroGarage = { getSkin: () => skins.find((skin) => skin.id === player?.equipped) || null, beginRace, finishRace };
+  window.NeuroGarage = { getSkin: () => skins.find((skin) => skin.id === player?.equipped) || null, beginRace, finishRace, setPreviewFactory };
 
   function showPage(value) {
     page = value;
@@ -98,6 +122,8 @@
     get('garage-title').textContent = page === 'store' ? 'Loja de pinturas' : 'Sua conta de piloto';
     for (const tab of ['race', 'account', 'store']) get(`menu-page-${tab}`).setAttribute('aria-pressed', String(page === tab));
     render();
+    if (page === 'store' && skins.length) inspectSkin(previewSkin || skins.find((skin) => skin.id === player?.equipped) || skins[0]);
+    else if (page !== 'store') { showroom?.dispose(); showroom = null; }
   }
   function setAuthMode(mode) {
     authMode = mode;
@@ -269,6 +295,22 @@
     get('garage-show-password').textContent = show ? 'Ocultar senha' : 'Mostrar senha';
   };
   get('race-reward-retry').onclick = () => { if (attempt?.result) finishRace(attempt.result); };
+  get('garage-preview-left').onclick = () => showroom?.rotate(-0.3);
+  get('garage-preview-right').onclick = () => showroom?.rotate(0.3);
+  get('garage-preview-reset').onclick = () => showroom?.reset();
+  const previewCanvas = get('garage-preview-canvas');
+  previewCanvas.onpointerdown = (event) => { previewDrag = { x: event.clientX, y: event.clientY }; previewCanvas.setPointerCapture?.(event.pointerId); };
+  previewCanvas.onpointermove = (event) => {
+    if (!previewDrag) return;
+    showroom?.rotate(-(event.clientX - previewDrag.x) * 0.012, (event.clientY - previewDrag.y) * 0.008);
+    previewDrag = { x: event.clientX, y: event.clientY };
+  };
+  previewCanvas.onpointerup = previewCanvas.onpointercancel = previewCanvas.onlostpointercapture = () => { previewDrag = null; };
+  previewCanvas.onkeydown = (event) => {
+    const rotation = { ArrowLeft: [-0.15, 0], ArrowRight: [0.15, 0], ArrowUp: [0, 0.1], ArrowDown: [0, -0.1] }[event.key];
+    if (rotation) { event.preventDefault(); event.stopPropagation(); showroom?.rotate(...rotation); }
+  };
+  if (window.ResizeObserver) new window.ResizeObserver(() => showroom?.draw()).observe(previewCanvas);
   setAuthMode('login');
   connect();
 })();

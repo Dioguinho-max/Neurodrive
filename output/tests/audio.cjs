@@ -39,7 +39,7 @@ const oscillators = [], gains = [];
 let contexts = 0;
 function parameter() {
   return { value: 0, setTargetAtTime(value) { this.value = value; },
-    setValueAtTime(value) { this.value = value; }, linearRampToValueAtTime(value) { this.value = value; },
+    setValueAtTime(value) { this.value = value; this.lastAttack = value; }, linearRampToValueAtTime(value) { this.value = value; },
     exponentialRampToValueAtTime(value) { this.value = value; }, cancelScheduledValues() {} };
 }
 function node() { return { connect() {}, disconnect() {} }; }
@@ -49,7 +49,10 @@ class FakeAudioContext {
   close() { this.state = 'closed'; return Promise.resolve(); }
   createGain() { const result = { ...node(), gain: parameter() }; gains.push(result); return result; }
   createDynamicsCompressor() { return node(); }
-  createBiquadFilter() { return { ...node(), frequency: parameter() }; }
+  createBiquadFilter() { return { ...node(), frequency: parameter(), Q: parameter() }; }
+  get sampleRate() { return 44100; }
+  createBuffer() { return { getChannelData: () => new Float32Array(44100) }; }
+  createBufferSource() { return { ...node(), start() {} }; }
   createPeriodicWave(real, imaginary) { return { real, imaginary }; }
   createOscillator() { const result = { ...node(), frequency: parameter(), start() {}, stop() {}, setPeriodicWave(wave) { this.wave = wave; } }; oscillators.push(result); return result; }
 }
@@ -78,6 +81,23 @@ new Function('window', read('neurodrive-audio.js'))(host);
   }
   audio.update(car, { phase: 'racing', elapsed: 0 }, true);
   assert.equal(oscillators.length - beforeLights, 6, 'Cinco luzes e sinal de largada, sem repetir bipes em snapshots online');
+  car.speed = 3; car.gripUsage = 1.6;
+  audio.update(car, { phase: 'racing' }, true);
+  assert(gains[4].gain.value > 0, 'Pneus audíveis perto do limite de aderência');
+  car.offRoad = true;
+  audio.update(car, { phase: 'racing' }, true);
+  assert.equal(gains[4].gain.value, 0, 'Sem chiado de asfalto na grama');
+  car.offRoad = false; car.gripUsage = 0.3;
+  audio.update(car, { phase: 'racing' }, true);
+  assert.equal(gains[4].gain.value, 0, 'Curva leve não chia');
+  car.impact = 0.8;
+  audio.update(car, { phase: 'racing' }, true);
+  assert(gains[5].gain.lastAttack > 0.4, 'Impacto forte tem ataque proporcional');
+  car.impact = 0;
+  audio.update(car, { phase: 'racing' }, true);
+  car.impact = 0.2;
+  audio.update(car, { phase: 'racing' }, true);
+  assert(gains[5].gain.lastAttack < 0.2, 'Raspada tem ataque menor');
   audio.setEnabled(false);
   audio.update(car, race, true);
   assert.equal(gains[0].gain.value, 0);

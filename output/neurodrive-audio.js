@@ -5,6 +5,7 @@
     let context, master, engineGain, filter, low, high;
     let enabled = true, volume = 0.3;
     let lastCountdown = null;
+    let tireGain, tireFilter, impactGain, lastImpact = 0;
 
     async function unlock() {
       if (!enabled) return;
@@ -43,6 +44,18 @@
           engineGain.connect(master);
           low.start();
           high.start();
+          const buffer = context.createBuffer(1, context.sampleRate, context.sampleRate);
+          const data = buffer.getChannelData(0);
+          for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+          const noise = context.createBufferSource();
+          noise.buffer = buffer; noise.loop = true;
+          tireFilter = context.createBiquadFilter(); tireFilter.type = 'bandpass'; tireFilter.Q.value = 1.8;
+          tireGain = context.createGain(); tireGain.gain.value = 0;
+          noise.connect(tireFilter); tireFilter.connect(tireGain); tireGain.connect(master);
+          const impactFilter = context.createBiquadFilter(); impactFilter.type = 'lowpass'; impactFilter.frequency.value = 220;
+          impactGain = context.createGain(); impactGain.gain.value = 0;
+          noise.connect(impactFilter); impactFilter.connect(impactGain); impactGain.connect(master);
+          noise.start();
         }
         await context.resume();
         return context.state === 'running';
@@ -54,6 +67,10 @@
       const now = context.currentTime;
       engineGain.gain.cancelScheduledValues(now);
       engineGain.gain.setTargetAtTime(0, now, 0.015);
+      for (const gain of [tireGain, impactGain]) {
+        gain?.gain.cancelScheduledValues(now); gain?.gain.setTargetAtTime(0, now, 0.015);
+      }
+      lastImpact = 0;
       // Também interrompe um bip em andamento ao pausar ou perder foco.
       master.gain.cancelScheduledValues(now);
       master.gain.setTargetAtTime(0, now, 0.015);
@@ -83,6 +100,21 @@
       }
       const now = context.currentTime;
       master.gain.setTargetAtTime(volume, now, 0.02);
+      if (tireGain) {
+        const speed = Math.min(1, (car.speed || 0) / 3);
+        const grip = Math.max(0, Math.min(1, ((car.gripUsage || 0) - 0.95) / 0.7));
+        const hardBrake = (car.activations?.[2]?.[1] || 0) < -0.85 ? Math.max(0, speed - 0.65) * 0.8 : 0;
+        const level = race.phase === 'racing' && !car.offRoad && !car.pitExit ? Math.max(grip, hardBrake) * speed * 0.14 : 0;
+        tireGain.gain.setTargetAtTime(level, now, 0.08);
+        tireFilter.frequency.setTargetAtTime(850 + grip * 1100, now, 0.08);
+        const impact = car.impact || 0;
+        if (impact > 0.08 && impact > lastImpact + 0.04 && race.phase === 'racing') {
+          impactGain.gain.cancelScheduledValues(now);
+          impactGain.gain.setValueAtTime(impact * 0.65, now);
+          impactGain.gain.exponentialRampToValueAtTime(0.001, now + 0.16);
+        }
+        lastImpact = impact;
+      }
       const combustionFrequency = car.rpm / 60 * 2;
       low.frequency.setTargetAtTime(car.rpm / 60, now, 0.035);
       high.frequency.setTargetAtTime(combustionFrequency, now, 0.025);

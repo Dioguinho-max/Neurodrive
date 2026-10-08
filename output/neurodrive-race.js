@@ -379,6 +379,7 @@
   });
 
   function initializeRenderer() {
+    window.NeuroGarage?.setPreviewFactory?.(null);
     renderer?.dispose?.();
     renderer = null;
     try {
@@ -389,6 +390,7 @@
       speedEffects: !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches,
     });
     get('race-start').disabled = false;
+    window.NeuroGarage?.setPreviewFactory?.((canvas) => renderer.createPreview(canvas));
   } catch (error) {
     get('race-message').textContent = 'Não foi possível iniciar o 3D. Use um navegador com WebGL ou abra o Laboratório para a versão 2D.';
     get('race-start').disabled = true;

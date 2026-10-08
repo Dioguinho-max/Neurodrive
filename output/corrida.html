@@ -161,6 +161,12 @@
             </div>
             </div>
             <div id="garage-store-screen" hidden>
+            <section class="garage-showroom" aria-label="Vitrine 3D de pinturas">
+              <div class="garage-showroom-heading"><strong id="garage-preview-name">Escolha uma pintura</strong><span>PRÉVIA 3D</span></div>
+              <canvas id="garage-preview-canvas" tabindex="0" aria-label="Carro em 3D. Arraste ou use as setas para girar."></canvas>
+              <p id="garage-preview-note">Escolha Ver em 3D em uma skin. Experimente antes de comprar.</p>
+              <div class="garage-actions"><button class="btn" id="garage-preview-left" type="button" aria-label="Girar carro para a esquerda">↶ Girar</button><button class="btn" id="garage-preview-right" type="button" aria-label="Girar carro para a direita">Girar ↷</button><button class="btn" id="garage-preview-reset" type="button">Restaurar câmera</button></div>
+            </section>
             <p id="garage-store-balance"></p>
             <button class="btn" id="garage-store-login">Entrar para comprar</button>
             <label class="form-label">Mostrar<select class="form-select" id="garage-filter"><option value="all">Todas as skins</option><option value="owned">Minha garagem</option></select></label>

@@ -234,6 +234,7 @@
         }
       }
       if (previewBend > 0.65) { lane *= 0.9; car.tacticTicks = 0; }
+      if (lane && !clearLane(lane)) { lane = currentLane; car.tacticTicks = 0; }
       // Preserva espaço lateral durante uma disputa, inclusive quando volta ao centro.
       for (const { ahead, side } of nearby) {
         if (Math.abs(ahead) < 22 && Math.abs(side) < 24) {
@@ -246,7 +247,8 @@
       const aheadPoint = pointAt(car.progress + 38 + car.speed * 12, car.racingLane);
       const angleError = wrap(Math.atan2(aheadPoint.y - car.y, aheadPoint.x - car.x) - car.angle);
       const pathSteering = clamp(angleError * 2.1, -1, 1);
-      steering = steering * 0.55 + pathSteering * 0.45;
+      const pathWeight = Math.abs(car.racingLane) > 1 ? 1 : 0.45;
+      steering = steering * (1 - pathWeight) + pathSteering * pathWeight;
       const laterPoint = pointAt(car.progress + 115 + car.speed * 18);
       const bend = Math.abs(wrap(laterPoint.angle - aheadPoint.angle));
       const driverPace = car.driver.pace;
@@ -317,7 +319,8 @@
       const point = pointAt(startDistance + car.progress, car.id % 2 ? -10 : 10);
       Object.assign(car, point, { speed: 0, steering: 0, gear: 1, rpm: 900, shiftTicks: 0,
         throttle: 0, brake: 0, limiter: false, cutTicks: 0, launchTicks: 0, cooldown: 120, stalled: 0,
-        gripUsage: 0, sliding: false, offRoad: false, bodyRoll: 0 });
+        gripUsage: 0, sliding: false, offRoad: false, bodyRoll: 0, impact: 0,
+        tacticTicks: 0, targetLane: 0, racingLane: 0 });
     }
 
     function standings() {
