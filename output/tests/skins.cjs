@@ -51,6 +51,16 @@ player.speed = player.maxSpeed;
 for (let i = 0; i < 60; i++) renderer.update(race.cars, player, false);
 assert(camera.fov > lowSpeedFov + 15, 'Campo de visão deve aumentar em alta velocidade');
 assert(camera.position.y > host.NeuroTrack.heightAt(camera.position.x, camera.position.z), 'Câmera deve permanecer acima do terreno');
+const beforeBrake = camera.position.clone();
+const beforeBrakeRotation = camera.quaternion.clone();
+const groundedPosition = models[0].position.clone();
+for (const pedal of [-1, 0, -1, 1]) {
+  player.activations[2][1] = pedal;
+  renderer.update(race.cars, player, false);
+  assert(camera.position.distanceTo(beforeBrake) < 1e-8, 'Acionar ou soltar freio não desloca a câmera instantaneamente');
+  assert(camera.quaternion.angleTo(beforeBrakeRotation) < 1e-6, 'Freio não dá solavanco no enquadramento');
+  assert(models[0].position.distanceTo(groundedPosition) < 1e-8, 'Carro continua apoiado no terreno');
+}
 const preview = renderer.createPreview({ clientWidth: 700, clientHeight: 330 });
 preview.setSkin(catalog.find((skin) => skin.id === 'rubi'));
 const previewModel = scene.children.find((object) => object.isGroup);

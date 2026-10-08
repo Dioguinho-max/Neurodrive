@@ -52,7 +52,7 @@ class FakeAudioContext {
   createBiquadFilter() { return { ...node(), frequency: parameter(), Q: parameter() }; }
   get sampleRate() { return 44100; }
   createBuffer() { return { getChannelData: () => new Float32Array(44100) }; }
-  createBufferSource() { return { ...node(), start() {} }; }
+  createBufferSource() { throw new Error('Ruídos extras de pneus e impactos foram removidos'); }
   createPeriodicWave(real, imaginary) { return { real, imaginary }; }
   createOscillator() { const result = { ...node(), frequency: parameter(), start() {}, stop() {}, setPeriodicWave(wave) { this.wave = wave; } }; oscillators.push(result); return result; }
 }
@@ -81,23 +81,10 @@ new Function('window', read('neurodrive-audio.js'))(host);
   }
   audio.update(car, { phase: 'racing', elapsed: 0 }, true);
   assert.equal(oscillators.length - beforeLights, 6, 'Cinco luzes e sinal de largada, sem repetir bipes em snapshots online');
-  car.speed = 3; car.gripUsage = 1.6;
+  const channels = gains.length;
+  Object.assign(car, { speed: 3, gripUsage: 1.6, impact: 0.8, activations: [[], [], [1, -1]] });
   audio.update(car, { phase: 'racing' }, true);
-  assert(gains[4].gain.value > 0, 'Pneus audíveis perto do limite de aderência');
-  car.offRoad = true;
-  audio.update(car, { phase: 'racing' }, true);
-  assert.equal(gains[4].gain.value, 0, 'Sem chiado de asfalto na grama');
-  car.offRoad = false; car.gripUsage = 0.3;
-  audio.update(car, { phase: 'racing' }, true);
-  assert.equal(gains[4].gain.value, 0, 'Curva leve não chia');
-  car.impact = 0.8;
-  audio.update(car, { phase: 'racing' }, true);
-  assert(gains[5].gain.lastAttack > 0.4, 'Impacto forte tem ataque proporcional');
-  car.impact = 0;
-  audio.update(car, { phase: 'racing' }, true);
-  car.impact = 0.2;
-  audio.update(car, { phase: 'racing' }, true);
-  assert(gains[5].gain.lastAttack < 0.2, 'Raspada tem ataque menor');
+  assert.equal(gains.length, channels, 'Curva fechada e frenagem forte não criam efeitos extras');
   audio.setEnabled(false);
   audio.update(car, race, true);
   assert.equal(gains[0].gain.value, 0);

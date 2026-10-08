@@ -27,6 +27,9 @@ new Function('window', 'document', 'WebSocket', 'fetch', 'performance', 'setInte
   for (let i = 0; i < 180; i++) race.step();
   receive({ type: 'state', cars: race.cars, self: 1, track: 'serra', phase: 'racing', laps: 3, elapsed: 0 });
   assert.equal(nodes['online-lobby'].open, false);
+  assert.equal(nodes['online-ready'].hidden, true, 'Pronto não aparece durante corrida');
+  assert.equal(nodes['online-start'].hidden, true, 'Largar não aparece após largada');
+  assert.equal(nodes['online-manual'].disabled, true);
   listeners.keydown({ code: 'KeyW', target: { tagName: 'BODY' }, preventDefault() {} });
   now = 1; intervals.get(16)(); now = 70; frame();
   assert(drawn[0].speed > 0, 'Online page renders local input without a new snapshot');
@@ -35,5 +38,8 @@ new Function('window', 'document', 'WebSocket', 'fetch', 'performance', 'setInte
   assert.match(nodes['online-connection'].textContent, /120 ms/);
   listeners.blur(); now = 140; frame(); assert(drawn[0].brake > 0);
   receive({ type: 'left' }); assert.equal(nodes['online-hud'].hidden, true);
+  assert.equal(nodes['online-ready'].hidden, false);
+  assert.equal(nodes['online-manual'].disabled, false);
+  assert.equal(nodes['online-recover'].disabled, true, 'Não reposiciona fora da corrida');
   console.log('OK: online page integrates prediction, input, blur braking, ping and room cleanup.');
 })().catch((error) => { console.error(error); process.exitCode = 1; });

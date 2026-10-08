@@ -142,7 +142,7 @@
     const laps = qualifying ? 3 : Number.isInteger(requestedLaps) && requestedLaps >= 1 && requestedLaps <= 50 ? requestedLaps : 3;
     const startDistance = 0;
     const checkpointLength = track.length / 12;
-    const aiSpeed = { easy: 2.5, normal: 2.9, hard: MAX_RACE_SPEED }[difficulty] || 2.9;
+    const aiSpeed = ({ easy: 170, normal: 190, hard: 205 }[difficulty] || 190) / 54;
     let phase = 'countdown';
     let countdown = 180;
     let elapsed = 0;
@@ -216,17 +216,17 @@
       const nearest = track.nearest(car.x, car.y);
       const currentLane = (car.x - nearest.x) * -nearest.ty + (car.y - nearest.y) * nearest.tx;
       const clearLane = (candidate) => nearby.every(({ ahead, side }) =>
-        ahead < -35 || ahead > 95 || Math.abs(currentLane + side - candidate) > 21);
+        ahead < -45 || ahead > 130 || Math.abs(currentLane + side - candidate) > 21);
       const previewBend = Math.abs(wrap(pointAt(car.progress + 145).angle - pointAt(car.progress + 40).angle));
       if (!car.tacticTicks) {
         lane = 0;
-        const slower = nearby.filter(({ other, ahead, side }) => ahead > 20 && ahead < 100 && Math.abs(side) < 20 && car.speed > other.speed + 0.08)
+        const slower = nearby.filter(({ other, ahead, side }) => ahead > 18 && ahead < 130 && Math.abs(side) < 22 && car.speed > other.speed + 0.03)
           .sort((a, b) => a.ahead - b.ahead)[0];
         const laneWidth = Math.min(26, track.halfWidth - 18);
-        if (previewBend < 0.32 && slower) {
+        if (previewBend < 0.5 && slower) {
           const choices = [-laneWidth, laneWidth].sort((a, b) => Math.abs(a - currentLane) - Math.abs(b - currentLane));
           lane = choices.find(clearLane) ?? 0;
-          if (lane) car.tacticTicks = 150;
+          if (lane) car.tacticTicks = 180;
         } else if (previewBend < 0.2 && nearby.some(({ other, ahead, side }) => ahead < -30 && ahead > -85 && Math.abs(side) < 18 && other.speed > car.speed + 0.12)) {
           // Uma defesa antecipada; nunca fecha a porta com outro carro ao lado.
           const candidate = Math.min(14, laneWidth);
@@ -247,28 +247,30 @@
       const aheadPoint = pointAt(car.progress + 38 + car.speed * 12, car.racingLane);
       const angleError = wrap(Math.atan2(aheadPoint.y - car.y, aheadPoint.x - car.x) - car.angle);
       const pathSteering = clamp(angleError * 2.1, -1, 1);
-      const pathWeight = Math.abs(car.racingLane) > 1 ? 1 : 0.45;
+      const pathWeight = Math.abs(car.racingLane) > 1 ? 1 : 0.65;
       steering = steering * (1 - pathWeight) + pathSteering * pathWeight;
       const laterPoint = pointAt(car.progress + 115 + car.speed * 18);
       const bend = Math.abs(wrap(laterPoint.angle - aheadPoint.angle));
       const driverPace = car.driver.pace;
       // Limita a velocidade pela curvatura prevista, usando a mesma escala da física.
       const curvature = bend / Math.max(20, Math.hypot(laterPoint.x - aheadPoint.x, laterPoint.y - aheadPoint.y));
-      const cornerGrip = ({ easy: 1.05, normal: 1.35, hard: 1.6 }[difficulty] || 1.35) * car.driver.corner;
+      // Mais próximo da aderência de 2.6 g, com margem para tráfego e correções.
+      const cornerGrip = ({ easy: 1.65, normal: 2.05, hard: 2.3 }[difficulty] || 2.05) * car.driver.corner;
       const safeSpeed = Math.sqrt(9.81 * cornerGrip * 0.25 / Math.max(curvature, 0.0001)) / 15;
       const targetCornerSpeed = Math.min(aiSpeed * driverPace, Math.max(0.7, safeSpeed));
       pedal = Math.max(pedal, clamp((targetCornerSpeed - car.speed) * 1.8, -1, 1));
-      if (car.speed > targetCornerSpeed + 0.08) pedal = -clamp((car.speed - targetCornerSpeed) * 1.8, 0.25, 1);
+      if (car.speed > targetCornerSpeed + 0.08) pedal = -clamp((car.speed - targetCornerSpeed) * 1.8, 0.12, 1);
       // A rede lê a pista; esta assistência de tráfego mantém distância dos carros.
       for (const other of cars) {
         if (qualifying || other === car || other.done || other.cooldown) continue;
         const dx = other.x - car.x, dy = other.y - car.y;
         const ahead = dx * Math.cos(car.angle) + dy * Math.sin(car.angle);
         const lateral = Math.abs(-dx * Math.sin(car.angle) + dy * Math.cos(car.angle));
-        const gap = (23 + car.speed * 10) * car.driver.gap;
+        const closing = Math.max(0, car.speed - other.speed);
+        const gap = (21 + car.speed * 7 + closing * 10) * car.driver.gap;
         if (ahead > 0 && ahead < gap && lateral < 20) {
           const targetSpeed = Math.max(0, other.speed - (gap - ahead) * 0.08);
-          if (car.speed > targetSpeed) pedal = Math.min(pedal, -0.7);
+          if (car.speed > targetSpeed) pedal = Math.min(pedal, -clamp((car.speed - targetSpeed) * 1.5, 0.15, 1));
         }
       }
       car.activations = [car.inputs, hidden, [steering, pedal]];

@@ -30,6 +30,54 @@
   let lastTimingUpdate = -1;
   let lastTimingPhase = '';
   let resultsPresented = false;
+  let resultsReturnRemaining = null;
+  let resultsReturnScheduled = false;
+  function returnToMenu() {
+    resultsReturnRemaining = null;
+    get('race-results-return').hidden = true;
+    openMenu();
+    window.NeuroGarage?.showPage('race');
+    get('menu-mode').focus();
+  }
+  let finale = null;
+  function clearFinale() {
+    finale = null;
+    get('race-finale').hidden = true;
+    renderer?.setFinishCamera?.(false);
+  }
+  function updateFinale(ranking) {
+    const player = race.cars[0];
+    const waiting = started && race.qualifying && player.done && race.phase !== 'finished';
+    if (!finale && !waiting) { get('race-finale').hidden = true; return; }
+    const overlay = get('race-finale');
+    overlay.hidden = false;
+    overlay.setAttribute('data-stage', waiting ? 'waiting' : 'finished');
+    get('race-banner').textContent = '';
+    get('finale-eyebrow').textContent = `${track.name} · ${race.qualifying ? 'CLASSIFICAÇÃO' : 'BANDEIRADA FINAL'}`;
+    const position = ranking.indexOf(player) + 1;
+    if (waiting) {
+      const remaining = race.cars.filter((car) => !car.done).length;
+      get('finale-title').textContent = 'Suas voltas estão registradas';
+      get('finale-detail').textContent = `${player.bestLap === null ? 'Sem volta válida' : `Melhor volta ${timeLabel(player.bestLap)}`} · ${remaining} pilotos em pista. Acompanhe os últimos tempos ou encerre a sessão.`;
+      get('finale-skip').textContent = 'Encerrar classificação e definir grid';
+      get('finale-progress-fill').style.width = '0%';
+    } else {
+      const reveal = finale.elapsed >= 2200;
+      get('finale-title').textContent = race.qualifying
+        ? reveal ? (player.bestLap === null ? 'Grid definido' : position === 1 ? 'POLE POSITION' : `Você larga em ${position}º`) : 'Bandeira quadriculada'
+        : reveal ? (player.place === 1 ? 'VITÓRIA!' : `${player.place}º LUGAR`) : 'Linha de chegada cruzada';
+      get('finale-detail').textContent = race.qualifying
+        ? `${player.bestLap === null ? 'Sem volta válida · largada no fim do grid' : `Melhor volta · ${timeLabel(player.bestLap)}`} · Prepare-se para a corrida`
+        : `${race.laps} voltas · Tempo final ${timeLabel(player.finishTime ?? race.elapsed)} · ${player.place <= 3 ? 'Seu lugar no pódio está garantido' : 'Cada disputa conta. A próxima largada espera por você'}`;
+      get('finale-skip').textContent = race.qualifying ? 'Ver grid de largada' : 'Ver pódio e resultados';
+      get('finale-progress-fill').style.width = `${Math.min(100, finale.elapsed / 60)}%`;
+      if (finale.elapsed >= 6000 && !get('race-menu').open) showResults();
+    }
+  }
+  get('finale-skip').onclick = () => {
+    if (race.qualifying && race.phase !== 'finished') get('race-end-qualifying').onclick();
+    else showResults();
+  };
   const career = window.createNeuroCareer();
   let championship = null;
   let recordNoticeUntil = 0;
@@ -101,6 +149,8 @@
 
   function showResults() {
     if (race.phase !== 'finished') return;
+    get('race-menu').close();
+    clearFinale();
     clearInput();
     const ranking = race.standings();
     get('race-results-stage').textContent = `${track.name} · ${race.qualifying ? 'Classificação encerrada' : `🏁 Bandeirada · ${race.cars[0].place}º lugar`}`;
@@ -117,6 +167,13 @@
     }).join('');
     get('race-results-continue').hidden = false;
     get('race-results-continue').textContent = race.qualifying ? 'Ir para a corrida' : 'Ver classificação completa';
+    get('race-results-close').textContent = race.qualifying ? 'Voltar à pista' : 'Voltar ao menu';
+    if (!race.qualifying && !resultsReturnScheduled) {
+      resultsReturnScheduled = true;
+      resultsReturnRemaining = 10000;
+      get('race-results-return').textContent = 'Voltando ao menu em 10 segundos. Você poderá rever estes resultados pelo menu.';
+    }
+    get('race-results-return').hidden = resultsReturnRemaining === null;
     get('championship-next').hidden = !championship || race.qualifying || championship.stage >= 2;
     get('championship-results').hidden = !championship || race.qualifying;
     if (championship && !race.qualifying) {
@@ -137,7 +194,10 @@
     championship = series;
     startSession(true);
   };
-  get('race-results-close').onclick = () => get('race-results').close();
+  get('race-results-close').onclick = () => { if (race.qualifying) get('race-results').close(); else returnToMenu(); };
+  get('race-results').oncancel = (event) => {
+    if (!race.qualifying) { event.preventDefault(); returnToMenu(); }
+  };
   get('race-results-continue').onclick = () => {
     if (race.qualifying) {
       get('race-results').close();
@@ -146,6 +206,7 @@
       get('race-podium').hidden = true;
       get('race-results-table').hidden = false;
       get('race-results-title').textContent = 'Classificação de todos os pilotos';
+      if (resultsReturnRemaining !== null) resultsReturnRemaining = 10000;
       get('race-results-continue').hidden = true;
       get('race-results-close').focus();
     }
@@ -162,6 +223,8 @@
   }
 
   function openMenu() {
+    resultsReturnRemaining = null;
+    get('race-results-return').hidden = true;
     get('race-menu').setAttribute('data-state', started ? 'pause' : 'home');
     get('menu-state-title').textContent = started ? 'PAUSA · RESPIRE. VOLTE MAIS FORTE.' : 'SEU PRÓXIMO DESAFIO COMEÇA AQUI';
     setPause(true);
@@ -170,6 +233,7 @@
     get('race-results').close();
     for (const name of ['track', 'difficulty', 'laps']) get(`menu-${name}`).value = get(`race-${name}`).value;
     get('race-menu-resume').hidden = !started;
+    window.NeuroGarage?.showPage(started ? 'pause' : 'race');
     get('race-menu-resume').textContent = race.phase === 'finished' ? 'Voltar aos resultados' : 'Continuar sessão';
     get('race-menu-restart-note').hidden = !started;
     get('race-menu-status').textContent = !renderer ? 'Não foi possível iniciar o 3D. Use um navegador com WebGL ou explore o Laboratório de IA.'
@@ -193,15 +257,15 @@
   }
   get('race-menu-open').onclick = openMenu;
   get('menu-new-event').onclick = () => {
-    get('race-menu').setAttribute('data-state', 'home');
     get('menu-state-title').textContent = 'ESCOLHA SEU PRÓXIMO DESAFIO';
-    get('menu-page-race').click?.();
+    window.NeuroGarage?.showPage('race');
+    get('menu-mode').focus();
   };
   get('menu-pause-settings').onclick = () => {
-    get('menu-new-event').onclick();
-    get('menu-driving-settings').open = true;
-    get('menu-driving-settings').scrollIntoView?.({ block: 'center', behavior: 'smooth' });
+    window.NeuroGarage?.showPage('settings');
+    get('race-transmission').focus();
   };
+  get('menu-back-pause').onclick = openMenu;
   get('menu-end-qualifying').onclick = () => {
     get('race-menu').close();
     get('race-end-qualifying').onclick();
@@ -229,7 +293,9 @@
     const recordNotice = Date.now() < recordNoticeUntil ? `Novo recorde pessoal! ${timeLabel(career.records[track.id])}` : '';
     if (get('race-personal-best').textContent !== recordNotice) get('race-personal-best').textContent = recordNotice;
     player.skin = window.NeuroGarage?.getSkin() || null;
-    renderer?.update(race.cars, player, false, player, race.phase === 'finished');
+    const spectator = started && race.qualifying && player.done && race.phase !== 'finished'
+      ? race.cars.find((car) => !car.done && !car.pitExit) || player : player;
+    renderer?.update(race.cars, player, false, spectator, race.phase === 'finished');
     const ranking = race.standings();
     updateHUD(player, ranking.indexOf(player) + 1, ranking.length, race.laps, race.elapsed);
     get('race-laps').disabled = started && !race.qualifying && race.phase !== 'finished';
@@ -265,12 +331,19 @@
         resultsPresented = true;
         if (!qualifying && championship) championship.score(ranking);
         if (!qualifying) window.NeuroGarage?.finishRace({ elapsed: race.elapsed, completedLaps: player.completedLaps, place: player.place });
-        showResults();
+        clearInput();
+        finale = { elapsed: 0 };
+        renderer?.setFinishCamera?.(true);
       }
     }
+    updateFinale(ranking);
   }
 
   function startSession(qualifying) {
+    resultsReturnRemaining = null;
+    resultsReturnScheduled = false;
+    get('race-results-return').hidden = true;
+    clearFinale();
     recordNoticeUntil = 0;
     get('race-menu').close();
     unlockAudio();
@@ -320,6 +393,10 @@
     if (race.qualifying && race.phase === 'finished') startSession(false);
   };
   get('race-track').onchange = () => {
+    resultsReturnRemaining = null;
+    resultsReturnScheduled = false;
+    get('race-results-return').hidden = true;
+    clearFinale();
     championship = null;
     recordNoticeUntil = 0;
     get('race-results').close();
@@ -339,7 +416,7 @@
     initializeRenderer();
     refresh();
   };
-  get('race-pause').onclick = () => { setPause(!paused); refresh(); };
+  get('race-pause').onclick = () => { if (paused) resumeFromMenu(); else openMenu(); refresh(); };
   get('race-recover').onclick = () => { if (!paused) race.recoverPlayer(); };
 
   window.addEventListener('keydown', (event) => {
@@ -352,7 +429,7 @@
       if (!event.repeat) unlockAudio();
     }
     if (event.repeat) return;
-    if (event.code === 'KeyP') setPause(!paused);
+    if (event.code === 'KeyP') get('race-pause').onclick();
     if (event.code === 'KeyR' && started && !paused) race.recoverPlayer();
   });
   window.addEventListener('keyup', (event) => heldKeys.delete(event.code));
@@ -402,6 +479,12 @@
   function frame(time) {
     const delta = previousTime === null ? 0 : Math.min(time - previousTime, 100);
     previousTime = time;
+    if (resultsReturnRemaining !== null && get('race-results').open && !document.hidden) {
+      resultsReturnRemaining -= Math.max(0, delta);
+      get('race-results-return').textContent = `Voltando ao menu em ${Math.max(0, Math.ceil(resultsReturnRemaining / 1000))} segundos. Você poderá rever estes resultados pelo menu.`;
+      if (resultsReturnRemaining <= 0) returnToMenu();
+    }
+    if (finale && !get('race-menu').open && !document.hidden) finale.elapsed += Math.max(0, delta);
     if (started && !paused && race.phase !== 'finished') {
       accumulator += delta;
       const input = {};

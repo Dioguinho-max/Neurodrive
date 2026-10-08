@@ -628,6 +628,7 @@
     let viewportHeight = 0;
     const clamp = (value, min, max) => Math.max(min, Math.min(max, value));
 
+    let finishCameraAt = null;
     function render() {
       const width = canvas.clientWidth;
       const height = canvas.clientHeight;
@@ -640,7 +641,7 @@
         viewportHeight = height;
       }
 
-      const mode = element('camera').value;
+      const mode = finishCameraAt !== null ? 'finish' : element('camera').value;
       const car = snapshot?.target;
       pitRoofs.forEach((roof, index) => {
         const cutaway = car?.pitExit && car.id === index + 1;
@@ -665,7 +666,13 @@
         camera.fov = fieldOfView;
         camera.updateProjectionMatrix();
       }
-      if (mode === 'chase' && car?.pitExit) {
+      if (mode === 'finish' && car && !car.pitExit) {
+        const elapsed = Math.min(6, Math.max(0, (Date.now() - finishCameraAt) / 1000));
+        const orbit = car.angle + 0.7 + (options.speedEffects === false ? 0 : elapsed * 0.09);
+        const x = car.x + Math.cos(orbit) * 32, z = car.y + Math.sin(orbit) * 32;
+        camera.position.set(x, Math.max(track.heightAt(x, z) + 9, track.heightAt(car.x, car.y) + 14), z);
+        camera.lookAt(car.x, track.heightAt(car.x, car.y) + 3, car.y);
+      } else if ((mode === 'chase' || mode === 'finish') && car?.pitExit) {
         // Enquadra o carro pela frente aberta da garagem, não por trás da parede.
         const nearest = track.nearest(car.x, car.y);
         const tangent = Math.atan2(nearest.ty, nearest.tx);
@@ -675,9 +682,8 @@
         camera.lookAt(car.x, track.heightAt(car.x, car.y) + 3, car.y);
       } else if (mode === 'chase' && car) {
         // Terceira pessoa: camera atras do carro, olhando adiante na pista.
-        const brakeMotion = raceCamera ? Math.max(0, -(car.activations?.[2]?.[1] || 0)) * speedRatio : 0;
         const impactMotion = raceCamera ? (car.impact || 0) : 0;
-        const behind = (raceCamera ? 30 + speedRatio * 4 - brakeMotion * 1.2 : 42) * zoom;
+        const behind = (raceCamera ? 30 + speedRatio * 4 : 42) * zoom;
         const angle = car.angle + chaseOrbit;
         camera.position.set(
           car.x - Math.cos(angle) * behind,
@@ -690,7 +696,7 @@
         const lookX = car.x + Math.cos(car.angle) * 32;
         const lookY = car.y + Math.sin(car.angle) * 32;
         camera.lookAt(lookX, track.heightAt(lookX, lookY) + 4, lookY);
-        camera.position.y += brakeMotion * 0.4 + Math.sin(Date.now() * 0.065) * impactMotion * 0.35;
+        camera.position.y += Math.sin(Date.now() * 0.065) * impactMotion * 0.35;
       } else {
         const follow = mode === 'follow' && car;
         const bounds = track.bounds;
@@ -788,6 +794,7 @@
     setQuality(options.quality);
     return {
       setQuality,
+      setFinishCamera(active) { finishCameraAt = active ? Date.now() : null; },
       createPreview(previewCanvas) {
         // Uma única vitrine, com cópia do mesmo modelo e recursos próprios.
         const source = models[0] || (models[0] = createCarModel(0));

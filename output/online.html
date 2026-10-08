@@ -6,7 +6,8 @@
   <link rel="stylesheet" href="neuro-pista.css"><link rel="stylesheet" href="neurodrive-race.css"><link rel="stylesheet" href="online.css">
   <script src="vendor/three.min.js" defer></script><script src="neuro-pista-track.js" defer></script>
   <script src="neurodrive-race-engine.js" defer></script><script src="neurodrive-prediction.js" defer></script>
-  <script src="neuro-pista-3d.js" defer></script><script src="neurodrive-audio.js" defer></script><link rel="stylesheet" href="neurodrive-hud.css"><script src="neurodrive-hud.js" defer></script><script src="neurodrive-online-buffer.js" defer></script><script src="online.js" defer></script>
+  <script src="neuro-pista-3d.js" defer></script><script src="neurodrive-audio.js?v=engine-only-2" defer></script><link rel="stylesheet" href="neurodrive-hud.css"><script src="neurodrive-hud.js" defer></script><script src="neurodrive-online-buffer.js" defer></script><script src="online.js" defer></script>
+  <link rel="stylesheet" href="neurodrive-menu.css?v=menus-2">
 </head>
 <body><main id="neuro-race">
   <div class="race-stage"><canvas id="np-track-3d" aria-label="Corrida online 3D"></canvas><div id="race-banner" role="status"></div></div>
@@ -28,11 +29,12 @@
   <ol id="online-ranking" aria-label="Posições da corrida"></ol>
   <div class="viz-controls race-touch" aria-label="Controles"><button class="btn" data-drive="left">←</button><button class="btn" data-drive="right">→</button><button class="btn" data-drive="brake">Frear</button><button class="btn" data-drive="accelerate">Acelerar</button><button class="btn" data-drive="shiftDown">Q −</button><button class="btn" data-drive="shiftUp">E +</button></div>
   <dialog id="online-lobby" class="race-results" aria-labelledby="online-title">
+    <nav class="online-navigation" aria-label="Navegação do jogo"><div class="online-brand">NEURO<span>DRIVE</span></div><a class="btn" href="corrida.html">← Menu principal</a></nav>
     <p class="race-results-eyebrow">Online · beta · 2 a 6 jogadores</p><h1 id="online-title">Dispute com seus amigos</h1>
     <div class="beta-notice"><strong class="beta-badge">BETA</strong> Jogo em desenvolvimento. Você pode encontrar bugs e mudanças durante os testes.</div>
     <p id="online-message" role="status">Entre na conta no menu principal antes de conectar.</p>
     <p id="online-connection">Conexão ainda não medida.</p>
-    <button class="btn btn-primary" id="online-connect">Conectar</button>
+    <button class="btn btn-primary" id="online-connect">Entrar no multiplayer</button>
     <div id="online-options" hidden>
       <label class="form-label">Disputa<select class="form-select" id="online-mode"><option value="race">Corrida com amigos</option><option value="tournament">Copa Neuro · torneio de 3 voltas</option></select></label>
       <p class="tournament-rules">Copa Neuro: entrada gratuita, 2–6 jogadores e três voltas. Quem terminar recebe 110 moedas; bônus de pódio: +90 / +60 / +30. Limites: 200 por prova e 500 por dia UTC. Abandono não premia. Saldo validado pelo servidor e salvo na conta.</p>
@@ -49,10 +51,10 @@
       <label class="form-label">Gráficos<select class="form-select" id="online-quality"><option value="performance">Leve · recomendado</option><option value="high">Mais detalhes</option><option value="ultra">Super alto · exige mais da GPU</option></select></label>
       <label class="form-check"><input type="checkbox" id="online-sound" checked>Som do motor</label>
       <label class="form-label">Câmera<select class="form-select" id="np-camera"><option value="chase">Terceira pessoa</option><option value="overview">Visão da pista</option><option value="follow">Orbital</option></select></label>
-      <div class="viz-controls"><button class="btn" id="np-rotate">Girar</button><button class="btn" id="np-zoom-in">+</button><button class="btn" id="np-zoom-out">−</button><button class="btn" id="np-camera-reset">Restaurar câmera</button><button class="btn" id="online-recover">Voltar à pista (R)</button></div>
+      <div class="viz-controls"><button class="btn" id="np-rotate">Girar</button><button class="btn" id="np-zoom-in">+</button><button class="btn" id="np-zoom-out">−</button><button class="btn" id="np-camera-reset">Restaurar câmera</button><button class="btn" id="online-recover" disabled>Voltar à pista (R)</button></div>
       <p>WASD ou setas para dirigir. Q/E para trocar no manual. R reposiciona. Esc abre a sala.</p>
     </details>
     <p id="online-reward" role="status"></p>
-    <button class="btn" id="online-back" hidden>Voltar à pista</button><a class="btn" href="corrida.html">Menu principal e conta</a>
+    <button class="btn" id="online-back" hidden>Voltar à pista</button>
   </dialog>
 </main></body></html>

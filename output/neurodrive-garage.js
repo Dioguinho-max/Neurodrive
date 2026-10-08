@@ -111,16 +111,22 @@
     preview.append(art, palette, controls);
     return preview;
   }
-  window.NeuroGarage = { getSkin: () => skins.find((skin) => skin.id === player?.equipped) || null, beginRace, finishRace, setPreviewFactory };
+  window.NeuroGarage = { getSkin: () => skins.find((skin) => skin.id === player?.equipped) || null, beginRace, finishRace, setPreviewFactory, showPage };
 
   function showPage(value) {
     page = value;
     get('menu-race-screen').hidden = page !== 'race';
-    get('garage-panel').hidden = page === 'race';
+    get('menu-pause-screen').hidden = page !== 'pause';
+    get('menu-driving-settings').hidden = page !== 'settings';
+    get('garage-panel').hidden = !['account', 'store'].includes(page);
+    get('race-menu').setAttribute('data-page', page);
+    get('race-menu').setAttribute('data-state', page === 'pause' ? 'pause' : 'home');
+    get('menu-state-title').textContent = ({ pause: 'PAUSA · RESPIRE. VOLTE MAIS FORTE.', race: 'ESCOLHA SEU PRÓXIMO DESAFIO', settings: 'AJUSTE SUA EXPERIÊNCIA', account: 'SEU PERFIL DE PILOTO', store: 'SUA PRÓXIMA PINTURA' })[page];
+    get('menu-back-pause').hidden = page === 'pause' || get('race-menu-resume').hidden;
     get('garage-login-screen').hidden = page !== 'account';
     get('garage-store-screen').hidden = page !== 'store';
     get('garage-title').textContent = page === 'store' ? 'Loja de pinturas' : 'Sua conta de piloto';
-    for (const tab of ['race', 'account', 'store']) get(`menu-page-${tab}`).setAttribute('aria-pressed', String(page === tab));
+    for (const tab of ['race', 'account', 'store', 'settings']) get(`menu-page-${tab}`).setAttribute('aria-pressed', String(page === tab));
     render();
     if (page === 'store' && skins.length) inspectSkin(previewSkin || skins.find((skin) => skin.id === player?.equipped) || skins[0]);
     else if (page !== 'store') { showroom?.dispose(); showroom = null; }
@@ -285,7 +291,7 @@
   get('garage-retry').onclick = connect;
   get('garage-panel').ontoggle = () => { if (!busy) render(); };
   get('garage-filter').onchange = render;
-  for (const tab of ['race', 'account', 'store']) get(`menu-page-${tab}`).onclick = () => showPage(tab);
+  for (const tab of ['race', 'account', 'store', 'settings']) get(`menu-page-${tab}`).onclick = () => showPage(tab);
   get('garage-store-login').onclick = () => showPage('account');
   get('auth-login-mode').onclick = () => setAuthMode('login');
   get('auth-register-mode').onclick = () => setAuthMode('register');

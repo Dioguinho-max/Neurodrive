@@ -15,13 +15,21 @@
   const say = (message) => { get('online-message').textContent = message; };
   const send = (data) => { if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify(data)); };
   function clear() { keys.clear(); pointers.clear(); prediction?.input({ brake: true }, performance.now()); send({ type: 'input', brake: true }); }
-  function menu() { clear(); if (!get('online-lobby').open) get('online-lobby').showModal(); }
+  function menu() {
+    clear();
+    get('online-title').textContent = latest ? (latest.phase === 'finished' ? 'Bandeirada final' : 'Sua corrida continua') : room ? 'Prepare seu grid' : 'Dispute com seus amigos';
+    if (!get('online-lobby').open) get('online-lobby').showModal();
+  }
   function resetRoom() {
     get('online-hud').hidden = true;
     room = null; latest = null; ready = false; displayedFinish = false;
     motion.clear(); rankingKey = ''; lastInput = ''; lastInputAt = 0;
     prediction = null; rtt = 0;
     get('online-ready').disabled = false;
+    get('online-ready').hidden = get('online-start').hidden = false;
+    get('online-manual').disabled = false;
+    get('online-recover').disabled = true;
+    get('online-leave').textContent = 'Sair da sala';
     get('online-room').hidden = true; get('online-back').hidden = true;
     get('online-options').hidden = false; get('online-reward').textContent = ''; audio?.silence();
   }
@@ -53,7 +61,7 @@
           room = message; get('online-options').hidden = true; get('online-room').hidden = false;
           get('online-room-code').textContent = `${room.mode === 'tournament' ? 'Copa Neuro' : 'Sala'} ${room.code} · ${room.laps} volta(s)`;
           ready = room.players.find((p) => p.id === self)?.ready || false;
-          get('online-ready').textContent = ready ? 'Cancelar pronto' : 'Pronto';
+          get('online-ready').textContent = ready ? 'Cancelar confirmação' : 'Estou pronto';
           get('online-start').disabled = room.owner !== self || room.players.length < 2 || room.players.some((p) => !p.ready);
           get('online-players').replaceChildren();
           for (const p of room.players) { const li = document.createElement('li'); li.textContent = `${p.name}${p.id === room.owner ? ' · dono' : ''} · ${p.ready ? 'pronto' : 'aguardando'}`; get('online-players').append(li); }
@@ -67,6 +75,10 @@
             catch { renderer = null; say('Não foi possível iniciar WebGL.'); menu(); send({ type: 'leave' }); }
           }
           const player = latest.cars.find((car) => car.id === latest.self);
+          get('online-ready').hidden = get('online-start').hidden = true;
+          get('online-manual').disabled = true;
+          get('online-recover').disabled = latest.phase !== 'racing' || player.done || Boolean(player.cooldown);
+          get('online-leave').textContent = latest.phase === 'finished' || player.done ? 'Voltar às salas' : 'Abandonar corrida';
           prediction ||= window.createOnlinePrediction(window.createNeuroTrack(trackId));
           prediction.receive(player, latest.phase, performance.now(), rtt);
           const ranking = [...latest.cars].sort((a, b) => Number(Boolean(a.disconnected)) - Number(Boolean(b.disconnected)) || (a.place || 99) - (b.place || 99) || b.progress - a.progress);
