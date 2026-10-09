@@ -3,6 +3,7 @@
   'use strict';
   const get = (id) => document.getElementById(id);
   let player = null;
+  let pilotPanel;
   let skins = [];
   let busy = false;
   let online = false;
@@ -32,7 +33,7 @@
     if (factory && page === 'store' && previewSkin) inspectSkin(previewSkin);
   }
   // Ilustrações leves: cores vêm das variáveis CSS do catálogo, nunca de HTML interpolado.
-  function createSkinPreview(skin) {
+  function createSkinPreview(skin, allowShowroom = true) {
     const preview = document.createElement('div');
     preview.className = 'garage-preview';
     preview.setAttribute('data-finish', skin.finish || 'gloss');
@@ -105,7 +106,7 @@
     const inspect = document.createElement('button');
     inspect.type = 'button'; inspect.textContent = 'Ver em 3D';
     inspect.onclick = () => inspectSkin(skin, true);
-    controls.append(inspect);
+    if (allowShowroom) controls.append(inspect);
     palette.className = 'garage-preview-palette';
     palette.textContent = 'CARROCERIA / FAIXAS';
     preview.append(art, palette, controls);
@@ -186,6 +187,7 @@
     return result;
   }
   function render() {
+    pilotPanel?.render(player, skins);
     get('garage-auth').hidden = Boolean(player);
     get('auth-login-mode').hidden = get('auth-register-mode').hidden = Boolean(player);
     get('garage-auth-fields').disabled = busy || !online;
@@ -199,7 +201,7 @@
     get('garage-rewards-info').textContent = `${capabilities.online ? 'Conclua corridas nas salas online' : 'Conclua corridas conectado'}: 50 moedas + 20 por volta, até 200 por corrida e 500 por dia (UTC). Copa Neuro online: bônus de 90, 60 ou 30 moedas para o pódio, dentro dos mesmos limites. A classificação não dá moedas.`;
     get('garage-store-balance').textContent = player ? `Seu saldo: ${player.coins} moedas` : 'Entre na conta para guardar suas compras.';
     if (player) {
-      get('garage-name').textContent = player.username;
+      get('garage-name').textContent = player.nickname || player.username;
       get('garage-balance').textContent = player.coins;
       get('garage-stats').textContent = `${player.stats?.races || 0} corridas registradas · ${player.stats?.wins || 0} vitórias`;
       const available = Date.now() >= player.nextBonusAt;
@@ -317,6 +319,7 @@
     if (rotation) { event.preventDefault(); event.stopPropagation(); showroom?.rotate(...rotation); }
   };
   if (window.ResizeObserver) new window.ResizeObserver(() => showroom?.draw()).observe(previewCanvas);
+  pilotPanel = window.createNeuroPilot?.({ request, updated: next => { player = next; render(); }, preview: id => { const skin = skins.find(item => item.id === id); return skin ? createSkinPreview(skin, false) : null; } });
   setAuthMode('login');
   connect();
 })();

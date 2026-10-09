@@ -6,6 +6,7 @@ const { promisify } = require('node:util');
 const { CloudStore, createPool } = require('./cloud-store.cjs');
 const { attachOnline } = require('./online.cjs');
 const catalog = require('./catalog.cjs');
+const pilot = require('./pilot.cjs');
 const { startupConfig, startupMessage } = require('./startup-config.cjs');
 const scrypt = promisify(crypto.scrypt);
 const hash = (s) => crypto.createHash('sha256').update(s).digest('hex');
@@ -13,7 +14,7 @@ const fail = (status, message) => Object.assign(new Error(message), { status });
 const derive = (password, salt) => scrypt(password, salt, 64, { N: 32768, maxmem: 67108864 });
 const validPassword = (s) => typeof s === 'string' && s.length >= 10 && s.length <= 128;
 
-function createCloudServer({ store, frontendOrigin, backendOrigin }) {
+function createCloudServer({ store, frontendOrigin, backendOrigin, avatarStorage = pilot.storage() }) {
   const front = new URL(frontendOrigin).origin;
   const backend = new URL(backendOrigin).origin;
   const secure = front.startsWith('https:');
@@ -48,12 +49,14 @@ function createCloudServer({ store, frontendOrigin, backendOrigin }) {
         if (req.method === 'HEAD') return res.end();
         fs.createReadStream(real).on('error', () => res.destroy()).pipe(res); return;
       }
+      const avatarRequest = url.pathname === '/api/avatar';
+      if (avatarRequest && !await store.session(hash(token))) throw fail(401, 'Entre na sua conta.');
       let data = {};
       if (req.method === 'POST') {
         if (req.headers.origin !== front) throw fail(403, 'Origem não permitida.');
         if (req.headers['content-type']?.split(';')[0] !== 'application/json') throw fail(415, 'Envie JSON.');
         const chunks = []; let bytes = 0;
-        for await (const chunk of req) { bytes += chunk.length; if (bytes > 4096) throw fail(413, 'Pedido muito grande.'); chunks.push(chunk); }
+        for await (const chunk of req) { bytes += chunk.length; if (bytes > (avatarRequest ? 280000 : 4096)) throw fail(413, 'Pedido muito grande.'); chunks.push(chunk); }
         try { data = JSON.parse(Buffer.concat(chunks)); } catch { throw fail(400, 'JSON inválido.'); }
         if (!data || typeof data !== 'object' || Array.isArray(data)) throw fail(400, 'Dados inválidos.');
       } else if (req.method !== 'GET') throw fail(405, 'Método inválido.');
@@ -80,12 +83,25 @@ function createCloudServer({ store, frontendOrigin, backendOrigin }) {
       const id = await store.session(hash(token));
       if (!id) throw fail(401, 'Entre na sua conta para continuar.');
       if (req.method === 'GET' && url.pathname === '/api/me') return json(200, { player: await store.profile(id) });
+      if (req.method === 'GET' && url.pathname === '/api/pilot') {
+        const target = await store.find((url.searchParams.get('name') || '').slice(0, 20));
+        if (!target) throw fail(404, 'Piloto nao encontrado.');
+        return json(200, { pilot: pilot.publicPilot(await store.profile(target.id)) });
+      }
       if (req.method !== 'POST') throw fail(404, 'Rota não encontrada.');
       if (url.pathname === '/api/online-ticket') return json(200, { ticket: online.issue(id) });
       if (url.pathname === '/api/logout') {
         await store.logout(hash(token)); online.disconnect(id); res.setHeader('Set-Cookie', cookie('', 0)); return json(200, { ok: true });
       }
-      if (url.pathname === '/api/password') {
+      if (url.pathname === '/api/profile') {
+        await store.limit(hash('profile:' + id));
+        await store.updatePilot(id, pilot.details(data));
+      } else if (url.pathname === '/api/avatar') {
+        await store.limit(hash('avatar:' + id));
+        const bytes = pilot.avatar(data.avatar);
+        if (bytes) await store.updateAvatar(id, await avatarStorage.upload(id, bytes));
+        else { await avatarStorage.remove(id); await store.updateAvatar(id, null); }
+      } else if (url.pathname === '/api/password') {
         if (!validPassword(data.password) || !validPassword(data.currentPassword)) throw fail(400, 'Senhas devem ter de 10 a 128 caracteres.');
         await store.limit(hash('password:' + id));
         const profile = await store.profile(id);

@@ -19,7 +19,7 @@ const { CloudStore, createPool } = require('../server/cloud-store.cjs');
       }
       for (const row of sqlite.prepare('SELECT * FROM inventory').all()) await db.query('INSERT INTO neurodrive.inventory VALUES($1,$2)', [row.player_id, row.skin]);
       if (sqlite.prepare("SELECT name FROM sqlite_master WHERE name='races'").get()) {
-        for (const row of sqlite.prepare('SELECT * FROM races WHERE claimed IS NOT NULL').all()) await db.query('INSERT INTO neurodrive.results VALUES($1,$2,$3,$4,$5)', ['local-' + row.id, row.player_id, row.reward, row.place, row.claimed]);
+        for (const row of sqlite.prepare('SELECT * FROM races WHERE claimed IS NOT NULL').all()) await db.query('INSERT INTO neurodrive.results(id,player_id,reward,place,finished) VALUES($1,$2,$3,$4,$5)', ['local-' + row.id, row.player_id, row.reward, row.place, row.claimed]);
       }
       await db.query("SELECT setval(pg_get_serial_sequence('neurodrive.players','id'),COALESCE((SELECT MAX(id) FROM neurodrive.players),1), EXISTS(SELECT 1 FROM neurodrive.players))");
     });

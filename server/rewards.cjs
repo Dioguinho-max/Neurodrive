@@ -12,7 +12,7 @@ module.exports = function createRewards(db, now = Date.now) {
   ); CREATE INDEX IF NOT EXISTS races_player ON races(player_id);`);
   return {
     stats(id) {
-      return db.prepare('SELECT COUNT(*) AS races, COALESCE(SUM(place=1),0) AS wins FROM races WHERE player_id=? AND claimed IS NOT NULL').get(id);
+      return db.prepare('SELECT COUNT(*) AS races, COALESCE(SUM(place=1),0) AS wins, COALESCE(SUM(place<=3),0) AS podiums, NULL AS poles FROM races WHERE player_id=? AND claimed IS NOT NULL').get(id);
     },
     start(id, data) {
       if (!['serra', 'veloz', 'tecnico'].includes(data.track) || ![1, 3, 5, 10, 20, 50].includes(data.laps)) throw error(400, 'Configuração de corrida inválida.');

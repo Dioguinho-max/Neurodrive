@@ -11,7 +11,9 @@
     <script src="neuro-pista-3d.js" defer></script>
     <script src="neurodrive-race-engine.js" defer></script>
     <script src="neurodrive-audio.js?v=engine-only-2" defer></script>
+    <script src="neurodrive-profile.js" defer></script>
     <script src="neurodrive-garage.js" defer></script>
+    <link rel="stylesheet" href="neurodrive-profile.css">
     <link rel="stylesheet" href="neurodrive-hud.css">
     <script src="neurodrive-hud.js" defer></script><script src="neurodrive-gamepad.js" defer></script><link rel="stylesheet" href="neurodrive-gamepad.css">
     <script src="neurodrive-race.js" defer></script>
@@ -168,6 +170,24 @@
               </fieldset>
             </form>
             <div id="garage-account" hidden>
+              <section class="pilot-card" aria-label="Perfil do piloto">
+                <div class="pilot-hero">
+                  <div class="pilot-portrait"><img id="pilot-photo" alt="Foto do piloto" hidden><span id="pilot-initials" aria-hidden="true">ND</span><b id="pilot-badge">#00</b></div>
+                  <div><p class="menu-eyebrow">MEU PILOTO</p><h3 id="pilot-title"></h3><p id="pilot-handle"></p><p id="pilot-car-name"></p></div>
+                </div>
+                <div id="pilot-car" class="pilot-car" aria-label="Pintura equipada"></div>
+                <div class="pilot-stats"><div><strong id="pilot-races">0</strong><span>Corridas</span></div><div><strong id="pilot-wins">0</strong><span>Vitórias</span></div><div><strong id="pilot-podiums">0</strong><span>Pódios</span></div><div><strong id="pilot-poles">—</strong><span>Poles</span></div></div>
+                <p class="text-small">Resultados salvos na conta. Poles e voltas online passam a contar nas corridas concluídas após esta atualização.</p>
+                <h4>Minhas melhores voltas online</h4><ul id="pilot-laps" class="pilot-laps"></ul>
+              </section>
+              <details class="pilot-editor"><summary>Editar meu piloto</summary>
+                <form id="pilot-form"><fieldset id="pilot-fields"><label class="form-label">Nick do piloto<input id="pilot-nickname" required minlength="3" maxlength="24" autocomplete="nickname"></label><label class="form-label">Número do carro<input id="pilot-number" type="number" min="0" max="99" step="1" required></label><p class="text-small">O nome usado para entrar na conta continua o mesmo. O número identifica seu perfil; não é exclusivo.</p><button class="btn btn-primary" type="submit">Salvar piloto</button></fieldset></form>
+                <div class="pilot-photo-editor"><label class="form-label">Foto do perfil<input id="pilot-file" type="file" accept="image/jpeg,image/png,image/webp"></label><p class="text-small">Escolha uma foto de até 5 MB. Ajuste o corte quadrado e confirme. Sua foto aparecerá no perfil público.</p>
+                <div id="pilot-crop" hidden><canvas id="pilot-canvas" width="256" height="256" aria-label="Prévia do corte da foto"></canvas><label class="form-label">Zoom<input id="pilot-zoom" type="range" min="1" max="3" step="0.05" value="1"></label><label class="form-label">Horizontal<input id="pilot-x" type="range" min="0" max="100" value="50"></label><label class="form-label">Vertical<input id="pilot-y" type="range" min="0" max="100" value="50"></label><div class="garage-actions"><button class="btn btn-primary" id="pilot-upload" type="button">Usar esta foto</button><button class="btn" id="pilot-cancel-photo" type="button">Cancelar</button></div></div>
+                <button class="btn" id="pilot-remove-photo" type="button">Remover foto</button></div>
+              </details>
+              <p id="pilot-status" role="status" aria-live="polite"></p>
+              <details class="pilot-search"><summary>Visitar outro piloto</summary><form id="pilot-search-form"><label class="form-label">Nome da conta<input id="pilot-search-name" required minlength="3" maxlength="20" placeholder="Nome usado no login"></label><button class="btn" type="submit" id="pilot-search-button">Ver perfil</button></form><div id="pilot-visitor" hidden></div></details>
               <p class="garage-identity"><strong id="garage-name"></strong> · <strong id="garage-balance"></strong> moedas</p>
               <p id="garage-stats" class="text-small"></p><div class="garage-actions"><button class="btn" id="garage-bonus">Resgatar bônus de 100 moedas</button><button class="btn" id="garage-logout">Sair da conta</button></div>
               <p class="text-small" id="garage-bonus-note"></p>

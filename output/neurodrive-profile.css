@@ -1,0 +1,25 @@
+.pilot-card { margin: 18px 0; padding: 22px; border: 1px solid #72c7a555; border-radius: 18px; background: radial-gradient(ellipse at top right,#20554780,transparent 65%),#0d1b26; overflow: hidden; }
+.pilot-hero { display: flex; align-items: center; gap: 20px; }
+.pilot-hero h3 { margin: 4px 0; font-size: clamp(24px,4vw,36px); overflow-wrap: anywhere; }
+.pilot-hero p { margin: 5px 0; color: #aebecb; }
+.pilot-portrait { position: relative; flex: 0 0 96px; width: 96px; height: 96px; border: 2px solid #8bf0ba; border-radius: 18px; background: #28493e; display: grid; place-items: center; font-size: 30px; font-weight: 800; }
+.pilot-portrait img { width: 100%; height: 100%; object-fit: cover; border-radius: 16px; }
+.pilot-portrait b { position: absolute; bottom: -10px; right: -10px; padding: 4px 8px; border-radius: 6px; background: #a2ffd0; color: #102920; font-size: 18px; }
+.pilot-car { max-width: 400px; margin: 6px auto; }
+.pilot-car .garage-preview { width: 100%; }
+.pilot-stats { display: grid; grid-template-columns: repeat(4,1fr); gap: 8px; margin: 18px 0; }
+.pilot-stats div { padding: 12px 5px; border-radius: 10px; background: #ffffff08; text-align: center; }
+.pilot-stats strong,.pilot-stats span { display: block; }
+.pilot-stats strong { color: #a2ffd0; font-size: 26px; }
+.pilot-stats span { color: #b6c8d4; font-size: 11px; }
+.pilot-laps { list-style: none; padding: 0; }
+.pilot-laps li { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid #ffffff12; font-size: 13px; }
+.pilot-editor,.pilot-search { padding: 16px 0; border-bottom: 1px solid #ffffff22; }
+.pilot-editor summary,.pilot-search summary { cursor: pointer; min-height: 44px; font-weight: 700; }
+#pilot-fields { border: 0; padding: 0; margin: 0; }
+.pilot-photo-editor { margin-top: 24px; }
+#pilot-canvas { width: min(100%,256px); height: auto; border-radius: 14px; border: 2px solid #8bf0ba; }
+#pilot-status { color: #a2ffd0; min-height: 24px; }
+#pilot-visitor img { width: 72px; height: 72px; object-fit: cover; border-radius: 12px; }
+#pilot-visitor { padding: 16px; background: #102630; border-radius: 12px; margin-top: 14px; }
+@media(max-width:600px) { .pilot-card { padding: 14px; } .pilot-hero { gap: 14px; } .pilot-portrait { flex-basis: 72px; width: 72px; height: 72px; } .pilot-stats strong { font-size: 22px; } }

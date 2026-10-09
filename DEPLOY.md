@@ -115,3 +115,6 @@ npm.cmd run build
 `cloud.cjs` usa PostgreSQL em WASM (PGlite) e dois clientes WebSocket reais. Verifica transações, isolamento, sessões, troca de senha, salas, controles independentes e rejeição de posições enviadas pelo cliente. Não acessa o Supabase real. A versão local existente continua com `npm.cmd start` e SQLite; o backend cloud usa `npm.cmd run start:cloud`.
 
 Referências: [Render WebSocket](https://render.com/docs/websocket), [Supabase PostgreSQL](https://supabase.com/docs/guides/database/connecting-to-postgres), [Vercel configuração](https://vercel.com/docs/project-configuration).
+# Fotos e perfis de pilotos
+
+A atualização de perfil inclui migração automática das contas existentes. Para habilitar fotos no site, configure o bucket `neurodrive-avatars` e as variáveis privadas do Render conforme [PERFIL-PILOTO.md](PERFIL-PILOTO.md). Publique backend e frontend juntos. Sem Storage configurado, a edição de nick e número continua disponível.

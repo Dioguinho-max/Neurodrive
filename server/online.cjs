@@ -14,7 +14,7 @@ function attachOnline(server, { origin, store, tickMs = 1000 / 60 }) {
   };
   function lobby(room) {
     const data = { type: 'lobby', code: room.code, track: room.track, laps: room.laps, mode: room.mode, owner: room.owner,
-      players: [...room.peers].map((p) => ({ id: p.id, name: p.profile.username, ready: p.ready })) };
+      players: [...room.peers].map((p) => ({ id: p.id, name: (p.profile.nickname || p.profile.username), ready: p.ready })) };
     room.peers.forEach((p) => send(p, data));
   }
   function leave(peer) {
@@ -53,7 +53,7 @@ function attachOnline(server, { origin, store, tickMs = 1000 / 60 }) {
     peers.forEach((peer, index) => {
       peer.carId = index + 1;
       const car = room.race.cars[index];
-      Object.assign(car, { accountId: peer.id, name: peer.profile.username, manual: peer.manual,
+      Object.assign(car, { accountId: peer.id, name: (peer.profile.nickname || peer.profile.username), manual: peer.manual,
         skin: catalog.find((s) => s.id === peer.profile.equipped) });
     });
     let ticks = 0;
@@ -87,7 +87,7 @@ function attachOnline(server, { origin, store, tickMs = 1000 / 60 }) {
         if (status.saved || status.pending || Date.now() < (status.retry || 0)) continue;
         status.pending = true;
         room.rewards.set(car.id, status);
-        store.award(car.accountId, room.raceId, room.laps, car.place, room.mode).then((amount) => {
+        store.award(car.accountId, room.raceId, room.laps, car.place, room.mode, { track: room.track, bestLap: car.bestLap, pole: room.grid?.[0]?.id === car.id && room.grid[0].bestLap > 0 }).then((amount) => {
           Object.assign(status, { amount, saved: true });
         }).catch(() => { status.retry = Date.now() + 5000; }).finally(() => { status.pending = false; });
       }
@@ -128,7 +128,7 @@ function attachOnline(server, { origin, store, tickMs = 1000 / 60 }) {
           users.get(peer.id)?.ws.close(1000, 'Conta aberta em outra conexão');
           users.set(peer.id, peer);
           clearTimeout(timeout);
-          send(peer, { type: 'auth', id: peer.id, name: peer.profile.username });
+          send(peer, { type: 'auth', id: peer.id, name: (peer.profile.nickname || peer.profile.username) });
           return;
         }
         if (msg.type === 'ping' && Number.isFinite(msg.time)) { send(peer, { type: 'pong', time: msg.time }); return; }

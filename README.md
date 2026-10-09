@@ -55,6 +55,14 @@ O box do jogador também conta com dois chefes de equipe em estações de comput
 
 ## Controles
 
+### Perfil do piloto
+
+Em **Conta**, personalize seu nick, número e foto com corte ajustável. O cartão mostra a pintura equipada, corridas, vitórias, pódios, poles e melhores voltas online salvas por circuito. Você também pode visitar outro piloto pelo nome da conta.
+
+Fotos publicadas usam Supabase Storage; a configuração do Render, os limites e a origem das estatísticas estão em [PERFIL-PILOTO.md](PERFIL-PILOTO.md). Poles e voltas começam a ser registradas nas novas corridas online concluídas; o histórico anterior não contém esses dados. O ranking global será uma etapa posterior.
+
+### Teclado e toque
+
 | Ação | Tecla |
 | --- | --- |
 | Acelerar | W ou ↑ |

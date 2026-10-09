@@ -6,6 +6,7 @@ const crypto = require('node:crypto');
 const { promisify } = require('node:util');
 const { DatabaseSync } = require('node:sqlite');
 const catalog = require('./catalog.cjs');
+const pilot = require('./pilot.cjs');
 const scrypt = promisify(crypto.scrypt);
 const DAY = 86400000;
 const hash = (value) => crypto.createHash('sha256').update(value).digest('hex');
@@ -28,6 +29,9 @@ function createApp({ database = path.join(__dirname, 'data', 'neurodrive.sqlite'
     CREATE TABLE IF NOT EXISTS sessions (
       token_hash TEXT PRIMARY KEY, player_id INTEGER NOT NULL REFERENCES players(id), expires INTEGER NOT NULL
     );`);
+  for (const [name, type] of [['nickname', 'TEXT'], ['driver_number', 'INTEGER NOT NULL DEFAULT 0'], ['avatar', 'TEXT']]) {
+    if (!db.prepare('PRAGMA table_info(players)').all().some(column => column.name === name)) db.exec(`ALTER TABLE players ADD COLUMN ${name} ${type}`);
+  }
   const rewards = require('./rewards.cjs')(db, clock);
   const publicRoot = fs.realpathSync(path.join(__dirname, '..', 'output'));
   const attempts = new Map();
@@ -39,9 +43,9 @@ function createApp({ database = path.join(__dirname, 'data', 'neurodrive.sqlite'
     catch (error) { db.exec('ROLLBACK'); throw error; }
   }
   function profile(id) {
-    const player = statement('SELECT id, username, coins, equipped, last_bonus FROM players WHERE id=?', id);
+    const player = statement('SELECT id, username, nickname, driver_number, avatar, coins, equipped, last_bonus FROM players WHERE id=?', id);
     const owned = db.prepare('SELECT skin FROM inventory WHERE player_id=?').all(id).map((row) => row.skin);
-    return { username: player.username, coins: player.coins, equipped: player.equipped, owned, stats: rewards.stats(id),
+    return { username: player.username, nickname: player.nickname || player.username, number: player.driver_number, avatar: player.avatar, bestLaps: [], coins: player.coins, equipped: player.equipped, owned, stats: rewards.stats(id),
       nextBonusAt: player.last_bonus ? player.last_bonus + DAY : 0 };
   }
   function token(req) {
@@ -58,13 +62,13 @@ function createApp({ database = path.join(__dirname, 'data', 'neurodrive.sqlite'
     run('INSERT INTO sessions VALUES (?, ?, ?)', hash(value), id, Date.now() + 7 * DAY);
     res.setHeader('Set-Cookie', `nd_session=${value}; HttpOnly; SameSite=Strict; Path=/; Max-Age=604800${allowedOrigin.startsWith('https:') ? '; Secure' : ''}`);
   }
-  async function body(req) {
+  async function body(req, maximum = 4096) {
     if (req.headers['content-type']?.split(';')[0] !== 'application/json') throw fail(415, 'Envie JSON.');
     const chunks = [];
     let size = 0;
     for await (const chunk of req) {
       size += chunk.length;
-      if (size > 4096) throw fail(413, 'Pedido muito grande.');
+      if (size > maximum) throw fail(413, 'Pedido muito grande.');
       chunks.push(chunk);
     }
     try {
@@ -98,12 +102,19 @@ function createApp({ database = path.join(__dirname, 'data', 'neurodrive.sqlite'
         if (req.method === 'GET' && url.pathname === '/api/config') return json(200, { online: false, localRewards: true });
         if (req.method === 'GET' && url.pathname === '/api/catalog') return json(200, { skins: catalog });
         if (req.method === 'GET' && url.pathname === '/api/me') return json(200, { player: profile(user(req)) });
+        if (req.method === 'GET' && url.pathname === '/api/pilot') {
+          user(req);
+          const target = statement('SELECT id FROM players WHERE username=?', (url.searchParams.get('name') || '').slice(0, 20));
+          if (!target) throw fail(404, 'Piloto nao encontrado.');
+          return json(200, { pilot: pilot.publicPilot(profile(target.id)) });
+        }
         if (req.method !== 'POST') throw fail(404, 'Rota não encontrada.');
         if (req.headers.origin && req.headers.origin !== allowedOrigin) throw fail(403, 'Origem não permitida.');
         if (req.headers['sec-fetch-site'] === 'cross-site') throw fail(403, 'Origem não permitida.');
         const auth = ['/api/register', '/api/login'].includes(url.pathname);
         if (auth) rateLimit(req);
-        const data = await body(req);
+        if (url.pathname === '/api/avatar') user(req);
+        const data = await body(req, url.pathname === '/api/avatar' ? 280000 : 4096);
         if (auth) {
           const username = typeof data.username === 'string' ? data.username.trim() : '';
           const password = data.password;
@@ -139,7 +150,13 @@ function createApp({ database = path.join(__dirname, 'data', 'neurodrive.sqlite'
           const reward = rewards.finish(id, data);
           return json(200, { reward, player: profile(id) });
         }
-        if (url.pathname === '/api/bonus') {
+        if (url.pathname === '/api/profile') {
+          const dataPilot = pilot.details(data);
+          run('UPDATE players SET nickname=?,driver_number=? WHERE id=?', dataPilot.nickname, dataPilot.number, id);
+        } else if (url.pathname === '/api/avatar') {
+          const bytes = pilot.avatar(data.avatar);
+          run('UPDATE players SET avatar=? WHERE id=?', bytes ? 'data:image/jpeg;base64,' + bytes.toString('base64') : null, id);
+        } else if (url.pathname === '/api/bonus') {
           const result = run('UPDATE players SET coins=coins+100, last_bonus=? WHERE id=? AND last_bonus<=?', Date.now(), id, Date.now() - DAY);
           if (!result.changes) throw fail(409, 'Bônus já resgatado. Volte após 24 horas.');
         } else if (['/api/buy', '/api/equip'].includes(url.pathname)) {

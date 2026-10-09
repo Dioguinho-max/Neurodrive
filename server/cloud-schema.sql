@@ -10,6 +10,9 @@ CREATE TABLE IF NOT EXISTS neurodrive.players (
   last_bonus BIGINT NOT NULL DEFAULT 0
 );
 CREATE UNIQUE INDEX IF NOT EXISTS players_name ON neurodrive.players(lower(username));
+ALTER TABLE neurodrive.players ADD COLUMN IF NOT EXISTS nickname TEXT;
+ALTER TABLE neurodrive.players ADD COLUMN IF NOT EXISTS driver_number INTEGER NOT NULL DEFAULT 0 CHECK(driver_number BETWEEN 0 AND 99);
+ALTER TABLE neurodrive.players ADD COLUMN IF NOT EXISTS avatar TEXT;
 CREATE TABLE IF NOT EXISTS neurodrive.inventory (
   player_id BIGINT REFERENCES neurodrive.players(id) ON DELETE CASCADE,
   skin TEXT NOT NULL, PRIMARY KEY(player_id, skin)
@@ -27,6 +30,9 @@ CREATE TABLE IF NOT EXISTS neurodrive.results (
 CREATE TABLE IF NOT EXISTS neurodrive.auth_limits (
   key TEXT PRIMARY KEY, attempts INTEGER NOT NULL, expires BIGINT NOT NULL
 );
+ALTER TABLE neurodrive.results ADD COLUMN IF NOT EXISTS track TEXT;
+ALTER TABLE neurodrive.results ADD COLUMN IF NOT EXISTS best_lap DOUBLE PRECISION;
+ALTER TABLE neurodrive.results ADD COLUMN IF NOT EXISTS pole BOOLEAN NOT NULL DEFAULT FALSE;
 ALTER TABLE neurodrive.players ENABLE ROW LEVEL SECURITY;
 ALTER TABLE neurodrive.inventory ENABLE ROW LEVEL SECURITY;
 ALTER TABLE neurodrive.sessions ENABLE ROW LEVEL SECURITY;

@@ -32,13 +32,18 @@ class CloudStore {
     } catch (err) { if (err.code === '23505') throw fail(409, 'Esse nome já está em uso.'); throw err; }
   }
   async profile(id) {
-    const player = (await this.pool.query('SELECT username, coins, equipped, last_bonus FROM neurodrive.players WHERE id=$1', [id])).rows[0];
+    const player = (await this.pool.query('SELECT username, nickname, driver_number, avatar, coins, equipped, last_bonus FROM neurodrive.players WHERE id=$1', [id])).rows[0];
     if (!player) throw fail(401, 'Conta não encontrada.');
     const owned = (await this.pool.query('SELECT skin FROM neurodrive.inventory WHERE player_id=$1', [id])).rows.map((row) => row.skin);
-    const stats = (await this.pool.query('SELECT count(*)::int AS races, count(*) FILTER(WHERE place=1)::int AS wins FROM neurodrive.results WHERE player_id=$1', [id])).rows[0];
-    return { username: player.username, coins: player.coins, equipped: player.equipped, owned, stats,
+    const stats = (await this.pool.query('SELECT count(*)::int AS races, count(*) FILTER(WHERE place=1)::int AS wins, count(*) FILTER(WHERE place<=3)::int AS podiums, count(*) FILTER(WHERE pole)::int AS poles FROM neurodrive.results WHERE player_id=$1', [id])).rows[0];
+    const bestLaps = (await this.pool.query('SELECT track, min(best_lap) AS time FROM neurodrive.results WHERE player_id=$1 AND best_lap>0 AND track IS NOT NULL GROUP BY track', [id])).rows;
+    return { username: player.username, nickname: player.nickname || player.username, number: player.driver_number, avatar: player.avatar, coins: player.coins, equipped: player.equipped, owned, stats, bestLaps,
       nextBonusAt: Number(player.last_bonus) ? Number(player.last_bonus) + 86400000 : 0 };
   }
+  async updatePilot(id, data) {
+    await this.pool.query('UPDATE neurodrive.players SET nickname=$1,driver_number=$2 WHERE id=$3', [data.nickname, data.number, id]);
+  }
+  async updateAvatar(id, url) { await this.pool.query('UPDATE neurodrive.players SET avatar=$1 WHERE id=$2', [url, id]); }
   async session(tokenHash) { return (await this.pool.query('SELECT player_id FROM neurodrive.sessions WHERE token_hash=$1 AND expires>$2', [tokenHash, Date.now()])).rows[0]?.player_id; }
   async newSession(tokenHash, id, oldHash) {
     await this.transaction(async (db) => {
@@ -80,7 +85,7 @@ class CloudStore {
     const row = await this.pool.query('UPDATE neurodrive.players SET coins=coins+100,last_bonus=$1 WHERE id=$2 AND last_bonus<=$3', [Date.now(), id, Date.now() - 86400000]);
     if (!row.rowCount) throw fail(409, 'Bônus já resgatado. Aguarde 24 horas.');
   }
-  async award(id, raceId, laps, place, mode = 'race') {
+  async award(id, raceId, laps, place, mode = 'race', performance = {}) {
     return this.transaction(async (db) => {
       await db.query('SELECT id FROM neurodrive.players WHERE id=$1 FOR UPDATE', [id]);
       const existing = (await db.query('SELECT reward FROM neurodrive.results WHERE id=$1 AND player_id=$2', [raceId, id])).rows[0];
@@ -89,7 +94,7 @@ class CloudStore {
       const paid = (await db.query('SELECT COALESCE(sum(reward),0)::int AS total FROM neurodrive.results WHERE player_id=$1 AND finished>=$2', [id, Math.floor(now / 86400000) * 86400000])).rows[0].total;
       const podiumBonus = mode === 'tournament' ? ({ 1: 90, 2: 60, 3: 30 }[place] || 0) : 0;
       const reward = Math.max(0, Math.min(200, 50 + 20 * laps + podiumBonus, 500 - paid));
-      await db.query('INSERT INTO neurodrive.results VALUES($1,$2,$3,$4,$5)', [raceId, id, reward, place, now]);
+      await db.query('INSERT INTO neurodrive.results(id,player_id,reward,place,finished,track,best_lap,pole) VALUES($1,$2,$3,$4,$5,$6,$7,$8)', [raceId, id, reward, place, now, performance.track || null, Number.isFinite(performance.bestLap) && performance.bestLap > 0 ? performance.bestLap : null, performance.pole === true]);
       await db.query('UPDATE neurodrive.players SET coins=coins+$1 WHERE id=$2', [reward, id]);
       return reward;
     });

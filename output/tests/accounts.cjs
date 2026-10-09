@@ -39,6 +39,19 @@ async function api(route, data, cookie = '', extra = {}) {
     assert.match(registration.cookie, /HttpOnly/);
     assert.match(registration.cookie, /SameSite=Strict/);
     let cookie = registration.cookie.split(';')[0];
+    assert.equal((await api('profile', { nickname: 'Diogo Racing', number: 27 })).status, 401);
+    const edited = await api('profile', { nickname: 'Diogo Racing', number: 27, coins: 99999 }, cookie);
+    assert.equal(edited.data.player.nickname, 'Diogo Racing');
+    assert.equal(edited.data.player.username, 'piloto');
+    assert.equal(edited.data.player.number, 27);
+    assert.equal(edited.data.player.coins, 500);
+    assert.equal((await api('profile', { nickname: '<script>', number: 27 }, cookie)).status, 400);
+    assert.equal((await api('profile', { nickname: 'Diogo', number: 100 }, cookie)).status, 400);
+    assert.equal((await api('avatar', { avatar: 'data:image/svg+xml;base64,AAA=' }, cookie)).status, 400);
+    const publicPilot = (await api('pilot?name=piloto', undefined, cookie)).data.pilot;
+    assert.equal(publicPilot.nickname, 'Diogo Racing');
+    assert.equal(publicPilot.coins, undefined);
+    assert.equal(publicPilot.password_hash, undefined);
     assert.equal((await api('register', { ...credentials, username: 'PILOTO' })).status, 409);
     assert.equal((await api('login', { ...credentials, password: 'SenhaErrada_123' })).status, 401);
     assert.equal((await api('buy', { skin: 'rubi' })).status, 401);
@@ -55,6 +68,7 @@ async function api(route, data, cookie = '', extra = {}) {
     await stop();
     const db = new DatabaseSync(database);
     const row = db.prepare('SELECT * FROM players').get();
+    assert.equal(row.nickname, 'Diogo Racing', 'Perfil permanece no banco');
     assert.notEqual(row.password_hash, credentials.password);
     assert.equal(row.password_hash.length, 128);
     assert(!JSON.stringify(db.prepare('SELECT * FROM sessions').all()).includes(cookie.split('=')[1]));
