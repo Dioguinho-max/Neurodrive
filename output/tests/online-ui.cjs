@@ -7,11 +7,15 @@ const nodes = Object.fromEntries([...read('online.html').matchAll(/id="([^"]+)"/
   setAttribute() {}, replaceChildren() {}, append() {}, showModal() { this.open = true; }, close() { this.open = false; },
 }]));
 const listeners = {}, intervals = new Map();
+const touchButtons = Object.fromEntries(['left', 'right', 'brake', 'accelerate', 'shiftDown', 'shiftUp'].map(action => [action, {
+  dataset: { drive: action }, hidden: false, attributes: {}, setPointerCapture() {},
+  setAttribute(name, value) { this.attributes[name] = value; },
+}]));
 let now = 0, frame, drawn;
 const windowMock = { addEventListener: (name, fn) => { listeners[name] = fn; }, matchMedia: () => ({ matches: false }),
   createNeuroTrack3D: () => ({ update(cars) { drawn = cars; }, dispose() {} }) };
 const documentMock = { hidden: false, getElementById: (id) => { assert(nodes[id], id); return nodes[id]; },
-  querySelectorAll: () => [], addEventListener() {}, createElement: () => ({ dataset: {} }) };
+  querySelectorAll: selector => selector === '[data-drive]' ? Object.values(touchButtons) : selector === '.race-shift' ? [touchButtons.shiftDown, touchButtons.shiftUp] : [], addEventListener() {}, createElement: () => ({ dataset: {} }) };
 let socket;
 class Socket { static OPEN = 1; constructor() { socket = this; this.readyState = 1; this.sent = []; } send(data) { this.sent.push(JSON.parse(data)); } }
 for (const file of ['neuro-pista-track.js', 'neurodrive-race-engine.js', 'neurodrive-hud.js', 'neurodrive-online-buffer.js', 'neurodrive-prediction.js']) new Function('window', read(file))(windowMock);
@@ -30,6 +34,23 @@ new Function('window', 'document', 'WebSocket', 'fetch', 'performance', 'setInte
   assert.equal(nodes['online-ready'].hidden, true, 'Pronto não aparece durante corrida');
   assert.equal(nodes['online-start'].hidden, true, 'Largar não aparece após largada');
   assert.equal(nodes['online-manual'].disabled, true);
+  assert.equal(touchButtons.shiftUp.hidden, true, 'Automatico oculta trocas manuais');
+  const pointer = pointerId => ({ pointerId, preventDefault() {} });
+  touchButtons.accelerate.onpointerdown(pointer(1));
+  touchButtons.right.onpointerdown(pointer(2));
+  now = 1; intervals.get(16)();
+  assert.equal(socket.sent.at(-1).accelerate, true);
+  assert.equal(socket.sent.at(-1).right, true, 'Acelera e vira simultaneamente');
+  touchButtons.right.onpointercancel(pointer(2));
+  now = 80; intervals.get(16)();
+  assert.equal(socket.sent.at(-1).accelerate, true, 'Soltar direcao preserva pedal');
+  assert.equal(Boolean(socket.sent.at(-1).right), false);
+  touchButtons.accelerate.onpointerdown(pointer(3));
+  touchButtons.accelerate.onpointerup(pointer(1));
+  assert.equal(touchButtons.accelerate.attributes['aria-pressed'], 'true');
+  listeners.blur();
+  assert.equal(touchButtons.accelerate.attributes['aria-pressed'], 'false', 'Perder foco libera pedal');
+  now = 0;
   listeners.keydown({ code: 'KeyW', target: { tagName: 'BODY' }, preventDefault() {} });
   now = 1; intervals.get(16)(); now = 70; frame();
   assert(drawn[0].speed > 0, 'Online page renders local input without a new snapshot');

@@ -17,7 +17,7 @@
   const audio = window.createNeuroAudio?.();
   const say = (message) => { get('online-message').textContent = message; };
   const send = (data) => { if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify(data)); };
-  function clear() { keys.clear(); pointers.clear(); prediction?.input({ brake: true }, performance.now()); send({ type: 'input', brake: true }); }
+  function clear() { keys.clear(); pointers.clear(); document.querySelectorAll('[data-drive]').forEach((button) => button.setAttribute('aria-pressed', 'false')); prediction?.input({ brake: true }, performance.now()); send({ type: 'input', brake: true }); }
   function menu() {
     clear();
     get('online-title').textContent = latest ? latest.stage === 'waiting' ? 'Grid definido' : latest.stage === 'qualifying' ? 'Classificação em andamento' : latest.phase === 'finished' ? 'Celebração no pódio' : 'Sua corrida continua' : room ? 'Prepare seu grid' : 'Dispute com seus amigos';
@@ -87,6 +87,7 @@
             catch { renderer = null; say('Não foi possível iniciar WebGL.'); menu(); send({ type: 'leave' }); }
           }
           const player = latest.cars.find((car) => car.id === latest.self);
+          document.querySelectorAll('.race-shift').forEach((button) => { button.hidden = !player.manual; });
           get('online-ready').hidden = get('online-start').hidden = true;
           get('online-manual').disabled = true;
           get('online-recover').disabled = latest.phase !== 'racing' || player.done || Boolean(player.cooldown || player.pitState);
@@ -174,8 +175,10 @@
   window.addEventListener('blur', clear);
   document.addEventListener('visibilitychange', () => { if (document.hidden) clear(); });
   document.querySelectorAll('[data-drive]').forEach((button) => {
-    button.onpointerdown = (event) => { event.preventDefault(); button.setPointerCapture(event.pointerId); pointers.set(event.pointerId, button.dataset.drive); };
-    for (const name of ['onpointerup', 'onpointercancel', 'onlostpointercapture']) button[name] = (event) => pointers.delete(event.pointerId);
+    button.setAttribute('aria-pressed', 'false');
+    button.oncontextmenu = (event) => event.preventDefault();
+    button.onpointerdown = (event) => { event.preventDefault(); button.setPointerCapture(event.pointerId); pointers.set(event.pointerId, button.dataset.drive); button.setAttribute('aria-pressed', 'true'); };
+    for (const name of ['onpointerup', 'onpointercancel', 'onlostpointercapture']) button[name] = (event) => { pointers.delete(event.pointerId); button.setAttribute('aria-pressed', String([...pointers.values()].includes(button.dataset.drive))); };
   });
   setInterval(() => {
     if (!latest || latest.phase === 'finished') return;

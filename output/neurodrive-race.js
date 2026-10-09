@@ -456,9 +456,10 @@
       touches.set(event.pointerId, button.dataset.drive);
       button.setAttribute('aria-pressed', 'true');
     });
+    button.addEventListener('contextmenu', (event) => event.preventDefault());
     const release = (event) => {
       touches.delete(event.pointerId);
-      button.setAttribute('aria-pressed', 'false');
+      button.setAttribute('aria-pressed', String([...touches.values()].includes(button.dataset.drive)));
     };
     button.addEventListener('pointerup', release);
     button.addEventListener('pointercancel', release);

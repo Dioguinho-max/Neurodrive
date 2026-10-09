@@ -1,13 +1,14 @@
 <!doctype html>
 <html lang="pt-BR">
 <head>
-  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>NeuroDrive · Online</title>
   <link rel="stylesheet" href="neuro-pista.css"><link rel="stylesheet" href="neurodrive-race.css"><link rel="stylesheet" href="online.css">
   <script src="vendor/three.min.js" defer></script><script src="neurodrive-podium.js" defer></script><link rel="stylesheet" href="neurodrive-podium.css"><script src="neuro-pista-track.js" defer></script>
   <script src="neurodrive-race-engine.js" defer></script><script src="neurodrive-prediction.js" defer></script>
   <script src="neuro-pista-3d.js" defer></script><script src="neurodrive-audio.js?v=engine-only-2" defer></script><link rel="stylesheet" href="neurodrive-hud.css"><script src="neurodrive-hud.js" defer></script><script src="neurodrive-online-buffer.js" defer></script><script src="online.js" defer></script>
   <link rel="stylesheet" href="neurodrive-menu.css?v=menus-2">
+  <link rel="stylesheet" href="neurodrive-mobile.css">
 </head>
 <body><main id="neuro-race">
   <div class="race-stage"><canvas id="np-track-3d" aria-label="Corrida online 3D"></canvas><div id="race-banner" role="status"></div></div>
@@ -33,7 +34,16 @@
 <button class="btn" id="race-pit-request" type="button">Chamar boxes (B)</button>
 </aside>
   <ol id="online-ranking" aria-label="Posições da corrida"></ol>
-  <div class="viz-controls race-touch" aria-label="Controles"><button class="btn" data-drive="left">←</button><button class="btn" data-drive="right">→</button><button class="btn" data-drive="brake">Frear</button><button class="btn" data-drive="accelerate">Acelerar</button><button class="btn" data-drive="shiftDown">Q −</button><button class="btn" data-drive="shiftUp">E +</button></div>
+  <div class="viz-controls race-touch" aria-label="Controles de dire&#231;&#227;o">
+        <div class="touch-steering">
+          <div class="touch-shifts"><button class="btn race-shift" data-drive="shiftDown" aria-label="Reduzir marcha" hidden>&#8722;</button><button class="btn race-shift" data-drive="shiftUp" aria-label="Subir marcha" hidden>+</button></div>
+          <div class="touch-arrows"><button class="btn touch-arrow" data-drive="left" aria-label="Virar &#224; esquerda"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M29 10 15 24l14 14"/></svg></button><button class="btn touch-arrow" data-drive="right" aria-label="Virar &#224; direita"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="m19 10 14 14-14 14"/></svg></button></div>
+        </div>
+        <div class="touch-pedals">
+          <button class="btn touch-pedal touch-brake" data-drive="brake" aria-label="Frear"><svg viewBox="0 0 56 80" aria-hidden="true"><rect x="5" y="19" width="46" height="53" rx="9"/><path d="M14 30h28M14 40h28M14 50h28M14 60h28"/></svg></button>
+          <button class="btn touch-pedal touch-accelerator" data-drive="accelerate" aria-label="Acelerar"><svg viewBox="0 0 56 100" aria-hidden="true"><path class="pedal-body" d="M15 6h26l5 81q0 7-7 7H17q-7 0-7-7Z"/><path d="M21 18h14M20 30h16M19 42h18M18 54h20M18 66h20M17 78h22"/></svg></button>
+        </div>
+      </div>
   <dialog id="online-lobby" class="race-results" aria-labelledby="online-title">
     <nav class="online-navigation" aria-label="Navegação do jogo"><div class="online-brand">NEURO<span>DRIVE</span></div><a class="btn" href="corrida.html">← Menu principal</a></nav>
     <p class="race-results-eyebrow">Online · beta · 2 a 6 jogadores</p><h1 id="online-title">Dispute com seus amigos</h1>

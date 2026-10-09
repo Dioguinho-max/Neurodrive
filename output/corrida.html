@@ -2,7 +2,7 @@
 <html lang="pt-BR">
   <head>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <title>NeuroDrive — Corrida</title>
     <link rel="stylesheet" href="neuro-pista.css">
     <link rel="stylesheet" href="neurodrive-race.css">
@@ -16,6 +16,7 @@
     <script src="neurodrive-hud.js" defer></script>
     <script src="neurodrive-race.js" defer></script>
     <link rel="stylesheet" href="neurodrive-menu.css?v=menus-2">
+  <link rel="stylesheet" href="neurodrive-mobile.css">
 </head>
   <body>
     <main id="neuro-race">
@@ -51,13 +52,15 @@
         </aside>
       </div>
       <p id="race-message" role="status">Segure W ou ↑ na contagem para cortar giro parado. WASD ou setas: dirigir · P: pausar · R: reposicionar (2 s de espera) · Personalize seu carro na garagem.</p>
-      <div class="viz-controls race-touch" aria-label="Controles de direção">
-        <button class="btn" data-drive="left" aria-label="Virar à esquerda">← Esquerda</button>
-        <button class="btn" data-drive="right" aria-label="Virar à direita">Direita →</button>
-        <button class="btn race-shift" data-drive="shiftDown" hidden>Q · − marcha</button>
-        <button class="btn race-shift" data-drive="shiftUp" hidden>E · + marcha</button>
-        <button class="btn" data-drive="brake">Frear</button>
-        <button class="btn btn-primary" data-drive="accelerate">Acelerar</button>
+      <div class="viz-controls race-touch" aria-label="Controles de dire&#231;&#227;o">
+        <div class="touch-steering">
+          <div class="touch-shifts"><button class="btn race-shift" data-drive="shiftDown" aria-label="Reduzir marcha" hidden>&#8722;</button><button class="btn race-shift" data-drive="shiftUp" aria-label="Subir marcha" hidden>+</button></div>
+          <div class="touch-arrows"><button class="btn touch-arrow" data-drive="left" aria-label="Virar &#224; esquerda"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M29 10 15 24l14 14"/></svg></button><button class="btn touch-arrow" data-drive="right" aria-label="Virar &#224; direita"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="m19 10 14 14-14 14"/></svg></button></div>
+        </div>
+        <div class="touch-pedals">
+          <button class="btn touch-pedal touch-brake" data-drive="brake" aria-label="Frear"><svg viewBox="0 0 56 80" aria-hidden="true"><rect x="5" y="19" width="46" height="53" rx="9"/><path d="M14 30h28M14 40h28M14 50h28M14 60h28"/></svg></button>
+          <button class="btn touch-pedal touch-accelerator" data-drive="accelerate" aria-label="Acelerar"><svg viewBox="0 0 56 100" aria-hidden="true"><path class="pedal-body" d="M15 6h26l5 81q0 7-7 7H17q-7 0-7-7Z"/><path d="M21 18h14M20 30h16M19 42h18M18 54h20M18 66h20M17 78h22"/></svg></button>
+        </div>
       </div>
 <aside id="race-pit-panel" class="race-pit-panel" hidden aria-label="Pneus e boxes">
 <strong id="race-tyres">Pneus ? 100%</strong>
