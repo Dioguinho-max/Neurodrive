@@ -487,6 +487,17 @@
   }
   initializeRenderer();
 
+  const gamepad = window.createNeuroGamepad?.({
+    menu: openMenu,
+    back: (dialog) => {
+      const back = get('menu-back-pause');
+      if (dialog === get('race-menu') && !back.hidden) back.click();
+      else dialog.dispatchEvent(new Event('cancel', { cancelable: true }));
+    },
+    pit: () => get('race-pit-request').click(),
+    recover: () => get('menu-recover').click(),
+    disconnect: () => { if (started) openMenu(); },
+  });
   function frame(time) {
     const delta = previousTime === null ? 0 : Math.min(time - previousTime, 100);
     previousTime = time;
@@ -498,7 +509,7 @@
     if (finale && !get('race-menu').open && !document.hidden) finale.elapsed += Math.max(0, delta);
     if (started && !paused && race.phase !== 'finished') {
       accumulator += delta;
-      const input = {};
+      const input = { ...gamepad?.input() };
       heldKeys.forEach((key) => { input[keyActions[key]] = true; });
       touches.forEach((action) => { input[action] = true; });
       while (accumulator >= 1000 / 60) {

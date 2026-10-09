@@ -5,13 +5,14 @@ const api = {};
 for (const file of ['neuro-pista-track.js', 'neurodrive-race-engine.js', 'neurodrive-prediction.js']) {
   new Function('window', fs.readFileSync(path.join(__dirname, '..', file), 'utf8'))(api);
 }
-for (const manual of [false, true]) {
+for (const analog of [false, true]) for (const manual of [false, true]) {
   const track = api.createNeuroTrack('serra');
   const race = api.createNeuroRace(track, 'normal', { transmission: manual ? 'manual' : 'auto' });
   race.cars.slice(1).forEach((car) => { car.done = true; });
   for (let i = 0; i < 180; i++) race.step();
   for (let i = 0; i < 600; i++) {
     const input = { accelerate: i < 450, brake: i >= 450, right: i > 200 && i < 320, shiftUp: i === 150 || i === 300, shiftDown: i === 500 };
+    if (analog) Object.assign(input, { accelerate: false, brake: false, right: false, throttle: i < 450 ? .65 : 0, braking: i >= 450 ? .4 : 0, steering: i > 200 && i < 320 ? .32 : 0 });
     const predicted = structuredClone(race.cars[0]);
     api.predictNeuroCar(track, predicted, input);
     race.step(input);

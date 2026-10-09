@@ -2,6 +2,11 @@
 (() => {
   'use strict';
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const analog = (value, min = 0) => Number.isFinite(value) ? clamp(value, min, 1) : 0;
+  const playerCommand = command => [
+    command.left || command.right ? Number(Boolean(command.right)) - Number(Boolean(command.left)) : analog(command.steering, -1),
+    command.brake || analog(command.braking) > 0 ? -(command.brake ? 1 : analog(command.braking)) : command.accelerate ? 1 : analog(command.throttle),
+  ];
   const wrap = (angle) => Math.atan2(Math.sin(angle), Math.cos(angle));
   const tyreGripFactor = car => !car.tyreWearEnabled ? 1 : car.tyreBurst ? .16
     : 1 - .5 * Math.pow(1 - clamp(car.tyreLife ?? 1, 0, 1), 1.7);
@@ -147,7 +152,7 @@
     car.lastShift = shift;
     if (car.wallCooldown > 0) car.wallCooldown--;
     if (car.cooldown > 0) { car.cooldown--; return; }
-    advanceCar(track, car, Number(Boolean(command.right)) - Number(Boolean(command.left)), command.brake ? -1 : command.accelerate ? 1 : 0, MAX_RACE_SPEED);
+    advanceCar(track, car, ...playerCommand(command), MAX_RACE_SPEED);
   };
 
   window.createNeuroRace = function createNeuroRace(track, difficulty = 'normal', options = {}) {
@@ -461,7 +466,7 @@
       if (phase === 'countdown') {
         for (const car of cars) {
           const command = options.online ? input[car.id] || {} : input;
-          car.throttle = car.player ? Number(Boolean(command.accelerate) && !command.brake) : 0.65;
+          car.throttle = car.player ? Math.max(0, playerCommand(command)[1]) : 0.65;
           const target = car.throttle ? 900 + car.throttle * (REV_LIMIT - 900) : 900;
           car.rpm += clamp(target - car.rpm, -95, 125);
           car.limiter = car.rpm >= REV_LIMIT - 20;
@@ -488,7 +493,7 @@
         if (car.pitState) { updatePitStop(car); continue; }
         const command = options.online ? input[car.id] || {} : input;
         const [steering, pedal] = car.player
-          ? [Number(Boolean(command.right)) - Number(Boolean(command.left)), command.brake ? -1 : command.accelerate ? 1 : 0]
+          ? playerCommand(command)
           : aiDecision(car);
         advanceCar(track, car, steering, pedal, car.player ? MAX_RACE_SPEED : aiSpeed);
       }

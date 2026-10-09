@@ -180,10 +180,17 @@
     button.onpointerdown = (event) => { event.preventDefault(); button.setPointerCapture(event.pointerId); pointers.set(event.pointerId, button.dataset.drive); button.setAttribute('aria-pressed', 'true'); };
     for (const name of ['onpointerup', 'onpointercancel', 'onlostpointercapture']) button[name] = (event) => { pointers.delete(event.pointerId); button.setAttribute('aria-pressed', String([...pointers.values()].includes(button.dataset.drive))); };
   });
+  const gamepad = window.createNeuroGamepad?.({
+    menu,
+    back: () => { if (latest && latest.stage !== 'waiting') get('online-lobby').close(); },
+    pit: () => { if (latest && !get('race-pit-request').disabled) send({ type: 'pit' }); },
+    recover: () => { if (!get('online-recover').disabled) send({ type: 'recover' }); },
+    disconnect: menu,
+  });
   setInterval(() => {
     if (!latest || latest.phase === 'finished') return;
     const input = { type: 'input' };
-    if (!get('online-lobby').open && !document.hidden) { keys.forEach((key) => { input[actions[key]] = true; }); pointers.forEach((key) => { input[key] = true; }); }
+    if (!get('online-lobby').open && !document.hidden) { Object.assign(input, gamepad?.input()); keys.forEach((key) => { input[actions[key]] = true; }); pointers.forEach((key) => { input[key] = true; }); }
     else input.brake = true;
     const encoded = JSON.stringify(input), now = performance.now();
     prediction?.input(input, now);

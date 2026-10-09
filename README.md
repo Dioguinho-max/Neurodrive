@@ -68,6 +68,24 @@ O box do jogador também conta com dois chefes de equipe em estações de comput
 
 Há controles de toque na tela. No online, abrir o menu **não pausa a corrida**. A recuperação do carro tem penalidade de espera; o pit stop é conduzido automaticamente.
 
+### Controle de Xbox ou PlayStation
+
+Conecte por USB ou Bluetooth e pressione um botão com o jogo aberto. Use HTTPS (site publicado) ou localhost; o navegador precisa reconhecer o controle no mapeamento padrão da Gamepad API. Controles com mapeamento proprietário ainda não são suportados.
+
+| Ação | Xbox / PlayStation |
+| --- | --- |
+| Direção gradual | Analógico esquerdo |
+| Acelerar / frear gradualmente | RT / LT · R2 / L2 |
+| Subir / reduzir marcha | RB / LB · R1 / L1 |
+| Boxes | X / □ |
+| Recuperar carro | Y / △ |
+| Menu / pausa | Start / Options |
+| Navegar no menu | Direcional ou analógico esquerdo |
+| Confirmar / voltar | A / B · ✕ / ○ |
+| Ajustar seleção ou volume | Esquerda / direita |
+
+Os menus destacam a opção selecionada. Campos de login e códigos de sala continuam usando teclado ou teclado virtual do dispositivo. Após desconectar ou trocar de janela, solte os botões e centralize o analógico para retomar. No solo, desconectar abre a pausa; no online, abre a sala e aciona o freio, mas a corrida continua.
+
 ## Laboratório de IA
 
 Cada carro possui uma rede neural que recebe sensores de distância e velocidade e produz decisões de direção e aceleração. A visualização mostra sensores, ativações, conexões e cálculos de neurônios; é possível pausar e inspecionar a rede.

@@ -152,6 +152,9 @@ function attachOnline(server, { origin, store, tickMs = 1000 / 60 }) {
         } else if (msg.type === 'start' && peer.room?.owner === peer.id) start(peer.room);
         else if (msg.type === 'input' && peer.room?.race) {
           peer.input = Object.fromEntries(['accelerate', 'brake', 'left', 'right', 'shiftUp', 'shiftDown'].map((key) => [key, msg[key] === true]));
+          for (const key of ['steering', 'throttle', 'braking']) {
+            peer.input[key] = Number.isFinite(msg[key]) ? Math.max(key === 'steering' ? -1 : 0, Math.min(1, msg[key])) : 0;
+          }
           peer.lastInput = Date.now();
         } else if (msg.type === 'recover' && peer.room?.race) peer.room.race.recoverCar(peer.carId);
         else if (msg.type === 'pit' && peer.room?.race) peer.room.race.requestPit(peer.carId);

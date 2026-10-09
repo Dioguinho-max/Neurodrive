@@ -1,0 +1,4 @@
+.gamepad-focus { outline: 3px solid #a2ffd0 !important; outline-offset: 3px; box-shadow: 0 0 18px #65ffac55 !important; scroll-margin-block: 72px; }
+.gamepad-hint { position: fixed; z-index: 100; bottom: max(8px, env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%); margin: 0; padding: 8px 14px; max-width: 90vw; width: max-content; border: 1px solid #82b5a266; border-radius: 10px; background: #0b1b24f5; color: #ddfbee; font: 12px system-ui; text-align: center; pointer-events: none; }
+.gamepad-hint[hidden] { display: none; }
+dialog:has(.gamepad-focus) { padding-bottom: 60px !important; }
