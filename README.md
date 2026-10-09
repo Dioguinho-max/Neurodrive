@@ -43,6 +43,8 @@ O servidor local oferece corrida solo, contas, loja e recompensas de treino com 
 
 Também é possível abrir [output/corrida.html](output/corrida.html) como visitante ou [output/neuro-pista.html](output/neuro-pista.html) para o laboratório, sem backend. Contas e loja precisam do servidor.
 
+O box do jogador também conta com dois chefes de equipe em estações de computador, com headsets e animações de digitação. As telas acompanham velocidade, marcha, condição dos pneus e RPM do carro acompanhado.
+
 ## Controles
 
 | Ação | Tecla |

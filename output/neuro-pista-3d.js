@@ -305,6 +305,7 @@
     // Instalações próximas à largada, fora da faixa de corrida e das barreiras.
     const grandstandDetails = new THREE.Object3D();
     const pitRoofs = [];
+    const pitEngineers = [];
     scene.add(grandstandDetails);
     if (options.racePresentation) {
       const block = new THREE.BoxGeometry(1, 1, 1);
@@ -352,6 +353,52 @@
             [point.x, track.heightAt(point.x, point.y) + 14, point.y]);
           plate.rotation.y = -point.angle;
         }
+      }
+      // Duas estações de telemetria no box do jogador, fora da área de troca.
+      for (const [index, along] of [-4, 4].entries()) {
+        const station = new THREE.Object3D(); station.userData.pitEngineer = true;
+        const point = circuitPoint(track.pit.garage(0).distance + along, track.halfWidth + 86);
+        station.position.set(point.x, track.heightAt(point.x, point.y) + .2, point.y);
+        station.rotation.y = -point.angle; scene.add(station);
+        const uniform = material(index ? '#246b88' : '#293e60', { roughness: .8 });
+        const skin = material(index ? '#986749' : '#d9a180');
+        const lightTrim = material('#dbe7eb');
+        addMesh(roundedBox(5.8, .3, 2.5, .1), navy, station, [0, 2.55, 2.1]);
+        for (const x of [-2.4, 2.4]) addMesh(new THREE.BoxGeometry(.2, 2.5, 2), steel, station, [x, 1.25, 2.1]);
+        addMesh(roundedBox(3.5, 2, .3, .1), navy, station, [0, 3.8, 2.7]);
+        addMesh(new THREE.BoxGeometry(.22, .65, .25), steel, station, [0, 2.95, 2.7]);
+        addMesh(roundedBox(2.5, .12, .8, .05), lightTrim, station, [0, 2.77, 1.45]);
+        for (let row = 0; row < 3; row++) for (let key = 0; key < 9; key++) {
+          addMesh(new THREE.BoxGeometry(.17, .025, .13), navy, station, [-.98 + key * .24, 2.84, 1.2 + row * .22]);
+        }
+        addMesh(roundedBox(.32, .15, .5, .1), lightTrim, station, [1.9, 2.8, 1.55]);
+        addMesh(roundedBox(1.4, 1.7, .9, .22), uniform, station, [0, 2.45, 0]);
+        addMesh(roundedBox(.12, 1.25, .05, .02), lightTrim, station, [0, 2.45, .46]);
+        for (const side of [-1, 1]) {
+          addMesh(roundedBox(.5, 1.55, .55, .13), uniform, station, [side * .38, .9, 0]);
+          addMesh(roundedBox(.58, .3, .9, .1), navy, station, [side * .38, .19, .18]);
+        }
+        const head = new THREE.Object3D(); head.position.set(0, 3.65, 0); station.add(head);
+        addMesh(new THREE.SphereGeometry(.58, 16, 12), skin, head);
+        const cap = addMesh(new THREE.SphereGeometry(.61, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), uniform, head, [0, .08, 0]);
+        addMesh(roundedBox(1, .1, .55, .05), uniform, cap, [0, .1, .4]);
+        for (const side of [-1, 1]) addMesh(roundedBox(.18, .5, .38, .08), navy, head, [side * .56, 0, 0]);
+        addMesh(roundedBox(.08, .08, .65, .03), navy, head, [.58, -.22, .35]);
+        const hands = [];
+        for (const side of [-1, 1]) {
+          const arm = new THREE.Object3D(); arm.position.set(side * .7, 2.8, .25); station.add(arm);
+          addMesh(roundedBox(.38, .45, 1.1, .13), uniform, arm, [0, -.06, .4]);
+          addMesh(roundedBox(.35, .21, .4, .09), skin, arm, [0, .01, 1]); hands.push(arm);
+        }
+        const screen = document.createElement('canvas'); screen.width = 256; screen.height = 128;
+        const ctx = screen.getContext?.('2d');
+        let map;
+        if (ctx) {
+          map = new THREE.CanvasTexture(screen); map.colorSpace = THREE.SRGBColorSpace; textures.push(map);
+          const display = addMesh(new THREE.PlaneGeometry(3.2, 1.72), new THREE.MeshBasicMaterial({ map }), station, [0, 3.8, 2.53]);
+          display.rotation.y = Math.PI;
+        }
+        pitEngineers.push({ head, hands, ctx, map, lastUpdate: -Infinity, index });
       }
       const towerLane = track.halfWidth + 76;
       if (clearSite(48, towerLane, 26, 30)) {
@@ -1021,6 +1068,24 @@
         renderer.dispose();
       },
       update(population, leader, showSensors, target = leader, finished = false) {
+        const engineerTime = Date.now();
+        for (const engineer of pitEngineers) {
+          const t = engineerTime / 1000 + engineer.index;
+          engineer.head.rotation.y = Math.sin(t * .55) * .12;
+          engineer.hands.forEach((arm, index) => { arm.rotation.x = Math.sin(t * 7 + index * 2) * .055; });
+          if (engineer.ctx && engineerTime - engineer.lastUpdate >= 250) {
+            engineer.lastUpdate = engineerTime;
+            const ctx = engineer.ctx;
+            ctx.fillStyle = '#081521'; ctx.fillRect(0, 0, 256, 128);
+            ctx.fillStyle = '#63ebbc'; ctx.font = 'bold 16px sans-serif'; ctx.fillText('NEURO / TELEMETRIA', 10, 22);
+            ctx.fillStyle = '#edf7ff'; ctx.font = '16px monospace';
+            ctx.fillText(`${Math.round((leader?.speed || 0) * 54)} km/h   M${leader?.gear || 1}`, 10, 48);
+            ctx.fillText(`PNEUS ${Math.round((leader?.tyreLife ?? 1) * 100)}%`, 10, 72);
+            ctx.fillStyle = '#203c4c'; ctx.fillRect(10, 91, 236, 15);
+            ctx.fillStyle = '#63ebbc'; ctx.fillRect(10, 91, 236 * Math.min(1, (leader?.rpm || 0) / 8000), 15);
+            engineer.map.needsUpdate = true;
+          }
+        }
         snapshot = { leader, target };
         models.forEach((model, index) => { model.group.visible = index < population.length; });
         population.forEach((car, index) => {
