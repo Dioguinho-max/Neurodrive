@@ -34,14 +34,14 @@
   .race-pit-panel .btn { min-height: 44px; padding: 5px; font-size: 10px; }
   .race-touch { display: flex; flex-wrap: nowrap; align-items: end; justify-content: space-between; gap: 12px; z-index: 4; left: max(12px, env(safe-area-inset-left)); right: max(12px, env(safe-area-inset-right)); bottom: max(12px, env(safe-area-inset-bottom)); pointer-events: none; margin: 0; }
   .race-touch button { box-sizing: border-box; flex: none; padding: 8px; margin: 0; pointer-events: auto; touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; color: #edf8ff; background: linear-gradient(145deg, #273f50df, #0a1825dc); border: 1px solid #aac8dd75; border-radius: 16px; box-shadow: inset 0 1px 0 #ffffff25, 0 4px 10px #0005; }
-  .race-touch .touch-arrow { width: 58px; height: 60px; }
-  .race-touch .touch-pedal { width: 58px; height: 80px; padding: 4px; }
-  .race-touch .touch-accelerator { height: 102px; border-color: #83edbe99; }
-  .race-touch .race-shift { width: 58px; height: 44px; min-height: 44px; font-size: 24px; padding: 0; }
+  .race-touch .touch-arrow { width: 66px; height: 72px; }
+  .race-touch .touch-pedal { width: 66px; height: 92px; padding: 4px; }
+  .race-touch .touch-accelerator { height: 116px; border-color: #83edbe99; }
+  .race-touch .race-shift { width: 66px; height: 44px; min-height: 44px; font-size: 24px; padding: 0; }
   .race-touch button[aria-pressed="true"] { background: #24694eea; border-color: #a4ffce; box-shadow: inset 0 3px 10px #0005, 0 0 12px #73ffc833; outline: none; transform: translateY(2px); }
   .race-touch .touch-brake[aria-pressed="true"] { background: #85443ded; border-color: #ffb1a1; }
   #race-banner { inset: 42% 16% auto; font-size: clamp(16px, 3vw, 26px); line-height: 1.2; pointer-events: none; }
-  .personal-best { bottom: calc(max(12px, env(safe-area-inset-bottom)) + 114px); max-width: 80%; font-size: 11px; pointer-events: none; }
+  .personal-best { bottom: calc(max(12px, env(safe-area-inset-bottom)) + 128px); max-width: 80%; font-size: 11px; pointer-events: none; }
   .start-lights { gap: 6px; padding: 8px; }
   .start-light { width: 24px; }
 }
