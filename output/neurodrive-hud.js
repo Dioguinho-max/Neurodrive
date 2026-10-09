@@ -66,13 +66,17 @@
     const panel = get('race-pit-panel');
     if (panel) {
       panel.hidden = !car.tyreWearEnabled || car.done || phase === 'finished';
-      const life = Math.round((car.tyreLife ?? 1) * 100);
-      get('race-tyres').textContent = `Pneus · ${life}%`;
+      const life = Math.ceil((car.tyreLife ?? 1) * 100);
+      panel.setAttribute('data-condition', car.tyreBurst ? 'burst' : life <= 10 ? 'critical' : life <= 30 ? 'worn' : 'normal');
+      get('race-tyres').textContent = car.tyreBurst ? 'PNEU ESTOURADO' : `Pneus · ${life}%`;
       get('race-tyre-life').value = life;
       get('race-pit-status').textContent = car.pitState === 'service'
         ? `Troca de pneus · ${Math.ceil(car.pitTimer / 60)} s`
         : car.pitState ? 'Piloto automático · limite 60 km/h'
+        : car.tyreBurst ? `Direção comprometida · ${car.pitRequested ? 'boxes chamados' : 'chame os boxes (B)'}`
         : car.pitRequested ? 'Parada solicitada · entrada após a largada'
+        : life <= 10 ? 'Pneus no limite! Troque antes de chegar a 0%.'
+        : life <= 30 ? 'Aderência reduzida · planeje sua parada'
         : `${car.pitStops || 0} parada(s) · desgaste ativo`;
       const button = get('race-pit-request');
       button.disabled = phase !== 'racing' || Boolean(car.pitState || car.cooldown || car.done);

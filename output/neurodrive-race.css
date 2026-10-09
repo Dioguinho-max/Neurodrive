@@ -107,6 +107,9 @@ body { overflow: hidden; }
 #race-message { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
 .race-finale { position: absolute; z-index: 4; inset: 0; display: flex; align-items: flex-end; justify-content: center; padding: 24px 24px 7vh; pointer-events: none; background: linear-gradient(transparent 35%, #06101bec); }
 .race-finale[hidden] { display: none; }
+.race-finale[data-ceremony="true"] { padding: 12px; background: linear-gradient(transparent 75%, #06101bcc); }
+.race-finale[data-ceremony="true"] h2 { font-size: 22px; margin: 4px 0; }
+.race-finale[data-ceremony="true"] .finale-progress { height: 3px; }
 #neuro-race:has(.race-finale:not([hidden])) :is(.drive-hud, .race-touch, .personal-best) { visibility: hidden; }
 .finale-card { max-width: 800px; text-align: center; color: #eef7ff; }
 .finale-card > .chequered-flag { width: 70px; height: 36px; }

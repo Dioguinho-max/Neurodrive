@@ -1,0 +1,12 @@
+.podium-ceremony { display: block; position: relative; margin: 16px 0; border: 1px solid #48718455; border-radius: 16px; overflow: hidden; background: radial-gradient(ellipse at 50% 20%, #254c65, #0a1625 75%); }
+.podium-ceremony canvas { display: block; width: 100%; }
+.ceremony-names { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; padding: 10px 8% 20px; color: #eff7ff; text-align: center; }
+.ceremony-names strong { display: block; color: #c9d8e7; font-size: 22px; }
+.ceremony-names [data-place="1"] strong { color: #edc563; }
+.ceremony-names [data-place="3"] strong { color: #c58b64; }
+.ceremony-names span { display: block; overflow-wrap: anywhere; font-size: clamp(11px, 2vw, 16px); }
+.podium-ceremony[hidden], #online-grid[hidden] { display: none; }
+#online-grid { padding: 14px; border-radius: 10px; background: #122332; color: #edf5ff; }
+#online-grid li { padding: 6px 0; font-variant-numeric: tabular-nums; }
+#neuro-race[data-ceremony="true"] :is(.drive-hud, .race-touch, #online-ranking) { visibility: hidden; }
+#neuro-race[data-ceremony="true"] #race-banner { top: auto; bottom: 18px; font-size: clamp(14px, 2vw, 22px); }

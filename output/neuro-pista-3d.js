@@ -819,6 +819,7 @@
     function clamp(value, min, max) { return Math.max(min, Math.min(max, value)); }
 
     let finishCameraAt = null;
+    let ceremony = null;
     function render() {
       const width = canvas.clientWidth;
       const height = canvas.clientHeight;
@@ -856,7 +857,14 @@
         camera.fov = fieldOfView;
         camera.updateProjectionMatrix();
       }
-      if (car?.pitState === 'service') {
+      if (ceremony) {
+        const close = clamp((ceremony.time - 4) / 3, 0, 1);
+        const origin = ceremony.origin;
+        const eye = new THREE.Vector3(-28 * (1 - close) + 8 * close, 36 - close * 17, 80 - close * 38);
+        eye.applyAxisAngle(new THREE.Vector3(0, 1, 0), -origin.angle);
+        camera.position.set(origin.x + eye.x, ceremony.height + eye.y, origin.y + eye.z);
+        camera.lookAt(origin.x, ceremony.height + 7, origin.y);
+      } else if (car?.pitState === 'service') {
         const x = car.x + Math.cos(car.angle) * 15 + Math.sin(car.angle) * 24;
         const z = car.y + Math.sin(car.angle) * 15 - Math.cos(car.angle) * 24;
         camera.position.set(x, Math.max(track.heightAt(x, z) + 8, track.heightAt(car.x, car.y) + 13), z);
@@ -990,6 +998,27 @@
     return {
       setQuality,
       setFinishCamera(active) { finishCameraAt = active ? Date.now() : null; },
+      setCeremony(ranking, milliseconds = 0) {
+        if (!ranking) { ceremony?.podium.dispose(); ceremony = null; return; }
+        if (!window.createNeuroPodiumScene) return;
+        if (!ceremony) {
+          const distance = track.pit.garage(0).distance;
+          const origin = circuitPoint(distance, -6);
+          const podium = window.createNeuroPodiumScene(THREE, ranking);
+          const terrain = Array.from({ length: 24 }, (_, i) => {
+            const angle = i * Math.PI / 12;
+            return track.heightAt(origin.x + Math.cos(angle) * 23, origin.y + Math.sin(angle) * 23);
+          });
+          const height = Math.max(...terrain) + .7;
+          const depth = height - Math.min(...terrain) + .2;
+          const foundation = new THREE.Mesh(new THREE.CylinderGeometry(11, 11, depth / 2, 48), material('#15283b'));
+          foundation.position.y = -depth / 4 - .31; podium.root.add(foundation);
+          podium.root.position.set(origin.x, height, origin.y); podium.root.rotation.y = -origin.angle;
+          podium.root.scale.setScalar(2); scene.add(podium.root);
+          ceremony = { podium, origin, height, distance, ids: ranking.filter(car => !car.disconnected).slice(0, 3).map(car => car.id), time: 0 };
+        }
+        ceremony.time = milliseconds / 1000; ceremony.podium.update(ceremony.time);
+      },
       createPreview(previewCanvas) {
         // Uma única vitrine, com cópia do mesmo modelo e recursos próprios.
         const source = models[0] || (models[0] = createCarModel(0));
@@ -1005,7 +1034,7 @@
         model.position.set(0, 0, 0); model.rotation.set(0, 0, 0); model.visible = true;
         model.children.filter((part) => part.isGroup).forEach((pivot) => {
           pivot.position.y = wheelRadius; pivot.position.z = Math.sign(pivot.position.z) * 4;
-          pivot.rotation.y = 0; pivot.children[0].visible = true;
+          pivot.rotation.y = 0; pivot.children[0].visible = true; pivot.children[0].scale.set(1, 1, 1);
         });
         const geometries = new Set(), surfaces = new Set();
         model.traverse((part) => {
@@ -1093,7 +1122,15 @@
           const original = car;
           updateNameplate(model, car, car === target);
           // Animação somente visual: tempos, voltas, colisões e recompensas já estão fechados.
-          if (options.racePresentation && !car.pitExit && (finished || car.done)) {
+          if (ceremony) {
+            const place = ceremony.ids.indexOf(car.id);
+            if (place < 0) { model.group.visible = false; return; }
+            const t = clamp((ceremony.time - place * .4) / 4, 0, 1);
+            const remaining = 100 * (1 - t) ** 3;
+            const p = circuitPoint(ceremony.distance + [0, -25, 25][place] - remaining, 24);
+            car = { ...car, ...p, speed: 1.25 * (1 - t) ** 2, steering: 0, pitState: null, pitExit: false, bodyRoll: 0 };
+            model.coast = null;
+          } else if (options.racePresentation && !car.pitExit && (finished || car.done)) {
             if (!model.coast) {
               const nearest = track.nearest(car.x, car.y);
               if (Number.isFinite(nearest.distance)) {
@@ -1154,7 +1191,7 @@
           }
           model.lastX = car.x; model.lastY = car.y;
           const up = new THREE.Vector3(0, 1, 0).applyQuaternion(model.group.quaternion);
-          model.wheels.forEach(({ pivot, wheel, x, z }) => {
+          model.wheels.forEach(({ pivot, wheel, x, z }, wheelIndex) => {
             const contact = model.group.localToWorld(new THREE.Vector3(x, wheelRadius, z));
             const height = track.heightAt(contact.x, contact.z) + 0.15 + wheelRadius + lift;
             pivot.position.y = wheelRadius + (height - contact.y) / up.y;
@@ -1162,6 +1199,9 @@
             pivot.position.z = z + Math.sign(z) * removal * 1.5;
             wheel.visible = !(service && serviceTime > 3.2 && serviceTime < 4.2);
             wheel.rotation.z = model.spin;
+            const flat = car.tyreBurst && car.burstWheel === wheelIndex;
+            wheel.scale.set(flat ? .8 : 1, flat ? .65 : 1, 1);
+            if (flat) pivot.position.y -= .4;
           });
           const customized = car.skin;
           if (customized) {

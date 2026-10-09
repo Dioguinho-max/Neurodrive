@@ -44,6 +44,7 @@
     finale = null;
     get('race-finale').hidden = true;
     renderer?.setFinishCamera?.(false);
+    renderer?.setCeremony?.(null);
   }
   function updateFinale(ranking) {
     const player = race.cars[0];
@@ -52,6 +53,7 @@
     const overlay = get('race-finale');
     overlay.hidden = false;
     overlay.setAttribute('data-stage', waiting ? 'waiting' : 'finished');
+    overlay.setAttribute('data-ceremony', String(!race.qualifying && Boolean(finale)));
     get('race-banner').textContent = '';
     get('finale-eyebrow').textContent = `${track.name} · ${race.qualifying ? 'CLASSIFICAÇÃO' : 'BANDEIRADA FINAL'}`;
     const position = ranking.indexOf(player) + 1;
@@ -70,8 +72,13 @@
         ? `${player.bestLap === null ? 'Sem volta válida · largada no fim do grid' : `Melhor volta · ${timeLabel(player.bestLap)}`} · Prepare-se para a corrida`
         : `${race.laps} voltas · Tempo final ${timeLabel(player.finishTime ?? race.elapsed)} · ${player.place <= 3 ? 'Seu lugar no pódio está garantido' : 'Cada disputa conta. A próxima largada espera por você'}`;
       get('finale-skip').textContent = race.qualifying ? 'Ver grid de largada' : 'Ver pódio e resultados';
-      get('finale-progress-fill').style.width = `${Math.min(100, finale.elapsed / 60)}%`;
-      if (finale.elapsed >= 6000 && !get('race-menu').open) showResults();
+      const duration = race.qualifying ? 6000 : 12000;
+      if (!race.qualifying) {
+        get('finale-title').textContent = finale.elapsed < 5000 ? 'Chegada ao pódio' : 'Os três melhores';
+        get('finale-detail').textContent = ranking.slice(0, 3).map((car, i) => `${i + 1}º ${car.name}`).join(' · ');
+      }
+      get('finale-progress-fill').style.width = `${Math.min(100, finale.elapsed / duration * 100)}%`;
+      if (finale.elapsed >= duration && !get('race-menu').open) showResults();
     }
   }
   get('finale-skip').onclick = () => {
@@ -295,6 +302,7 @@
     player.skin = window.NeuroGarage?.getSkin() || null;
     const spectator = started && race.qualifying && player.done && race.phase !== 'finished'
       ? race.cars.find((car) => !car.done && !car.pitExit) || player : player;
+    if (finale && !race.qualifying) renderer?.setCeremony?.(race.standings(), finale.elapsed);
     renderer?.update(race.cars, player, false, spectator, race.phase === 'finished');
     const ranking = race.standings();
     updateHUD(player, ranking.indexOf(player) + 1, ranking.length, race.laps, race.elapsed, race.phase);

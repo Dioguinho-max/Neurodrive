@@ -12,7 +12,7 @@
     "migrate:accounts": "node scripts/migrate-accounts.cjs",
     "test:accounts": "node output/tests/accounts.cjs",
     "test:cloud": "node output/tests/cloud.cjs",
-    "test:online": "node output/tests/prediction.cjs && node output/tests/online-ui.cjs && node output/tests/online-buffer.cjs",
+    "test:online": "node output/tests/prediction.cjs && node output/tests/online-ui.cjs && node output/tests/online-buffer.cjs && node output/tests/online-stages.cjs",
     "test:ui": "node output/tests/race-ui.cjs"
   },
   "dependencies": {

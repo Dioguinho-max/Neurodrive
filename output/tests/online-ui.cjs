@@ -37,6 +37,24 @@ new Function('window', 'document', 'WebSocket', 'fetch', 'performance', 'setInte
   now = 120; receive({ type: 'pong', time: 0 });
   assert.match(nodes['online-connection'].textContent, /120 ms/);
   listeners.blur(); now = 140; frame(); assert(drawn[0].brake > 0);
+  const qualifying = windowMock.createNeuroRace(windowMock.createNeuroTrack('serra'), 'normal', { session: 'qualifying', pitStart: true });
+  receive({ type: 'state', stage: 'qualifying', cars: qualifying.cars, self: 1, track: 'serra', phase: 'racing', laps: 3, elapsed: 3 });
+  assert.match(nodes['race-banner'].textContent, /boxes/);
+  const grid = qualifying.cars.map((car, i) => ({ id: car.id, name: car.name, bestLap: 40 + i }));
+  receive({ type: 'state', stage: 'waiting', grid, waiting: 10, cars: qualifying.cars, self: 1, track: 'serra', phase: 'waiting', laps: 3, elapsed: 100 });
+  assert.equal(nodes['online-lobby'].open, true);
+  assert.equal(nodes['online-grid'].hidden, false);
+  assert.match(nodes['online-grid-title'].textContent, /10 s/);
+  receive({ type: 'state', stage: 'race', cars: race.cars, self: 1, track: 'serra', phase: 'countdown', laps: 5, elapsed: 0 });
+  assert.equal(nodes['online-lobby'].open, false);
+  assert.equal(nodes['online-grid'].hidden, true);
+  const finished = race.cars.map((car, i) => ({ ...car, done: true, place: i + 1, finishTime: 100 + i }));
+  receive({ type: 'state', stage: 'race', cars: finished, self: 1, track: 'serra', phase: 'finished', laps: 5, elapsed: 100 });
+  assert.equal(nodes['online-podium'].hidden, true, 'Pódio acontece na pista');
+  assert.equal(nodes['online-lobby'].open, false, 'Resultados aguardam a cerimônia');
+  for (let i = 0; i < 125; i++) { now += 100; frame(); }
+  assert.equal(nodes['online-lobby'].open, true);
+  assert.equal(nodes['online-title'].textContent, 'Celebração no pódio');
   receive({ type: 'left' }); assert.equal(nodes['online-hud'].hidden, true);
   assert.equal(nodes['online-ready'].hidden, false);
   assert.equal(nodes['online-manual'].disabled, false);

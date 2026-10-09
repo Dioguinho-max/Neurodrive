@@ -9,6 +9,9 @@
   const motion = window.createOnlineBuffer();
   let rankingKey = '', lastInput = '', lastInputAt = 0;
   let displayedFinish = false;
+  let ceremonyElapsed = null, ceremonyPrevious = null;
+  let finalRanking = [];
+  const lapTime = value => Number.isFinite(value) ? `${Math.floor(value / 60)}:${(value % 60).toFixed(3).padStart(6, '0')}` : 'Sem tempo';
   const keys = new Set(), pointers = new Map();
   const actions = { KeyW: 'accelerate', ArrowUp: 'accelerate', KeyS: 'brake', ArrowDown: 'brake', KeyA: 'left', ArrowLeft: 'left', KeyD: 'right', ArrowRight: 'right', KeyQ: 'shiftDown', KeyE: 'shiftUp' };
   const audio = window.createNeuroAudio?.();
@@ -17,10 +20,13 @@
   function clear() { keys.clear(); pointers.clear(); prediction?.input({ brake: true }, performance.now()); send({ type: 'input', brake: true }); }
   function menu() {
     clear();
-    get('online-title').textContent = latest ? (latest.phase === 'finished' ? 'Bandeirada final' : 'Sua corrida continua') : room ? 'Prepare seu grid' : 'Dispute com seus amigos';
+    get('online-title').textContent = latest ? latest.stage === 'waiting' ? 'Grid definido' : latest.stage === 'qualifying' ? 'Classificação em andamento' : latest.phase === 'finished' ? 'Celebração no pódio' : 'Sua corrida continua' : room ? 'Prepare seu grid' : 'Dispute com seus amigos';
     if (!get('online-lobby').open) get('online-lobby').showModal();
   }
   function resetRoom() {
+    get('neuro-race').setAttribute('data-ceremony', 'false');
+    renderer?.setCeremony?.(null); ceremonyElapsed = null; ceremonyPrevious = null;
+    finalRanking = []; get('online-podium').hidden = true; get('online-grid').hidden = true;
     get('race-pit-panel').hidden = true;
     get('online-hud').hidden = true;
     room = null; latest = null; ready = false; displayedFinish = false;
@@ -68,6 +74,11 @@
           for (const p of room.players) { const li = document.createElement('li'); li.textContent = `${p.name}${p.id === room.owner ? ' · dono' : ''} · ${p.ready ? 'pronto' : 'aguardando'}`; get('online-players').append(li); }
           say('Compartilhe o código com seus amigos.');
         } else if (message.type === 'state') {
+          const stageChanged = latest && (message.stage || 'race') !== (latest.stage || 'race');
+          if (stageChanged) {
+            motion.clear(); prediction = null; rankingKey = ''; clear();
+            if (message.stage === 'race') { get('online-lobby').close(); get('online-grid').hidden = true; }
+          }
           if (!latest) { get('online-lobby').close(); audio?.unlock(); get('online-back').hidden = false; get('online-ready').disabled = true; get('online-start').disabled = true; }
           latest = message; motion.push(message, performance.now());
           if (trackId !== message.track) {
@@ -82,21 +93,49 @@
           get('online-leave').textContent = latest.phase === 'finished' || player.done ? 'Voltar às salas' : 'Abandonar corrida';
           prediction ||= window.createOnlinePrediction(window.createNeuroTrack(trackId));
           prediction.receive(player, latest.phase, performance.now(), rtt);
-          const ranking = [...latest.cars].sort((a, b) => Number(Boolean(a.disconnected)) - Number(Boolean(b.disconnected)) || (a.place || 99) - (b.place || 99) || b.progress - a.progress);
-          const nextRankingKey = JSON.stringify(ranking.map((car) => [car.id, car.name, car.disconnected, car.done, car.completedLaps]));
+          const qualifying = latest.stage === 'qualifying' || latest.stage === 'waiting';
+          const ranking = [...latest.cars].sort((a, b) => Number(Boolean(a.disconnected)) - Number(Boolean(b.disconnected)) || (qualifying
+            ? (a.bestLap ?? Infinity) - (b.bestLap ?? Infinity) || a.id - b.id
+            : (a.place || 99) - (b.place || 99) || b.progress - a.progress));
+          const nextRankingKey = JSON.stringify(ranking.map((car) => [car.id, car.name, car.disconnected, car.done, car.completedLaps, car.bestLap]));
           if (rankingKey !== nextRankingKey) {
           rankingKey = nextRankingKey;
           get('online-ranking').replaceChildren();
-          for (const car of ranking) { const li = document.createElement('li'); li.dataset.self = String(car.id === latest.self); li.textContent = `${car.name} · ${car.disconnected ? 'desconectado' : car.done ? 'chegou' : `volta ${Math.min(latest.laps, car.completedLaps + 1)}/${latest.laps}`}`; get('online-ranking').append(li); }
+          for (const car of ranking) { const li = document.createElement('li'); li.dataset.self = String(car.id === latest.self); li.textContent = `${car.name} · ${car.disconnected ? 'desconectado' : qualifying ? lapTime(car.bestLap) : car.done ? 'chegou' : `volta ${Math.min(latest.laps, car.completedLaps + 1)}/${latest.laps}`}`; get('online-ranking').append(li); }
           }
           get('online-hud').hidden = false;
           playerPosition = ranking.indexOf(player) + 1;
           updateHUD(player, playerPosition, ranking.length, latest.laps, latest.elapsed, latest.phase);
-          get('race-banner').textContent = latest.phase === 'countdown' ? latest.countdown : latest.phase === 'finished' ? 'Prova encerrada' : '';
-          updateSignals(player, latest);
-          if (player.done && !displayedFinish || latest.phase === 'finished' && !displayedFinish) { displayedFinish = true; menu(); }
+          get('race-banner').textContent = latest.stage === 'waiting' ? `Largada em ${latest.waiting} s`
+            : qualifying && player.done ? 'Aguardando os tempos dos adversários…'
+            : player.pitExit ? 'Saída automática dos boxes · classificação'
+            : latest.phase === 'countdown' ? latest.countdown : latest.phase === 'finished' ? 'Prova encerrada'
+            : qualifying ? player.completedLaps === 0 ? 'Classificação · aquecimento' : `Classificação · tentativa ${Math.min(2, player.completedLaps)}/2` : '';
+          if (!qualifying) updateSignals(player, latest);
+          if (latest.stage === 'waiting') {
+            get('online-grid').hidden = false;
+            get('online-grid-title').textContent = `Grid de largada · corrida em ${latest.waiting} s`;
+            get('online-grid-rows').replaceChildren();
+            for (const car of latest.grid || []) {
+              const li = document.createElement('li'); li.textContent = `${car.name} · ${lapTime(car.bestLap)}${car.disconnected ? ' · desconectado' : ''}`;
+              get('online-grid-rows').append(li);
+            }
+            if (stageChanged) menu();
+          }
+          if (!qualifying && latest.phase === 'finished' && !displayedFinish) {
+            finalRanking = ranking; displayedFinish = true; get('online-lobby').close(); get('online-back').hidden = true;
+            ceremonyElapsed = 0; ceremonyPrevious = null;
+            get('neuro-race').setAttribute('data-ceremony', 'true');
+            get('online-grid').hidden = false; get('online-grid-title').textContent = 'Classificação final';
+            get('online-grid-rows').replaceChildren();
+            for (const car of ranking) {
+              const li = document.createElement('li'); li.textContent = `${car.name} · ${car.disconnected ? 'Desconectado' : car.finishTime !== null ? lapTime(car.finishTime) : 'Em pista ao encerrar'}`;
+              get('online-grid-rows').append(li);
+            }
+          }
           get('online-reward').textContent = player.rewardPending ? 'Salvando recompensa…' : player.reward !== undefined ? `Recompensa: ${player.reward} moedas. Seu saldo foi salvo na conta.` : latest.phase === 'finished' && !player.done ? 'Prova encerrada pelo limite de tempo. Sem recompensa.' : '';
-          if (player.done && player.place && !player.disconnected) get('online-reward').textContent = `🏁 Bandeirada · ${player.place}º lugar. ${get('online-reward').textContent}`;
+          if (qualifying) get('online-reward').textContent = 'A classificação define o grid e não concede moedas.';
+          else if (player.done && player.place && !player.disconnected) get('online-reward').textContent = `🏁 Bandeirada · ${player.place}º lugar. ${get('online-reward').textContent}`;
         }
       };
       socket.onclose = () => { clear(); audio?.silence(); resetRoom(); get('online-options').hidden = true; get('online-connect').hidden = false; get('online-connect').disabled = false; say('Conexão encerrada. Reconecte para entrar em uma nova sala.'); menu(); };
@@ -156,12 +195,20 @@
     frames++;
     if (now - measuredAt >= 1000) { fps = Math.round(frames * 1000 / (now - measuredAt)); frames = 0; measuredAt = now; }
     if (latest && renderer && !document.hidden) {
+      if (ceremonyElapsed !== null) {
+        if (ceremonyPrevious !== null && !get('online-lobby').open) ceremonyElapsed += Math.min(100, Math.max(0, now - ceremonyPrevious));
+        ceremonyPrevious = now;
+        renderer.setCeremony?.(finalRanking, ceremonyElapsed);
+        get('race-banner').textContent = ceremonyElapsed < 5000 ? 'Chegada ao pódio' : finalRanking.filter(car => !car.disconnected).slice(0, 3).map((car, i) => `${i + 1}º ${car.name}`).join(' · ');
+        if (ceremonyElapsed >= 12000) { ceremonyElapsed = null; renderer.setCeremony?.(null); get('neuro-race').setAttribute('data-ceremony', 'false'); menu(); }
+      }
       const cars = motion.sample(performance.now());
       const index = cars.findIndex((car) => car.id === latest.self);
       const player = prediction?.sample(performance.now()) || cars[index];
       cars[index] = player;
       updateHUD(player, playerPosition, cars.length, latest.laps, latest.elapsed, latest.phase);
-      renderer.update(cars, player, false, player, latest.phase === 'finished'); audio?.update(player, latest, !player.done && !document.hidden);
+      const spectator = player.done && latest.stage === 'qualifying' ? cars.find(car => !car.done && !car.pitExit) || player : player;
+      renderer.update(cars, player, false, spectator, latest.phase === 'finished'); audio?.update(player, latest, !player.done && !document.hidden);
     }
     requestAnimationFrame(draw);
   }

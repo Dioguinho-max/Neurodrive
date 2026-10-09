@@ -18,9 +18,17 @@ O projeto está em **beta**, com física de estilo arcade e melhorias contínuas
 - **Apresentação:** câmera em terceira pessoa, tabela de posições, conta-giros, encerramento da sessão, pódio e notificações de recorde pessoal.
 - **Qualidade gráfica salva:** desempenho, mais detalhes ou super alto.
 
+## Etapas online e cerimônia de chegada
+
+Ao iniciar uma sala online, todos disputam a classificação: uma volta de aquecimento e duas tentativas válidas, com limite de cinco minutos. Quem termina pode acompanhar os adversários. A melhor volta determina o grid; pilotos sem tempo ficam atrás. Quando a sessão termina, o grid aparece durante uma espera de dez segundos e o servidor inicia a contagem da corrida automaticamente.
+
+A classificação não concede moedas. Na chegada, os modos solo e online exibem uma cerimônia de 12 segundos dentro do próprio autódromo: os três melhores carros chegam e estacionam junto ao pódio; a câmera se aproxima e mostra os pilotos levantando os troféus. Em seguida aparecem os resultados. A animação não altera tempos, posições ou recompensas. No online, a cerimônia espera o encerramento da prova (todos os humanos terminarem ou o limite de tempo); quem ainda estiver em pista é ordenado pelo progresso. Desconectados não participam do pódio.
+
 ## Pit stops e pneus
 
 Em corridas de **5 voltas ou mais**, os pneus desgastam e perdem aderência gradualmente. A classificação e as provas curtas não têm desgaste.
+
+Pneus desgastados dificultam as curvas e recebem alertas no painel. Ao atingir **0%**, um pneu estoura: o carro puxa para um lado, perde aderência e velocidade. A troca nos boxes repara o dano; reposicionar o carro não restaura os pneus. Derrapagens, frenagens e grama aceleram o desgaste.
 
 Pressione **B** ou use **Chamar boxes** para solicitar a parada. Na próxima entrada, logo após a linha de largada, o piloto automático assume e conduz até o atendimento com limite de **60 km/h**. É possível cancelar o pedido antes de entrar.
 
@@ -125,6 +133,8 @@ node output/tests/pit-stop.cjs
 node output/tests/pit-exit.cjs
 node output/tests/pit-view.cjs
 node output/tests/skins.cjs
+node output/tests/podium.cjs
+node output/tests/tyre-degradation.cjs
 ```
 
 Os testes cobrem menus, previsão online, contas, persistência, troca de pneus, trânsito nos boxes, piso das garagens, câmeras e modelos. Há verificações adicionais de pilotagem, física, áudio e recompensas em `output/tests/`. Parte dos testes usa DOM ou renderizador simulado; a avaliação visual e a sensação de pilotagem também precisam ser conferidas no navegador.

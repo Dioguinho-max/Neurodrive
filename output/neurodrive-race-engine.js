@@ -3,6 +3,8 @@
   'use strict';
   const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
   const wrap = (angle) => Math.atan2(Math.sin(angle), Math.cos(angle));
+  const tyreGripFactor = car => !car.tyreWearEnabled ? 1 : car.tyreBurst ? .16
+    : 1 - .5 * Math.pow(1 - clamp(car.tyreLife ?? 1, 0, 1), 1.7);
 
   // Transmissão automática simplificada: faixas de velocidade e força por marcha.
   const MAX_RACE_SPEED = 205 / 54;
@@ -57,12 +59,12 @@
     // progressivamente ao segurar o volante para uma curva mais fechada.
     const highSpeedBlend = clamp((car.speed * 54 - 60) / 100, 0, 1);
     const steeringCurve = 0.25 + 0.75 * Math.pow(Math.min(1, Math.abs(car.steering) / 0.78), 2);
-    const requestedYaw = car.steering * (1 - highSpeedBlend * (1 - steeringCurve)) * 0.065 * car.speed / 3.2;
+    const requestedYaw = car.steering * (1 - highSpeedBlend * (1 - steeringCurve)) * 0.065 * car.speed / 3.2 * (car.tyreBurst ? .38 : 1);
     // v (m/s) × velocidade angular (rad/s) = aceleração lateral.
     // 1 unidade/quadro = 15 m/s. Pneus têm aderência finita, não giro ilimitado.
     const lateralDemand = Math.abs(requestedYaw) * car.speed * 900;
     // Margem arcade no asfalto: curvas suaves e médias são mais tolerantes.
-    const tyreGrip = car.tyreWearEnabled ? 0.82 + 0.18 * (car.tyreLife ?? 1) : 1;
+    const tyreGrip = tyreGripFactor(car);
     const grip = (car.offRoad ? 1.55 : 2.6) * 9.81 * tyreGrip;
     const brakeLoad = Math.min(0.6, car.brake * 0.6);
     const lateralGrip = grip * Math.sqrt(1 - brakeLoad * brakeLoad);
@@ -71,13 +73,27 @@
     const maximumYaw = lateralGrip / Math.max(1, car.speed * 900);
     const yaw = clamp(requestedYaw, -maximumYaw, maximumYaw);
     car.angle = wrap(car.angle + yaw);
+    if (car.tyreBurst) {
+      // Desvio previsível pela distância, compartilhado pelo servidor e pela previsão local.
+      const side = car.burstWheel % 2 ? 1 : -1;
+      car.angle = wrap(car.angle + side * (1 + .65 * Math.sin((car.tyreDistance || 0) * .23)) * .009 * car.speed / 3.2);
+      car.speed = Math.max(0, car.speed - car.speed * .018);
+      car.sliding = car.speed > .65;
+    }
     car.bodyRoll += (clamp(yaw * car.speed * 900 / 9.81, -1.2, 1.2) * 0.075 - car.bodyRoll) * 0.1;
     // Arrasto dos pneus e do gramado; não há correção automática para o traçado.
     // Na grama usa só a resistência do terreno, sem somar outra frenagem por derrapagem.
     if (car.sliding && !car.offRoad) car.speed = Math.max(0, car.speed - Math.min(0.008, (car.gripUsage - 1.15) * 0.001));
     if (car.offRoad) car.speed = Math.max(0, car.speed - 0.0009 - car.speed * 0.00034);
-    if (car.tyreWearEnabled) car.tyreLife = Math.max(0, (car.tyreLife ?? 1) - car.speed / track.length * 0.16
-      * (1 + Math.min(1, Math.max(0, car.gripUsage - 1)) * 0.35 + car.brake * 0.1));
+    if (car.tyreWearEnabled) {
+      car.tyreDistance = (car.tyreDistance || 0) + car.speed;
+      car.tyreLife = Math.max(0, (car.tyreLife ?? 1) - car.speed / track.length * .28
+        * (1 + Math.min(1, Math.max(0, car.gripUsage - 1)) * .55 + car.brake * .18 + Number(car.offRoad) * .2));
+      if (car.tyreLife <= 0 && !car.tyreBurst) {
+        car.tyreBurst = true;
+        car.burstWheel = car.steering >= 0 ? 2 : 3;
+      }
+    }
     const x = car.x + Math.cos(car.angle) * car.speed;
     const y = car.y + Math.sin(car.angle) * car.speed;
     const edge = track.nearest(x, y);
@@ -184,7 +200,7 @@
         gripUsage: 0, sliding: false, offRoad: false, bodyRoll: 0,
         progress: distance - startDistance, checkpoint: 0,
         finishTime: null, place: null, cooldown: 0, stalled: 0, wallContact: false, wallCooldown: 0,
-        tyreWearEnabled: !qualifying && laps >= 5, tyreLife: 1, pitRequested: false, pitState: null, pitTimer: 0, pitStops: 0,
+        tyreWearEnabled: !qualifying && laps >= 5, tyreLife: 1, tyreBurst: false, burstWheel: -1, tyreDistance: 0, pitRequested: false, pitState: null, pitTimer: 0, pitStops: 0,
         bestLap: null, lastLap: null, lastLapKind: '', checkpointTimes: [],
         lapStart: 0, completedLaps: 0, invalidLap: false,
         inputs: [1, 1, 1, 1, 1, 0], activations: [[], [], [0, 0]],
@@ -261,7 +277,7 @@
       const curvature = bend / Math.max(20, Math.hypot(laterPoint.x - aheadPoint.x, laterPoint.y - aheadPoint.y));
       // Mais próximo da aderência de 2.6 g, com margem para tráfego e correções.
       const cornerGrip = ({ easy: 1.65, normal: 2.05, hard: 2.3 }[difficulty] || 2.05) * car.driver.corner
-        * (car.tyreWearEnabled ? 0.82 + 0.18 * car.tyreLife : 1);
+        * tyreGripFactor(car);
       const safeSpeed = Math.sqrt(9.81 * cornerGrip * 0.25 / Math.max(curvature, 0.0001)) / 15;
       const targetCornerSpeed = Math.min(aiSpeed * driverPace, Math.max(0.7, safeSpeed));
       pedal = Math.max(pedal, clamp((targetCornerSpeed - car.speed) * 1.8, -1, 1));
@@ -356,7 +372,8 @@
       if (car.pitState === 'service') {
         car.speed = 0;
         if (--car.pitTimer <= 0) {
-          car.tyreLife = 1; car.pitStops++; car.pitState = 'exit'; journey.node++;
+          car.tyreLife = 1; car.tyreBurst = false; car.burstWheel = -1; car.tyreDistance = 0;
+          car.pitStops++; car.pitState = 'exit'; journey.node++;
         }
         return;
       }
@@ -463,7 +480,7 @@
         if (car.pitExit) { exitPit(car); continue; }
         if (car.wallCooldown > 0) car.wallCooldown--;
         if (car.cooldown > 0) { car.cooldown--; continue; }
-        if (!car.player && !car.pitState && car.tyreWearEnabled && car.tyreLife < 0.5 && laps - car.progress / track.length > 0.8) car.pitRequested = true;
+        if (!car.player && !car.pitState && car.tyreWearEnabled && (car.tyreBurst || car.tyreLife < .55 && laps - car.progress / track.length > .4)) car.pitRequested = true;
         if (car.pitRequested && !car.pitState) {
           const s = track.nearest(car.x, car.y).progress;
           if (s >= track.pit.entry && s < track.pit.entry + 18 && Math.cos(car.angle - pointAt(s).angle) > 0.7) startPitStop(car);

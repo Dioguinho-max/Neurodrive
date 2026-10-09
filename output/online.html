@@ -4,7 +4,7 @@
   <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
   <title>NeuroDrive · Online</title>
   <link rel="stylesheet" href="neuro-pista.css"><link rel="stylesheet" href="neurodrive-race.css"><link rel="stylesheet" href="online.css">
-  <script src="vendor/three.min.js" defer></script><script src="neuro-pista-track.js" defer></script>
+  <script src="vendor/three.min.js" defer></script><script src="neurodrive-podium.js" defer></script><link rel="stylesheet" href="neurodrive-podium.css"><script src="neuro-pista-track.js" defer></script>
   <script src="neurodrive-race-engine.js" defer></script><script src="neurodrive-prediction.js" defer></script>
   <script src="neuro-pista-3d.js" defer></script><script src="neurodrive-audio.js?v=engine-only-2" defer></script><link rel="stylesheet" href="neurodrive-hud.css"><script src="neurodrive-hud.js" defer></script><script src="neurodrive-online-buffer.js" defer></script><script src="online.js" defer></script>
   <link rel="stylesheet" href="neurodrive-menu.css?v=menus-2">
@@ -50,9 +50,9 @@
     </div>
     <section id="online-room" hidden><h2 id="online-room-code"></h2><ul id="online-players"></ul>
       <label class="form-check"><input type="checkbox" id="online-manual"> Câmbio manual (E sobe, Q reduz)</label>
-      <div class="viz-controls"><button class="btn" id="online-ready">Pronto</button><button class="btn btn-primary" id="online-start">Largar</button><button class="btn" id="online-leave">Sair da sala</button></div>
+      <div class="viz-controls"><button class="btn" id="online-ready">Pronto</button><button class="btn btn-primary" id="online-start">Iniciar classifica&#231;&#227;o</button><button class="btn" id="online-leave">Sair da sala</button></div>
     </section>
-    <p>Vagas restantes são preenchidas por IA. O dono inicia quando todos estiverem prontos. A corrida não pausa ao abrir o menu; desconectar abandona a prova. Limite de 15 minutos.</p>
+    <p>Vagas restantes são preenchidas por IA. O dono inicia quando todos estiverem prontos. A corrida não pausa ao abrir o menu; desconectar abandona a prova. Classifica&#231;&#227;o de at&#233; 5 minutos, espera de 10 segundos e corrida de at&#233; 15 minutos.</p>
     <details><summary>Som, câmera e controles</summary>
       <label class="form-label">Gráficos<select class="form-select" id="online-quality"><option value="performance">Leve · recomendado</option><option value="high">Mais detalhes</option><option value="ultra">Super alto · exige mais da GPU</option></select></label>
       <label class="form-check"><input type="checkbox" id="online-sound" checked>Som do motor</label>
@@ -61,6 +61,7 @@
 <p class="pit-help">Corridas de 5 voltas ou mais t?m desgaste dos pneus. Pressione <strong>B</strong> ou use ?Chamar boxes?: a equipe assume na pr?xima entrada e troca os pneus em 8 segundos.</p>
       <p>WASD ou setas para dirigir. Q/E para trocar no manual. R reposiciona. Esc abre a sala.</p>
     </details>
+    <div id="online-podium" hidden></div><section id="online-grid" hidden><h2 id="online-grid-title">Grid</h2><ol id="online-grid-rows"></ol></section>
     <p id="online-reward" role="status"></p>
     <button class="btn" id="online-back" hidden>Voltar à pista</button>
   </dialog>
