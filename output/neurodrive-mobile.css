@@ -10,12 +10,14 @@
 @media (pointer: coarse), (max-width: 900px) {
   #neuro-race { --mobile-top: calc(env(safe-area-inset-top, 0px) + 62px); }
   .race-tower, #online-ranking { display: none; }
-  .game-toolbar { padding: calc(env(safe-area-inset-top, 0px) + 6px) max(10px, env(safe-area-inset-right)) 0 max(10px, env(safe-area-inset-left)); gap: 6px; }
-  .game-toolbar .game-brand { font-size: 16px; }
+  #neuro-race .game-toolbar { right: calc(max(10px, env(safe-area-inset-right)) + 154px); padding: calc(env(safe-area-inset-top, 0px) + 6px) 0 0 max(10px, env(safe-area-inset-left)); gap: 6px; justify-content: flex-start; flex-wrap: wrap; background: none; }
+  .game-toolbar .game-brand { font-size: 16px; order: 2; margin-right: 0; }
+  #race-menu-open, #online-menu { order: 0; }
+  #race-show-results { order: 1; }
   .game-toolbar .beta-badge { font-size: 8px; padding: 3px; }
   .game-toolbar .btn { min-height: 44px; padding: 8px 10px; font-size: 11px; }
-  #race-session { top: calc(env(safe-area-inset-top, 0px) + 49px); left: max(10px, env(safe-area-inset-left)); right: 10px; margin: 0; font-size: 9px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .drive-hud { top: var(--mobile-top); bottom: auto; right: max(10px, env(safe-area-inset-right)); width: 144px; }
+  #race-session { top: calc(env(safe-area-inset-top, 0px) + 49px); left: max(10px, env(safe-area-inset-left)); right: calc(max(10px, env(safe-area-inset-right)) + 154px); margin: 0; font-size: 9px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .drive-hud { top: calc(env(safe-area-inset-top, 0px) + 6px); bottom: auto; right: max(10px, env(safe-area-inset-right)); width: 144px; }
   .drive-dial { height: 110px; }
   .drive-speed { top: 34px; left: 13px; width: 76px; }
   .drive-speed strong { font-size: 34px; letter-spacing: -1px; }
@@ -44,4 +46,9 @@
   .personal-best { bottom: calc(max(12px, env(safe-area-inset-bottom)) + 128px); max-width: 80%; font-size: 11px; pointer-events: none; }
   .start-lights { gap: 6px; padding: 8px; }
   .start-light { width: 24px; }
+}
+
+/* Narrow screens reserve the left column for the menu and tyre status. */
+@media (max-width: 600px) {
+  .game-toolbar .game-brand { display: none; }
 }
