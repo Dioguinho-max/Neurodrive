@@ -2,7 +2,6 @@
 (() => {
   'use strict';
   const get = (id) => document.getElementById(id);
-  const resultReveal = window.createNeuroResults?.(get('race-result-reveal'), get('race-reward'), get('race-results-improvement'));
   const updateHUD = window.createRaceHUD(get);
   const updateSignals = window.createRaceSignals(get);
   // Ferramentas de inspeção são opt-in e não aparecem para o jogador.
@@ -163,7 +162,6 @@
     clearFinale();
     clearInput();
     const ranking = race.standings();
-    resultReveal?.show(race, `${ranking.indexOf(race.cars[0]) + 1}º / ${ranking.length}`, race.cars[0].bestLap === null ? 'Sem volta válida' : timeLabel(race.cars[0].bestLap));
     get('race-results-stage').textContent = `${track.name} · ${race.qualifying ? 'Classificação encerrada' : `🏁 Bandeirada · ${race.cars[0].place}º lugar`}`;
     get('race-results-title').textContent = race.qualifying ? 'Grid de largada definido' : 'Os três primeiros';
     get('race-results-note').textContent = race.qualifying
@@ -354,7 +352,6 @@
   }
 
   function startSession(qualifying) {
-    resultReveal?.reset();
     intro?.finish();
     sessionBestBefore = career.records[track.id] ?? null;
     resultsReturnRemaining = null;

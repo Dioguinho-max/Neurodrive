@@ -1,12 +1,6 @@
 (() => {
   'use strict';
   const get = (id) => document.getElementById(id);
-  const resultReveal = window.createNeuroResults?.(get('online-result-reveal'), get('online-reward'), get('online-improvement'));
-  function revealResults() {
-    if (!latest || (latest.phase !== 'finished' && latest.stage !== 'waiting') || ceremonyElapsed !== null) return;
-    const player = latest.cars.find(car => car.id === latest.self);
-    if (player) resultReveal?.show(`${latest.raceId}:${latest.stage}`, `${playerPosition}º / ${latest.cars.length}`, lapTime(player.bestLap));
-  }
   const updateHUD = window.createRaceHUD(get);
   const updateSignals = window.createRaceSignals(get);
   const recordNotice = window.createNeuroRecordNotice?.(get);
@@ -42,14 +36,12 @@
   function clear() { keys.clear(); pointers.clear(); document.querySelectorAll('[data-drive]').forEach((button) => button.setAttribute('aria-pressed', 'false')); prediction?.input({ brake: true }, performance.now()); send({ type: 'input', brake: true }); }
   function menu() {
     intro?.finish();
-    revealResults();
     clear();
     get('online-title').textContent = latest ? latest.stage === 'waiting' ? 'Grid definido' : latest.stage === 'qualifying' ? 'Classificação em andamento' : latest.phase === 'finished' ? 'Celebração no pódio' : 'Sua corrida continua' : room ? 'Prepare seu grid' : 'Dispute com seus amigos';
     if (!get('online-lobby').open) get('online-lobby').showModal();
   }
   function resetRoom() {
     intro?.finish(); introSession = ''; introPrevious = null;
-    resultReveal?.reset();
     recordNotice?.clear(); recordSummaries = {}; get('online-improvement').hidden = true;
     get('neuro-race').setAttribute('data-ceremony', 'false');
     renderer?.setCeremony?.(null); ceremonyElapsed = null; ceremonyPrevious = null;
@@ -104,7 +96,6 @@
         } else if (message.type === 'state') {
           const stageChanged = latest && (message.stage || 'race') !== (latest.stage || 'race');
           if (stageChanged) {
-            resultReveal?.reset();
             motion.clear(); prediction = null; rankingKey = ''; clear();
             if (message.stage === 'race') { get('online-lobby').close(); get('online-grid').hidden = true; }
           }
