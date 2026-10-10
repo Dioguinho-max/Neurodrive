@@ -208,6 +208,7 @@
         tyreWearEnabled: !qualifying && laps >= 5, tyreLife: 1, tyreBurst: false, burstWheel: -1, tyreDistance: 0, pitRequested: false, pitState: null, pitTimer: 0, pitStops: 0,
         bestLap: null, lastLap: null, lastLapKind: '', checkpointTimes: [],
         lapStart: 0, completedLaps: 0, invalidLap: false,
+        recordLapInvalid: false, recordLapStarted: false, recordLap: null,
         inputs: [1, 1, 1, 1, 1, 0], activations: [[], [], [0, 0]],
       };
     });
@@ -426,6 +427,7 @@
     function recover(car) {
       if (car.done || car.pitExit || car.pitState || phase !== 'racing') return;
       car.invalidLap = true;
+      car.recordLapInvalid = true;
       const point = pointAt(startDistance + car.progress, car.id % 2 ? -10 : 10);
       Object.assign(car, point, { speed: 0, steering: 0, gear: 1, rpm: 900, shiftTicks: 0,
         throttle: 0, brake: 0, limiter: false, cutTicks: 0, launchTicks: 0, cooldown: 120, stalled: 0,
@@ -482,6 +484,7 @@
       const before = cars.map((car) => ({ x: car.x, y: car.y, s: car.pitState ? car.pitTrackProgress : track.nearest(car.x, car.y).progress, pit: car.pitExit }));
       for (const car of cars) {
         if (car.done) continue;
+        if (car.pitExit || car.pitState || car.cooldown || !track.contains(car.x, car.y)) car.recordLapInvalid = true;
         if (car.pitExit) { exitPit(car); continue; }
         if (car.wallCooldown > 0) car.wallCooldown--;
         if (car.cooldown > 0) { car.cooldown--; continue; }
@@ -529,6 +532,7 @@
         let delta = (car.pitState ? car.pitTrackProgress : track.nearest(car.x, car.y).progress) - before[index].s;
         if (delta > track.length / 2) delta -= track.length;
         if (delta < -track.length / 2) delta += track.length;
+        if (Math.abs(delta) >= 25 || delta < -.5 || !track.contains(car.x, car.y) || car.pitState) car.recordLapInvalid = true;
         // Rejeita saltos entre partes do circuito: só movimento local conta.
         if (Math.abs(delta) < 25) car.progress += delta;
         if (car.progress >= (car.checkpoint + 1) * checkpointLength) {
@@ -547,6 +551,11 @@
         const completed = Math.min(laps, Math.floor(car.progress / track.length));
         if (completed > car.completedLaps && car.checkpoint >= completed * 12) {
           const lapTime = elapsed - car.lapStart;
+          if (car.recordLapStarted && !car.recordLapInvalid && !car.invalidLap && lapTime > 0) {
+            car.recordLap = { lap: completed, milliseconds: Math.round(lapTime * 1000) };
+          }
+          car.recordLapStarted = true;
+          car.recordLapInvalid = false;
           // Só a classificação tem volta de aquecimento; na corrida todas contam.
           car.lastLap = lapTime;
           car.lastLapKind = car.invalidLap ? 'inválida' : qualifying && car.completedLaps === 0 ? 'aquecimento' : 'válida';

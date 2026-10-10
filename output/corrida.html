@@ -12,6 +12,8 @@
     <script src="neurodrive-race-engine.js" defer></script>
     <script src="neurodrive-audio.js?v=engine-only-2" defer></script>
     <script src="neurodrive-profile.js" defer></script>
+    <script src="neurodrive-records.js" defer></script>
+    <link rel="stylesheet" href="neurodrive-records.css">
     <script src="neurodrive-garage.js" defer></script>
     <link rel="stylesheet" href="neurodrive-profile.css">
     <link rel="stylesheet" href="neurodrive-hud.css">
@@ -107,7 +109,19 @@
             <button class="btn" id="menu-page-account" aria-pressed="false">Conta</button>
             <button class="btn" id="menu-page-store" aria-pressed="false">Garagem</button>
             <button class="btn" id="menu-page-settings" aria-pressed="false">Ajustes</button>
+            <button class="btn" id="menu-page-records" aria-pressed="false">Recordes</button>
           </nav>
+          <section id="menu-records-screen" class="menu-section" hidden>
+            <p class="menu-eyebrow">CADA MILÉSIMO CONTA</p><h3>Mural de recordes</h3>
+            <div class="records-filters"><label class="form-label">Circuito<select id="records-track" class="form-select"><option value="serra">Serra Verde</option><option value="veloz">Autódromo Veloz</option><option value="tecnico">Vale Técnico</option></select></label><label class="form-label">Temporada<select id="records-season" class="form-select"><option value="">Temporada atual</option><option value="all">Histórico completo</option></select></label></div>
+            <p id="records-status" role="status" aria-live="polite"></p>
+            <article id="records-leader" class="records-leader" hidden aria-label="Recorde do circuito"></article>
+            <p id="records-own" class="records-own"></p>
+            <div class="records-table-wrap"><table class="records-table"><caption>Melhores voltas competitivas · uma marca por conta</caption><thead><tr><th scope="col">Pos.</th><th scope="col">Piloto</th><th scope="col">Melhor volta</th></tr></thead><tbody id="records-rows"></tbody></table></div>
+            <div class="records-pages"><button class="btn" id="records-prev" disabled>Anterior</button><span id="records-page"></span><button class="btn" id="records-next" disabled>Próxima</button><button class="btn" id="records-refresh">Atualizar</button></div>
+            <details><summary>Como uma volta entra no mural?</summary><p>Somente voltas completas calculadas pelo servidor, na classificação ou corrida online. A primeira passagem estabelece o início da volta. Reposicionamento, boxes, saída do asfalto, retorno na contramão ou salto entre trechos invalidam a tentativa competitiva.</p><p>Empates em milissegundos favorecem quem registrou primeiro. Histórico combina temporadas; versões diferentes podem ter regras e físicas diferentes. Tempos antigos do perfil não foram importados.</p></details>
+            <aside class="records-personal"><h4>Meu recorde solo · neste dispositivo</h4><strong id="records-solo">—</strong><p>Salvo neste navegador, sem validação do servidor. Não participa da classificação competitiva nem acompanha sua conta em outros dispositivos.</p></aside>
+          </section>
           <div id="menu-race-screen">
           <div class="event-cards"><a class="event-card" href="online.html"><span>MULTIPLAYER</span><strong>Encontre seus rivais</strong><small>Crie uma sala com amigos →</small></a><a class="event-card cup-card" href="online.html?mode=tournament"><span>COPA NEURO</span><strong>Corra por moedas</strong><small>Torneio online · 3 voltas · entrada grátis →</small></a></div>
           <p class="menu-eyebrow">NOVA DISPUTA · SOLO</p><h3>Monte seu próximo grid</h3>

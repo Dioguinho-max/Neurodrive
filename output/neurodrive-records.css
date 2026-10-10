@@ -1,0 +1,21 @@
+#race-menu .menu-pages { grid-template-columns: repeat(5,minmax(0,1fr)); }
+.records-filters { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.records-leader { margin: 18px 0; padding: 22px; background: #163a35; border: 1px solid #b8d88a66; border-top: 3px solid #eacf83; border-radius: 14px; }
+.records-leader img { width: 64px; height: 64px; object-fit: cover; border-radius: 14px; float: right; margin-left: 10px; }
+.records-leader h4 { color: #eacf83; margin: 0 0 12px; text-transform: uppercase; font-size: 12px; letter-spacing: .1em; }
+.records-leader strong { display: block; font-size: clamp(28px,5vw,42px); font-variant-numeric: tabular-nums; color: #baffd6; }
+.records-leader p { overflow-wrap: anywhere; }
+.records-own { border-left: 3px solid #8bf0ba; padding: 12px; background: #8bf0ba12; }
+.records-table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+.records-table caption { text-align: left; color: #b7c8d6; font-size: 12px; padding: 12px 0; }
+.records-table th,.records-table td { text-align: left; border-bottom: 1px solid #ffffff18; padding: 12px 8px; }
+.records-table th { font-size: 11px; color: #b7c8d6; }
+.records-table td:last-child { text-align: right; white-space: nowrap; }
+.records-table small { display: block; color: #b7c8d6; font-size: 11px; margin-top: 4px; }
+.records-table tr[data-self="true"] { background: #8bf0ba20; color: #baffd6; }
+.records-table button { color: inherit; background: none; border: 0; padding: 4px 0; text-align: left; font: inherit; cursor: pointer; min-height: 44px; overflow-wrap: anywhere; }
+.records-pages { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin: 16px 0; }
+.records-personal { margin-top: 24px; padding: 16px; border: 1px solid #718da24d; border-radius: 12px; }
+.records-personal p,#menu-records-screen details p { font-size: 12px; line-height: 1.6; color: #b7c8d6; }
+.records-personal strong { font-size: 24px; }
+@media(max-width:600px) { .records-filters { grid-template-columns: 1fr; } .records-table td { font-size: 12px; padding: 8px 4px; } }

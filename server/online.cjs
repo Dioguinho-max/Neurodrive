@@ -9,6 +9,19 @@ for (const file of ['neuro-pista-track.js', 'neurodrive-race-engine.js']) new Fu
 function attachOnline(server, { origin, store, tickMs = 1000 / 60 }) {
   const wss = new WebSocketServer({ noServer: true, maxPayload: 2048, perMessageDeflate: false });
   const tickets = new Map(), rooms = new Map(), users = new Map();
+  const recordQueue = new Map();
+  function flushRecords() {
+    for (const [key, entry] of recordQueue) {
+      if (entry.pending || Date.now() < (entry.retryAt || 0)) continue;
+      entry.pending = true;
+      const record = entry.record;
+      Promise.resolve().then(() => store.saveRecord(entry.id, record)).then(() => {
+        if (entry.record === record) recordQueue.delete(key);
+      }).catch(() => { entry.retryAt = Date.now() + 5000; }).finally(() => { entry.pending = false; });
+    }
+  }
+  const recordTimer = setInterval(flushRecords, 5000);
+  recordTimer.unref?.();
   const send = (peer, data) => {
     if (peer.ws.readyState === WebSocket.OPEN && peer.ws.bufferedAmount < 256000) peer.ws.send(JSON.stringify(data));
   };
@@ -35,7 +48,7 @@ function attachOnline(server, { origin, store, tickMs = 1000 / 60 }) {
   }
   function snapshot(room) {
     const race = room.race;
-    const cars = race.cars.map((car) => ({ ...car, checkpointTimes: undefined, accountId: undefined,
+    const cars = race.cars.map((car) => ({ ...car, checkpointTimes: undefined, accountId: undefined, recordLap: undefined,
       reward: room.rewards.get(car.id)?.amount, rewardPending: room.stage === 'race' && car.done && car.finishTime !== null && !car.disconnected && car.player && !room.rewards.get(car.id)?.saved }));
     for (const peer of room.peers) send(peer, { type: 'state', cars, stage: room.stage, grid: room.grid,
       waiting: room.stage === 'waiting' ? Math.ceil(room.waitTicks / 60) : 0,
@@ -50,6 +63,7 @@ function attachOnline(server, { origin, store, tickMs = 1000 / 60 }) {
     room.stage = 'qualifying';
     room.race = engine.createNeuroRace(engine.createNeuroTrack(room.track), 'normal', { online: true, humans: peers.map((_, i) => i + 1), session: 'qualifying', pitStart: true });
     room.rewards = new Map();
+    room.recordSeen = new Map();
     peers.forEach((peer, index) => {
       peer.carId = index + 1;
       const car = room.race.cars[index];
@@ -76,6 +90,15 @@ function attachOnline(server, { origin, store, tickMs = 1000 / 60 }) {
           room.peers.forEach(peer => { peer.input = {}; peer.lastInput = 0; });
         }
       } else room.race.step(inputs);
+      for (const car of room.race.cars) {
+        if (!store.saveRecord || !car.player || car.disconnected || !car.recordLap || room.recordSeen.get(car.id) === car.recordLap) continue;
+        room.recordSeen.set(car.id, car.recordLap);
+        const record = { track: room.track, milliseconds: car.recordLap.milliseconds, achieved: Date.now(), skin: car.skin?.id || 'original' };
+        const key = `${car.accountId}:${room.track}`, queued = recordQueue.get(key);
+        if (!queued) recordQueue.set(key, { id: car.accountId, record, pending: false });
+        else if (record.milliseconds < queued.record.milliseconds) queued.record = record;
+        flushRecords();
+      }
       if (room.stage === 'qualifying' && room.race.phase === 'finished') {
         room.grid = room.race.standings().sort((a, b) => Number(Boolean(a.disconnected)) - Number(Boolean(b.disconnected)))
           .map(car => ({ id: car.id, name: car.name, bestLap: car.bestLap, disconnected: Boolean(car.disconnected) }));
@@ -172,7 +195,7 @@ function attachOnline(server, { origin, store, tickMs = 1000 / 60 }) {
       return ticket;
     },
     disconnect(id) { users.get(String(id))?.ws.close(1000, 'Conta desconectada'); },
-    close() { rooms.forEach((room) => clearInterval(room.timer)); wss.clients.forEach((ws) => ws.terminate()); wss.close(); },
+    close() { clearInterval(recordTimer); rooms.forEach((room) => clearInterval(room.timer)); wss.clients.forEach((ws) => ws.terminate()); wss.close(); },
   };
 }
 module.exports = { attachOnline };

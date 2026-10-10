@@ -35,6 +35,10 @@ function createCloudServer({ store, frontendOrigin, backendOrigin, avatarStorage
     try {
       const url = new URL(req.url, backend);
       if (url.pathname === '/health') return json(200, { ok: true });
+      if (url.pathname === '/api/records' && req.method === 'GET') {
+        const filters = require('./records.cjs').filters(url.searchParams);
+        return json(200, await store.records(await store.session(hash(token)), filters));
+      }
       if (url.pathname === '/api/config' && req.method === 'GET') return json(200, { online: true, localRewards: false, websocketUrl: backend.replace(/^http/, 'ws') + '/online' });
       if (url.pathname === '/api/catalog' && req.method === 'GET') return json(200, { skins: catalog });
       if (!url.pathname.startsWith('/api/')) {

@@ -99,6 +99,10 @@ function createApp({ database = path.join(__dirname, 'data', 'neurodrive.sqlite'
       if (req.headers.host !== new URL(allowedOrigin).host) throw fail(403, 'Abra o endereço configurado do jogo.');
       const url = new URL(req.url, allowedOrigin);
       if (url.pathname.startsWith('/api/')) {
+        if (req.method === 'GET' && url.pathname === '/api/records') {
+          const filters = require('./records.cjs').filters(url.searchParams);
+          return json(200, { available: false, ...filters, seasons: [], entries: [], own: null, leader: null, total: 0 });
+        }
         if (req.method === 'GET' && url.pathname === '/api/config') return json(200, { online: false, localRewards: true });
         if (req.method === 'GET' && url.pathname === '/api/catalog') return json(200, { skins: catalog });
         if (req.method === 'GET' && url.pathname === '/api/me') return json(200, { player: profile(user(req)) });

@@ -34,7 +34,7 @@ Pressione **B** ou use **Chamar boxes** para solicitar a parada. Na próxima ent
 
 A troca dura **8 segundos**: o carro é levantado, quatro mecânicos trabalham nas rodas e quatro auxiliares entregam pneus novos e recolhem os usados. O tempo da corrida continua contando. Após sair dos boxes, o jogador retoma o controle. A IA também faz paradas quando precisa.
 
-O acesso tem uma curva gradual, piso asfaltado até o fundo das garagens e marcações de circulação. As rodas possuem aros detalhados, caixas de roda fechadas e freios visíveis durante a troca. No online, o servidor controla desgaste e troca. Veja [PIT-STOPS.md](PIT-STOPS.md).
+O acesso tem uma curva gradual, piso asfaltado até o fundo das garagens e marcações de circulação. As rodas possuem aros detalhados, caixas de roda fechadas e freios visíveis durante a troca. No online, o servidor controla desgaste e troca.
 
 ## Executar localmente
 
@@ -55,11 +55,21 @@ O box do jogador também conta com dois chefes de equipe em estações de comput
 
 ## Controles
 
+### Mural de recordes
+
+A aba **Recordes** reúne as melhores voltas competitivas por circuito, temporada e histórico. Mostra o piloto líder, foto, pintura da conquista e data, além da sua posição e diferença para o líder. Há uma marca por conta, paginação e acesso ao perfil pelo nick. Recordes solo do navegador aparecem separados.
+
+Somente voltas limpas calculadas no servidor online entram no mural, inclusive na classificação. A primeira passagem arma a tentativa; recuperação, boxes, saída de pista, contramão e saltos de progressão a invalidam. Os tempos anteriores à implementação não são importados. Empates favorecem a conquista mais antiga, com desempate estável pelo identificador interno da conta.
+
+Publique frontend e backend juntos. As tabelas são criadas automaticamente no Supabase pelo backend, com RLS e sem gravação pública. A temporada inicial é `beta-1`. Para inaugurar outra após mudanças de física ou pista, adicione-a em `server/cloud-schema.sql` e atualize `CURRENT` em `server/records.cjs`. Não apague as anteriores: o histórico escolhe a melhor marca de cada conta entre temporadas que podem ter físicas diferentes.
+
+Falhas de gravação são retentadas a cada cinco segundos enquanto o servidor está ativo; um reinício antes da gravação pode perder marcas pendentes. O mural mostra somente dados salvos. Em `npm.cmd start`, somente os tempos solo ficam disponíveis; o ranking precisa do backend cloud. Testes específicos: `npm.cmd run test:records`.
+
 ### Perfil do piloto
 
 Em **Conta**, personalize seu nick, número e foto com corte ajustável. O cartão mostra a pintura equipada, corridas, vitórias, pódios, poles e melhores voltas online salvas por circuito. Você também pode visitar outro piloto pelo nome da conta.
 
-Fotos publicadas usam Supabase Storage; a configuração do Render, os limites e a origem das estatísticas estão em [PERFIL-PILOTO.md](PERFIL-PILOTO.md). Poles e voltas começam a ser registradas nas novas corridas online concluídas; o histórico anterior não contém esses dados. O ranking global será uma etapa posterior.
+Fotos publicadas usam Supabase Storage. Poles e voltas do perfil são registradas nas novas corridas online concluídas; o histórico anterior não contém esses dados. O mural competitivo usa validação própria, descrita acima, e também aceita voltas limpas da classificação.
 
 ### Teclado e toque
 

@@ -48,6 +48,11 @@ function messages(ws) {
     const registration = await api('register', { username: 'player_one', password: 'SenhaSegura_123' });
     assert.equal(registration.status, 200);
     const ca = registration.cookie;
+    const emptyBoard = await api('records?track=veloz');
+    assert.equal(emptyBoard.status, 200);
+    assert.equal(emptyBoard.data.total, 0);
+    assert.equal((await api('records?track=unknown')).status, 400);
+    assert.equal((await api('records', {milliseconds:1}, ca)).status, 404, 'Client cannot submit leaderboard times');
     assert.equal((await api('profile', { nickname: 'Novo Piloto', number: 44 }, ca)).status, 200);
     assert.equal((await api('me', undefined, ca)).data.player.nickname, 'Novo Piloto');
     assert.equal((await api('profile', { nickname: 'Novo Piloto', number: -1 }, ca)).status, 400);

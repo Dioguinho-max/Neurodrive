@@ -33,6 +33,21 @@ CREATE TABLE IF NOT EXISTS neurodrive.auth_limits (
 ALTER TABLE neurodrive.results ADD COLUMN IF NOT EXISTS track TEXT;
 ALTER TABLE neurodrive.results ADD COLUMN IF NOT EXISTS best_lap DOUBLE PRECISION;
 ALTER TABLE neurodrive.results ADD COLUMN IF NOT EXISTS pole BOOLEAN NOT NULL DEFAULT FALSE;
+CREATE TABLE IF NOT EXISTS neurodrive.record_seasons (
+  id TEXT PRIMARY KEY, name TEXT NOT NULL
+);
+INSERT INTO neurodrive.record_seasons VALUES('beta-1', 'Beta 1 · voltas limpas') ON CONFLICT DO NOTHING;
+CREATE TABLE IF NOT EXISTS neurodrive.lap_records (
+  season TEXT NOT NULL REFERENCES neurodrive.record_seasons(id),
+  track TEXT NOT NULL CHECK(track IN ('serra','veloz','tecnico')),
+  player_id BIGINT NOT NULL REFERENCES neurodrive.players(id) ON DELETE CASCADE,
+  milliseconds INTEGER NOT NULL CHECK(milliseconds BETWEEN 1000 AND 1800000),
+  achieved BIGINT NOT NULL, skin TEXT NOT NULL,
+  PRIMARY KEY(season,track,player_id)
+);
+CREATE INDEX IF NOT EXISTS lap_records_ranking ON neurodrive.lap_records(track,season,milliseconds,achieved,player_id);
+ALTER TABLE neurodrive.record_seasons ENABLE ROW LEVEL SECURITY;
+ALTER TABLE neurodrive.lap_records ENABLE ROW LEVEL SECURITY;
 ALTER TABLE neurodrive.players ENABLE ROW LEVEL SECURITY;
 ALTER TABLE neurodrive.inventory ENABLE ROW LEVEL SECURITY;
 ALTER TABLE neurodrive.sessions ENABLE ROW LEVEL SECURITY;

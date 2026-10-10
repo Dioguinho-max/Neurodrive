@@ -15,6 +15,8 @@ function createPool(env = process.env) {
 class CloudStore {
   constructor(pool) { this.pool = pool; }
   async init() { await this.pool.query(fs.readFileSync(path.join(__dirname, 'cloud-schema.sql'), 'utf8')); }
+  async saveRecord(id, record) { return require('./records.cjs').save(this.pool, id, record); }
+  async records(id, filters) { return require('./records.cjs').board(this.pool, id, filters); }
   async transaction(fn) {
     const client = await this.pool.connect();
     try { await client.query('BEGIN'); const result = await fn(client); await client.query('COMMIT'); return result; }

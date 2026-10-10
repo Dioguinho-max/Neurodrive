@@ -23,10 +23,11 @@ function inbox(ws) {
     return new Promise((resolve, reject) => { const item = { test, resolve }; item.timer = setTimeout(() => reject(new Error('Missing online stage: ' + test.toString())), 3000); waiting.push(item); }); };
 }
 (async () => {
-  const server = http.createServer(), awards = [];
+  const server = http.createServer(), awards = [], records = [];
   const online = attachOnline(server, { origin: 'http://test', store: {
     profile: async id => ({ username: `Pilot_${id}`, equipped: 'original' }),
     award: async (...args) => { awards.push(args); return 70; },
+    saveRecord: async (...args) => { records.push(args); },
   } });
   let a, b;
   try {
@@ -45,11 +46,15 @@ function inbox(ws) {
     assert.equal(first.stage, 'qualifying'); assert(first.cars.every(car => car.pitExit));
     assert.equal(first.laps, 3); assert(first.cars.every(car => !car.rewardPending));
     races[0].cars.forEach((car, index) => { car.bestLap = 50 - index; car.finishTime = 100; car.done = true; });
+    races[0].cars[0].recordLap = {lap:2,milliseconds:45000};
     races[0].endQualifying(); for (let i = 0; i < 3; i++) tick();
     const waiting = await a.next(m => m.stage === 'waiting');
     assert.equal(waiting.phase, 'waiting'); assert.equal(waiting.waiting, 10);
     assert.deepEqual(waiting.grid.map(car => car.id), [6, 5, 4, 3, 2, 1]);
     assert.equal(awards.length, 0, 'ClassificaÃ§Ã£o nunca concede moedas');
+    await new Promise(resolve=>setImmediate(resolve));
+    assert.equal(records.length,1,'Clean qualifying lap saved once');
+    assert.equal(records[0][1].milliseconds,45000);
     b.ws.close(); await once(b.ws, 'close'); await new Promise(resolve => setImmediate(resolve));
     for (let i = 0; i < 603; i++) { tick(); if (i % 15 === 0) await new Promise(resolve => setImmediate(resolve)); }
     const race = await a.next(m => m.stage === 'race');
