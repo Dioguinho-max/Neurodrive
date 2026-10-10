@@ -142,8 +142,12 @@
       ribbon(-track.halfWidth - 4, -track.halfWidth, surface, i, 2);
       ribbon(track.halfWidth, track.halfWidth + 4, surface, i, 2);
     }
-    ribbon(-track.halfWidth + 1, -track.halfWidth + 1.8, white);
-    ribbon(track.halfWidth - 1.8, track.halfWidth - 1, white);
+    const roadMarking = white.clone();
+    roadMarking.polygonOffset = true;
+    roadMarking.polygonOffsetFactor = -1;
+    roadMarking.polygonOffsetUnits = -1;
+    ribbon(-track.halfWidth + 1, -track.halfWidth + 1.8, roadMarking);
+    ribbon(track.halfWidth - 1.8, track.halfWidth - 1, roadMarking);
 
     function circuitPoint(distance, lane = 0) {
       const wrapped = ((distance % track.length) + track.length) % track.length;
@@ -354,13 +358,15 @@
           plate.rotation.y = -point.angle;
         }
       }
-      // Duas estações de telemetria no box do jogador, fora da área de troca.
+      // Duas estações por equipe, fora da área de troca, também no online.
+      for (let bay = 0; bay < 6; bay++) {
       for (const [index, along] of [-4, 4].entries()) {
         const station = new THREE.Object3D(); station.userData.pitEngineer = true;
-        const point = circuitPoint(track.pit.garage(0).distance + along, track.halfWidth + 86);
+        station.userData.bay = bay;
+        const point = circuitPoint(track.pit.garage(bay).distance + along, track.halfWidth + 86);
         station.position.set(point.x, track.heightAt(point.x, point.y) + .2, point.y);
         station.rotation.y = -point.angle; scene.add(station);
-        const uniform = material(index ? '#246b88' : '#293e60', { roughness: .8 });
+        const uniform = material(['#293e60', '#7b375f', '#976337', '#356859', '#594b86', '#246b88'][bay], { roughness: .8 });
         const skin = material(index ? '#986749' : '#d9a180');
         const lightTrim = material('#dbe7eb');
         addMesh(roundedBox(5.8, .3, 2.5, .1), navy, station, [0, 2.55, 2.1]);
@@ -368,9 +374,12 @@
         addMesh(roundedBox(3.5, 2, .3, .1), navy, station, [0, 3.8, 2.7]);
         addMesh(new THREE.BoxGeometry(.22, .65, .25), steel, station, [0, 2.95, 2.7]);
         addMesh(roundedBox(2.5, .12, .8, .05), lightTrim, station, [0, 2.77, 1.45]);
+        const keyboard = new THREE.InstancedMesh(new THREE.BoxGeometry(.17, .025, .13), navy, 27);
+        const keyMatrix = new THREE.Matrix4();
         for (let row = 0; row < 3; row++) for (let key = 0; key < 9; key++) {
-          addMesh(new THREE.BoxGeometry(.17, .025, .13), navy, station, [-.98 + key * .24, 2.84, 1.2 + row * .22]);
+          keyboard.setMatrixAt(row * 9 + key, keyMatrix.makeTranslation(-.98 + key * .24, 2.84, 1.2 + row * .22));
         }
+        station.add(keyboard);
         addMesh(roundedBox(.32, .15, .5, .1), lightTrim, station, [1.9, 2.8, 1.55]);
         addMesh(roundedBox(1.4, 1.7, .9, .22), uniform, station, [0, 2.45, 0]);
         addMesh(roundedBox(.12, 1.25, .05, .02), lightTrim, station, [0, 2.45, .46]);
@@ -398,7 +407,8 @@
           const display = addMesh(new THREE.PlaneGeometry(3.2, 1.72), new THREE.MeshBasicMaterial({ map }), station, [0, 3.8, 2.53]);
           display.rotation.y = Math.PI;
         }
-        pitEngineers.push({ head, hands, ctx, map, lastUpdate: -Infinity, index });
+        pitEngineers.push({ station, bay, head, hands, ctx, map, lastUpdate: -Infinity, index: bay * 2 + index });
+      }
       }
       const towerLane = track.halfWidth + 76;
       if (clearSite(48, towerLane, 26, 30)) {
@@ -820,6 +830,7 @@
 
     let finishCameraAt = null;
     let ceremony = null;
+    let introProgress = null;
     function render() {
       const width = canvas.clientWidth;
       const height = canvas.clientHeight;
@@ -834,11 +845,10 @@
 
       const mode = finishCameraAt !== null ? 'finish' : element('camera').value;
       const car = snapshot?.target;
-      pitRoofs.forEach((roof, index) => {
-        const cutaway = (car?.pitExit || car?.pitState) && car.id === index + 1;
-        roof.visible = !cutaway;
+      pitRoofs.forEach((roof) => {
+        roof.visible = true;
         roof.material.opacity = 1;
-        roof.material.depthWrite = !cutaway;
+        roof.material.depthWrite = true;
       });
       if (options.quality === 'ultra') {
         const focus = car && mode !== 'overview';
@@ -851,13 +861,51 @@
       }
       const speedRatio = car ? Math.min(1, car.speed / (car.maxSpeed || 3.2)) : 0;
       const raceCamera = options.speedEffects && mode === 'chase';
-      const desiredFov = raceCamera ? 56 + speedRatio * 22 : 45;
+      const desiredFov = introProgress !== null ? 45 : raceCamera ? 56 + speedRatio * 22 : 45;
+      // A tomada aérea não precisa enxergar objetos a centímetros da lente.
+      // Um near maior preserva a precisão entre asfalto, terreno e marcações.
+      const near = introProgress !== null && introProgress < .68 ? 10 : .5;
+      if (camera.near !== near) {
+        camera.near = near; camera.far = 5000; camera.updateProjectionMatrix();
+      }
       const fieldOfView = camera.fov + (desiredFov - camera.fov) * 0.12;
       if (camera.fov !== fieldOfView) {
         camera.fov = fieldOfView;
         camera.updateProjectionMatrix();
       }
-      if (ceremony) {
+      if (introProgress !== null && car) {
+        // Primeiro mostra o traçado inteiro; o carro só entra no segundo plano.
+        const close = clamp((introProgress - .68) / .32, 0, 1);
+        const t = close * close * (3 - 2 * close);
+        if (introProgress < .68) {
+          const bounds = track.bounds;
+          const cx = (bounds.minX + bounds.maxX) / 2, cz = (bounds.minY + bounds.maxY) / 2;
+          const radius = Math.hypot(bounds.maxX - bounds.minX, bounds.maxY - bounds.minY) / 2 + track.halfWidth + 40;
+          const vertical = camera.fov * Math.PI / 360;
+          const horizontal = Math.atan(Math.tan(vertical) * camera.aspect);
+          const distance = radius * .95 / Math.sin(Math.min(vertical, horizontal));
+          const far = Math.max(5000, distance + radius * 2);
+          if (camera.far !== far) { camera.far = far; camera.updateProjectionMatrix(); }
+          const angle = -.8 + introProgress * .16;
+          const height = track.heightAt(cx, cz);
+          camera.position.set(cx + Math.cos(angle) * distance * .38, height + distance * .925, cz + Math.sin(angle) * distance * .38);
+          camera.lookAt(cx, height, cz);
+        } else if (car.pitExit || car.pitState) {
+          const nearest = track.nearest(car.x, car.y);
+          const tangent = Math.atan2(nearest.ty, nearest.tx);
+          const distance = 40 + (1 - t) * 25;
+          const x = car.x + Math.cos(tangent) * 8 + Math.sin(tangent) * distance;
+          const z = car.y + Math.sin(tangent) * 8 - Math.cos(tangent) * distance;
+          camera.position.set(x, Math.max(track.heightAt(x, z) + 5, track.heightAt(car.x, car.y) + 8), z);
+          camera.lookAt(car.x, track.heightAt(car.x, car.y) + 3, car.y);
+        } else {
+        const angle = car.angle + .7 + (1 - t) * .7;
+        const radius = 45 + (1 - t) * 210;
+        const x = car.x - Math.cos(angle) * radius, z = car.y - Math.sin(angle) * radius;
+        camera.position.set(x, Math.max(track.heightAt(x, z) + 18, track.heightAt(car.x, car.y) + 24 + (1 - t) * 140), z);
+        camera.lookAt(car.x, track.heightAt(car.x, car.y) + 3, car.y);
+        }
+      } else if (ceremony) {
         const close = clamp((ceremony.time - 4) / 3, 0, 1);
         const origin = ceremony.origin;
         const eye = new THREE.Vector3(-28 * (1 - close) + 8 * close, 36 - close * 17, 80 - close * 38);
@@ -867,7 +915,7 @@
       } else if (car?.pitState === 'service') {
         const x = car.x + Math.cos(car.angle) * 15 + Math.sin(car.angle) * 24;
         const z = car.y + Math.sin(car.angle) * 15 - Math.cos(car.angle) * 24;
-        camera.position.set(x, Math.max(track.heightAt(x, z) + 8, track.heightAt(car.x, car.y) + 13), z);
+        camera.position.set(x, Math.max(track.heightAt(x, z) + 5, track.heightAt(car.x, car.y) + 8), z);
         camera.lookAt(car.x, track.heightAt(car.x, car.y) + 3, car.y);
       } else if (mode === 'finish' && car && !car.pitExit) {
         const elapsed = Math.min(6, Math.max(0, (Date.now() - finishCameraAt) / 1000));
@@ -881,7 +929,7 @@
         const tangent = Math.atan2(nearest.ty, nearest.tx);
         const x = car.x + Math.cos(tangent) * 12 + Math.sin(tangent) * 40;
         const z = car.y + Math.sin(tangent) * 12 - Math.cos(tangent) * 40;
-        camera.position.set(x, Math.max(track.heightAt(x, z) + 8, track.heightAt(car.x, car.y) + 17), z);
+        camera.position.set(x, Math.max(track.heightAt(x, z) + 5, track.heightAt(car.x, car.y) + 8), z);
         camera.lookAt(car.x, track.heightAt(car.x, car.y) + 3, car.y);
       } else if (mode === 'chase' && car) {
         // Terceira pessoa: camera atras do carro, olhando adiante na pista.
@@ -998,6 +1046,7 @@
     return {
       setQuality,
       setFinishCamera(active) { finishCameraAt = active ? Date.now() : null; },
+      setIntro(progress) { introProgress = progress; },
       setCeremony(ranking, milliseconds = 0) {
         if (!ranking) { ceremony?.podium.dispose(); ceremony = null; return; }
         if (!window.createNeuroPodiumScene) return;
@@ -1023,7 +1072,7 @@
         // Uma única vitrine, com cópia do mesmo modelo e recursos próprios.
         const source = models[0] || (models[0] = createCarModel(0));
         const previewScene = new THREE.Scene();
-        previewScene.background = new THREE.Color('#101e2b');
+        previewScene.background = new THREE.Color('#09131d');
         previewScene.environment = getEnvironment();
         const previewRenderer = new THREE.WebGLRenderer({ canvas: previewCanvas, antialias: true });
         previewRenderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.75));
@@ -1052,11 +1101,31 @@
           new THREE.MeshStandardMaterial({ color: '#273948', roughness: 0.65 }));
         platform.position.y = -0.3; previewScene.add(platform);
         geometries.add(platform.geometry); surfaces.add(platform.material);
-        let azimuth = 0.7, elevation = 0.4, disposed = false;
+        // Piso, painéis e luzes da garagem usam recursos próprios da vitrine.
+        function scenery(geometry, material, x, y, z) {
+          const mesh = new THREE.Mesh(geometry, material);
+          mesh.position.set(x, y, z); previewScene.add(mesh);
+          geometries.add(geometry); surfaces.add(material); return mesh;
+        }
+        scenery(new THREE.BoxGeometry(110, .2, 110), new THREE.MeshStandardMaterial({ color: '#101d29', roughness: .38, metalness: .45 }), 0, -.6, 0);
+        scenery(new THREE.BoxGeometry(100, 28, .5), new THREE.MeshStandardMaterial({ color: '#182937', roughness: .8 }), 0, 13, -35);
+        for (const x of [-24, -12, 0, 12, 24]) {
+          scenery(new THREE.BoxGeometry(.14, 23, .2), new THREE.MeshBasicMaterial({ color: '#30544e' }), x, 12, -34.6);
+        }
+        for (const x of [-18, 18]) {
+          scenery(new THREE.BoxGeometry(.25, .08, 48), new THREE.MeshBasicMaterial({ color: '#79eabc' }), x, -.45, 0);
+          scenery(new THREE.BoxGeometry(.3, 1, 24), new THREE.MeshBasicMaterial({ color: '#d8f3ef' }), x, 22, 0);
+        }
+        const garageGlow = new THREE.PointLight('#76edb2', 4, 70, 1.4);
+        garageGlow.position.set(-12, 8, -15); previewScene.add(garageGlow);
+        let azimuth = 0.7, elevation = 0.4, disposed = false, lastWidth = 0, lastHeight = 0;
         function draw() {
           if (disposed) return;
           const width = Math.max(1, previewCanvas.clientWidth || 600), height = Math.max(1, previewCanvas.clientHeight || 300);
-          previewRenderer.setSize(width, height, false); view.aspect = width / height; view.updateProjectionMatrix();
+          if (width !== lastWidth || height !== lastHeight) {
+            previewRenderer.setSize(width, height, false); view.aspect = width / height; view.updateProjectionMatrix();
+            lastWidth = width; lastHeight = height;
+          }
           const radius = view.aspect < 1.4 ? 44 : 35;
           view.position.set(Math.cos(azimuth) * radius * Math.cos(elevation), 3 + Math.sin(elevation) * radius, Math.sin(azimuth) * radius * Math.cos(elevation));
           view.lookAt(0, 3, 0); previewRenderer.render(previewScene, view);
@@ -1099,19 +1168,23 @@
       update(population, leader, showSensors, target = leader, finished = false) {
         const engineerTime = Date.now();
         for (const engineer of pitEngineers) {
+          // Não anima nem redesenha monitores fora do alcance da câmera.
+          engineer.station.visible = engineer.station.position.distanceToSquared(camera.position) < 320 * 320;
+          if (!engineer.station.visible) continue;
+          const teamCar = population.find(car => car.id === engineer.bay + 1);
           const t = engineerTime / 1000 + engineer.index;
           engineer.head.rotation.y = Math.sin(t * .55) * .12;
           engineer.hands.forEach((arm, index) => { arm.rotation.x = Math.sin(t * 7 + index * 2) * .055; });
-          if (engineer.ctx && engineerTime - engineer.lastUpdate >= 250) {
+          if (engineer.ctx && engineerTime - engineer.lastUpdate >= (options.quality === 'performance' ? 500 : 250)) {
             engineer.lastUpdate = engineerTime;
             const ctx = engineer.ctx;
             ctx.fillStyle = '#081521'; ctx.fillRect(0, 0, 256, 128);
-            ctx.fillStyle = '#63ebbc'; ctx.font = 'bold 16px sans-serif'; ctx.fillText('NEURO / TELEMETRIA', 10, 22);
+            ctx.fillStyle = '#63ebbc'; ctx.font = 'bold 16px sans-serif'; ctx.fillText(`BOX ${engineer.bay + 1} / TELEMETRIA`, 10, 22);
             ctx.fillStyle = '#edf7ff'; ctx.font = '16px monospace';
-            ctx.fillText(`${Math.round((leader?.speed || 0) * 54)} km/h   M${leader?.gear || 1}`, 10, 48);
-            ctx.fillText(`PNEUS ${Math.round((leader?.tyreLife ?? 1) * 100)}%`, 10, 72);
+            ctx.fillText(teamCar ? `${Math.round((teamCar.speed || 0) * 54)} km/h   M${teamCar.gear || 1}` : 'AGUARDANDO PILOTO', 10, 48);
+            ctx.fillText(teamCar ? `PNEUS ${Math.round((teamCar.tyreLife ?? 1) * 100)}%` : 'SEM TELEMETRIA', 10, 72);
             ctx.fillStyle = '#203c4c'; ctx.fillRect(10, 91, 236, 15);
-            ctx.fillStyle = '#63ebbc'; ctx.fillRect(10, 91, 236 * Math.min(1, (leader?.rpm || 0) / 8000), 15);
+            ctx.fillStyle = '#63ebbc'; ctx.fillRect(10, 91, 236 * Math.min(1, (teamCar?.rpm || 0) / 8000), 15);
             engineer.map.needsUpdate = true;
           }
         }

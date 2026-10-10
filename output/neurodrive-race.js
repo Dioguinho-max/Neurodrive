@@ -2,6 +2,7 @@
 (() => {
   'use strict';
   const get = (id) => document.getElementById(id);
+  const resultReveal = window.createNeuroResults?.(get('race-result-reveal'), get('race-reward'), get('race-results-improvement'));
   const updateHUD = window.createRaceHUD(get);
   const updateSignals = window.createRaceSignals(get);
   // Ferramentas de inspeção são opt-in e não aparecem para o jogador.
@@ -22,6 +23,7 @@
   let qualifyingGrid = null;
   let sessionDifficulty = 'normal';
   let renderer;
+  const intro = window.createNeuroIntro?.(get, progress => renderer?.setIntro?.(progress), () => { clearInput(); accumulator = 0; });
   window.bindNeuroQuality(get('race-quality'), (quality) => renderer?.setQuality(quality));
   let started = false;
   let paused = false;
@@ -161,6 +163,7 @@
     clearFinale();
     clearInput();
     const ranking = race.standings();
+    resultReveal?.show(race, `${ranking.indexOf(race.cars[0]) + 1}º / ${ranking.length}`, race.cars[0].bestLap === null ? 'Sem volta válida' : timeLabel(race.cars[0].bestLap));
     get('race-results-stage').textContent = `${track.name} · ${race.qualifying ? 'Classificação encerrada' : `🏁 Bandeirada · ${race.cars[0].place}º lugar`}`;
     get('race-results-title').textContent = race.qualifying ? 'Grid de largada definido' : 'Os três primeiros';
     get('race-results-note').textContent = race.qualifying
@@ -232,6 +235,7 @@
   }
 
   function openMenu() {
+    intro?.finish();
     resultsReturnRemaining = null;
     get('race-results-return').hidden = true;
     get('race-menu').setAttribute('data-state', started ? 'pause' : 'home');
@@ -350,6 +354,8 @@
   }
 
   function startSession(qualifying) {
+    resultReveal?.reset();
+    intro?.finish();
     sessionBestBefore = career.records[track.id] ?? null;
     resultsReturnRemaining = null;
     resultsReturnScheduled = false;
@@ -381,6 +387,7 @@
     get('race-pause').textContent = 'Pausar (P)';
     get('race-pause').disabled = false;
     get('race-recover').disabled = false;
+    intro?.start(track, qualifying);
     refresh();
   }
   get('race-start').onclick = () => startSession(true);
@@ -432,6 +439,7 @@
   get('race-recover').onclick = () => { if (!paused) race.recoverPlayer(); };
 
   window.addEventListener('keydown', (event) => {
+    if (intro?.active) return;
     if (get('race-menu').open || get('race-results').open) return;
     if (event.code === 'Escape' && !event.repeat) { event.preventDefault(); openMenu(); return; }
     if (['INPUT', 'SELECT', 'TEXTAREA'].includes(event.target?.tagName)) return;
@@ -504,13 +512,15 @@
   function frame(time) {
     const delta = previousTime === null ? 0 : Math.min(time - previousTime, 100);
     previousTime = time;
+    const presenting = intro?.active;
+    intro?.tick(delta);
     if (resultsReturnRemaining !== null && get('race-results').open && !document.hidden) {
       resultsReturnRemaining -= Math.max(0, delta);
       get('race-results-return').textContent = `Voltando ao menu em ${Math.max(0, Math.ceil(resultsReturnRemaining / 1000))} segundos. Você poderá rever estes resultados pelo menu.`;
       if (resultsReturnRemaining <= 0) returnToMenu();
     }
     if (finale && !get('race-menu').open && !document.hidden) finale.elapsed += Math.max(0, delta);
-    if (started && !paused && race.phase !== 'finished') {
+    if (started && !paused && !presenting && race.phase !== 'finished') {
       accumulator += delta;
       const input = { ...gamepad?.input() };
       heldKeys.forEach((key) => { input[keyActions[key]] = true; });

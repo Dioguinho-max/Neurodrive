@@ -15,13 +15,15 @@
     <script src="neurodrive-achievements.js" defer></script><link rel="stylesheet" href="neurodrive-achievements.css">
     <script src="neurodrive-records.js" defer></script>
     <link rel="stylesheet" href="neurodrive-records.css">
-    <script src="neurodrive-garage.js" defer></script>
+    <script src="neurodrive-home.js" defer></script><script src="neurodrive-garage.js" defer></script>
     <link rel="stylesheet" href="neurodrive-profile.css">
     <link rel="stylesheet" href="neurodrive-hud.css">
     <script src="neurodrive-hud.js" defer></script><script src="neurodrive-gamepad.js" defer></script><link rel="stylesheet" href="neurodrive-gamepad.css">
-    <script src="neurodrive-race.js" defer></script>
+    <script src="neurodrive-intro.js" defer></script><script src="neurodrive-results.js" defer></script><script src="neurodrive-race.js" defer></script>
     <link rel="stylesheet" href="neurodrive-menu.css?v=menus-2">
   <link rel="stylesheet" href="neurodrive-mobile.css">
+  <link rel="stylesheet" href="neurodrive-home.css">
+<link rel="stylesheet" href="neurodrive-results.css">
 </head>
   <body>
     <main id="neuro-race">
@@ -80,21 +82,24 @@
         <div class="menu-hero">
           <p class="menu-eyebrow" id="menu-state-title">SEU PRÓXIMO DESAFIO COMEÇA AQUI</p>
           <h2 id="race-menu-title">NEURO<span>DRIVE</span></h2>
-          <svg class="menu-showcar" viewBox="0 0 520 240" aria-hidden="true">
-            <defs><linearGradient id="showcar-paint" x2="0" y2="1"><stop stop-color="#b8ffdd"/><stop offset=".45" stop-color="#46c993"/><stop offset="1" stop-color="#174e44"/></linearGradient></defs>
-            <ellipse cx="267" cy="195" rx="217" ry="22" fill="#000" opacity=".45"/>
-            <path d="M38 153 73 129 175 112 217 65 335 69 392 118 468 140 490 173 466 186 53 186Z" fill="url(#showcar-paint)" stroke="#a1f9cd" stroke-width="2"/>
-            <path d="m188 112 38-38 101 4 42 39Z" fill="#142a3d"/><path d="m276 75 5 41" stroke="#74bba4" stroke-width="6"/>
-            <path d="m62 155 393 1M174 126l-7 46m181-48 9 48" stroke="#143d38" stroke-width="3"/>
-            <g fill="#0c1420" stroke="#506276" stroke-width="5"><circle cx="128" cy="180" r="34"/><circle cx="401" cy="180" r="34"/></g>
-            <g fill="#b6c9d6"><circle cx="128" cy="180" r="18"/><circle cx="401" cy="180" r="18"/></g>
-            <path d="m49 146 42-5-7 12-35 5m347-28 47 12-5 7-39-9" fill="#effaff"/>
-          </svg>
+          <div class="home-showroom">
+ <canvas id="home-car-canvas" aria-label="Seu carro equipado na garagem"></canvas>
+ <div id="home-car-fallback">NEURO / MOTORSPORT<span>Sua próxima largada começa aqui.</span></div>
+ <div class="home-car-caption"><span>SEU CARRO</span><strong id="home-car-name">Original</strong><button class="btn" id="home-customize">Personalizar →</button></div>
+ </div>
+ <button class="home-pilot" id="home-pilot"><span class="home-avatar" id="home-avatar">ND</span><span><strong id="home-pilot-name">Piloto visitante</strong><small id="home-pilot-detail">Entre para salvar seu progresso</small></span><span id="home-pilot-coins">—</span></button>
           <div class="beta-notice"><strong class="beta-badge">BETA</strong> Temporada de estreia.</div>
           <p>Encontre o traçado. Conquiste a pole.<br>Dispute cada posição.</p>
           <div class="menu-lights" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i></div>
         </div>
         <div class="menu-content">
+          <nav class="menu-pages" aria-label="Menu principal">
+            <button class="btn" id="menu-page-race" aria-pressed="true">Jogar</button>
+            <button class="btn" id="menu-page-account" aria-pressed="false">Piloto</button>
+            <button class="btn" id="menu-page-store" aria-pressed="false">Garagem</button>
+            <button class="btn" id="menu-page-settings" aria-pressed="false">Ajustes</button>
+            <button class="btn" id="menu-page-records" aria-pressed="false">Recordes</button>
+          </nav>
           <p id="race-menu-status" role="status">Seu próximo grid começa aqui.</p>
           <button class="btn btn-primary" id="race-menu-resume" hidden>Continuar sessão</button>
 
@@ -105,13 +110,7 @@
 <button class="btn pause-action" id="menu-pause-settings">Configurações</button>
 <button class="btn" id="menu-end-qualifying" hidden>Encerrar classifica&#231;&#227;o e ver grid</button>
 <button class="btn" id="menu-recover" hidden>Voltar &#224; pista e continuar</button></div></section>
-          <nav class="menu-pages" aria-label="Menu principal">
-            <button class="btn" id="menu-page-race" aria-pressed="true">Jogar</button>
-            <button class="btn" id="menu-page-account" aria-pressed="false">Conta</button>
-            <button class="btn" id="menu-page-store" aria-pressed="false">Garagem</button>
-            <button class="btn" id="menu-page-settings" aria-pressed="false">Ajustes</button>
-            <button class="btn" id="menu-page-records" aria-pressed="false">Recordes</button>
-          </nav>
+
           <section id="menu-records-screen" class="menu-section" hidden>
             <p class="menu-eyebrow">CADA MILÉSIMO CONTA</p><h3>Mural de recordes</h3>
             <div class="records-filters"><label class="form-label">Circuito<select id="records-track" class="form-select"><option value="serra">Serra Verde</option><option value="veloz">Autódromo Veloz</option><option value="tecnico">Vale Técnico</option></select></label><label class="form-label">Temporada<select id="records-season" class="form-select"><option value="">Temporada atual</option><option value="all">Histórico completo</option></select></label></div>
@@ -128,7 +127,7 @@
           <p class="menu-eyebrow">NOVA DISPUTA · SOLO</p><h3>Monte seu próximo grid</h3>
           <label class="form-label">Modo<select class="form-select" id="menu-mode"><option value="single">Corrida avulsa</option><option value="championship">Campeonato · 3 etapas</option></select></label>
           <details class="menu-help"><summary>Regras do campeonato</summary><p class="text-small">Serra Verde → Autódromo Veloz → Vale Técnico. Pontos: 25, 18, 15, 12, 10 e 8. Desempate por vitórias e ordem inicial dos pilotos. Progresso válido nesta sessão; as moedas da Copa Neuro são disputadas no online.</p></details>
-          <p class="text-small" id="menu-records"></p>
+          <details class="menu-help"><summary>Meus tempos neste dispositivo</summary><p class="text-small" id="menu-records"></p></details>
           <div class="menu-settings">
             <label class="form-label">Circuito
               <select class="form-select" id="menu-track"><option value="serra">Serra Verde</option><option value="veloz">Autódromo Veloz</option><option value="tecnico">Vale Técnico</option></select>
@@ -140,14 +139,14 @@
               <select class="form-select" id="menu-laps"><option value="1">1 volta</option><option value="3" selected>3 voltas</option><option value="5">5 voltas</option><option value="10">10 voltas</option><option value="20">20 voltas</option><option value="50">50 voltas</option></select>
             </label>
           </div>
-          <p class="text-small">Na classificação, aguarde a saída automática dos boxes a até 60 km/h. Assuma o controle ao entrar na pista: uma volta de aquecimento e duas tentativas cronometradas. A corrida larga no grid.</p>
+          <details class="menu-help"><summary>Como funciona a classificação?</summary><p class="text-small">Na classificação, aguarde a saída automática dos boxes a até 60 km/h. Assuma o controle ao entrar na pista: uma volta de aquecimento e duas tentativas cronometradas. A corrida larga no grid.</p></details>
           <button class="btn btn-primary" id="race-menu-play">Iniciar classificação</button>
           <p class="text-small" id="race-menu-restart-note" hidden>Uma nova disputa substitui o progresso da sessão atual.</p>
 
 
 
           <details class="menu-help"><summary>Como jogar</summary>
-<p class="pit-help">Corridas de 5 voltas ou mais t?m desgaste dos pneus. Pressione <strong>B</strong> ou use ?Chamar boxes?: a equipe assume na pr?xima entrada e troca os pneus em 8 segundos.</p>
+<p class="pit-help">Corridas de 5 voltas ou mais têm desgaste dos pneus. Pressione <strong>B</strong> ou use “Chamar boxes”: a equipe assume na próxima entrada e troca os pneus em 8 segundos.</p>
             <p><strong>WASD ou setas:</strong> acelerar, frear e virar. No celular, use os botões na tela.</p>
             <p><strong>P:</strong> pausar · <strong>Esc:</strong> menu · <strong>R:</strong> voltar à pista (invalida a volta atual).</p>
             <p>Segure o acelerador durante a contagem para subir o giro. Freie antes das curvas fechadas e evite o gramado.</p>
@@ -225,7 +224,7 @@
               <p id="garage-preview-note">Escolha Ver em 3D em uma skin. Experimente antes de comprar.</p>
               <div class="garage-actions"><button class="btn" id="garage-preview-left" type="button" aria-label="Girar carro para a esquerda">↶ Girar</button><button class="btn" id="garage-preview-right" type="button" aria-label="Girar carro para a direita">Girar ↷</button><button class="btn" id="garage-preview-reset" type="button">Restaurar câmera</button></div>
             </section>
-            <p id="garage-store-balance"></p>
+            <div class="garage-actions"><button class="btn" id="garage-compare" aria-pressed="false">Comparar com equipada</button><button class="btn btn-primary" id="garage-preview-equip">Equipar seleção</button></div><p id="garage-equipped-notice" role="status" aria-live="polite"></p><p id="garage-store-balance"></p>
             <button class="btn" id="garage-store-login">Entrar para comprar</button>
             <label class="form-label">Mostrar<select class="form-select" id="garage-filter"><option value="all">Todas as skins</option><option value="owned">Minha garagem</option></select></label>
             <p class="text-small">Skins são apenas visuais. Nova conta: 500 moedas. Bônus de 100 a cada 24 horas. Sem dinheiro real.</p>
@@ -237,11 +236,13 @@
           <a class="menu-lab" href="neuro-pista.html">Explorar o Laboratório de IA ↗</a>
         </div>
       </dialog>
+      <dialog id="race-intro" class="race-intro" aria-labelledby="race-intro-title"><div><p id="race-intro-stage"></p><h2 id="race-intro-title"></h2><p>Seu próximo desafio começa aqui.</p></div><button class="btn" id="race-intro-skip">Pular apresentação →</button></dialog>
       <dialog id="race-results" class="race-results" aria-labelledby="race-results-title">
         <p class="race-results-eyebrow" id="race-results-stage"></p>
         <h2 id="race-results-title">Resultados</h2>
         <p id="race-results-note"></p>
-        <p id="race-results-improvement" class="session-improvement"></p>
+        <section id="race-result-reveal" class="result-reveal" aria-label="Resumo da sua sessão" hidden></section>
+<p id="race-results-improvement" class="session-improvement"></p>
         <p id="race-results-return" class="text-small" hidden></p>
         <p id="race-reward" role="status"></p>
         <button class="btn" id="race-reward-retry" hidden>Tentar resgatar recompensa</button>

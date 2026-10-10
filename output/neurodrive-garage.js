@@ -14,8 +14,23 @@
   let identity = 0;
   let capabilities = { localRewards: true, online: false };
   let previewFactory, showroom, previewSkin, previewDrag;
+  let comparing = false;
+  function previewActions() {
+    const skin = previewSkin;
+    const owned = player?.owned.includes(skin?.id);
+    const equipped = player?.equipped === skin?.id;
+    const button = get('garage-preview-equip');
+    button.textContent = equipped ? 'Equipada' : !player ? 'Entre para usar' : owned ? 'Equipar seleção' : `Comprar · ${skin?.price || 0} moedas`;
+    button.disabled = busy || !skin || !player || equipped || (!owned && player.coins < skin.price);
+    get('garage-compare').disabled = !player || !skin || equipped;
+    get('garage-compare').setAttribute('aria-pressed', String(comparing));
+    get('garage-compare').textContent = comparing ? 'Voltar à seleção' : 'Comparar com equipada';
+  }
   function inspectSkin(skin, scroll = false) {
+    get('garage-equipped-notice').textContent = '';
+    comparing = false;
     previewSkin = skin;
+    previewActions();
     get('garage-preview-name').textContent = skin.name;
     if (previewFactory && page === 'store') {
       try {
@@ -31,6 +46,7 @@
   }
   function setPreviewFactory(factory) {
     showroom?.dispose(); showroom = null; previewFactory = factory;
+    window.NeuroHome?.setFactory(factory);
     if (factory && page === 'store' && previewSkin) inspectSkin(previewSkin);
   }
   // Ilustrações leves: cores vêm das variáveis CSS do catálogo, nunca de HTML interpolado.
@@ -117,6 +133,7 @@
 
   function showPage(value) {
     page = value;
+    window.NeuroHome?.setPage(page);
     get('menu-race-screen').hidden = page !== 'race';
     get('menu-records-screen').hidden = page !== 'records';
     if (page === 'records') recordsPanel?.load();
@@ -190,7 +207,9 @@
     return result;
   }
   function render() {
+    previewActions();
     pilotPanel?.render(player, skins);
+    window.NeuroHome?.update(player, skins);
     get('garage-auth').hidden = Boolean(player);
     get('auth-login-mode').hidden = get('auth-register-mode').hidden = Boolean(player);
     get('garage-auth-fields').disabled = busy || !online;
@@ -244,6 +263,12 @@
     try {
       const result = await request(route, data);
       player = result.player || null;
+      if (['equip', 'buy'].includes(route)) {
+        const selected = skins.find(skin => skin.id === player?.equipped);
+        if (selected) inspectSkin(selected);
+        get('garage-equipped-notice').textContent = `${selected?.name || 'Pintura'} equipada. Pronto para a pista!`;
+        get('garage-preview-canvas').animate?.([{ opacity: .35, transform: 'scale(.97)' }, { opacity: 1, transform: 'scale(1)' }], { duration: window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ? 0 : 450 });
+      }
       if (['login', 'register', 'logout'].includes(route)) { identity++; setAuthMode('login'); }
       get('garage-password').value = '';
       get('garage-confirm').value = '';
@@ -309,6 +334,18 @@
   get('garage-preview-left').onclick = () => showroom?.rotate(-0.3);
   get('garage-preview-right').onclick = () => showroom?.rotate(0.3);
   get('garage-preview-reset').onclick = () => showroom?.reset();
+  get('garage-preview-equip').onclick = () => {
+    if (!previewSkin || get('garage-preview-equip').disabled) return;
+    act(player?.owned.includes(previewSkin.id) ? 'equip' : 'buy', { skin: previewSkin.id }, `${previewSkin.name} equipada!`);
+  };
+  get('garage-compare').onclick = () => {
+    const equipped = skins.find(skin => skin.id === player?.equipped);
+    if (!equipped || !previewSkin) return;
+    comparing = !comparing;
+    showroom?.setSkin(comparing ? equipped : previewSkin);
+    get('garage-preview-name').textContent = comparing ? `Equipada · ${equipped.name}` : previewSkin.name;
+    previewActions();
+  };
   const previewCanvas = get('garage-preview-canvas');
   previewCanvas.onpointerdown = (event) => { previewDrag = { x: event.clientX, y: event.clientY }; previewCanvas.setPointerCapture?.(event.pointerId); };
   previewCanvas.onpointermove = (event) => {

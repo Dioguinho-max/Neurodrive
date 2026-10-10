@@ -13,7 +13,7 @@
 .race-menu .event-card { min-height: 115px; gap: 10px; padding: 16px; }
 .race-menu .menu-lab { font-size: 12px; opacity: .8; }
 .race-menu .menu-content { min-width: 0; max-width: 760px; width: 100%; }
-.race-menu .menu-pages { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+.race-menu .menu-pages { grid-template-columns: repeat(5, minmax(0, 1fr)); }
 .race-menu .menu-pages .btn { border: 0; border-bottom: 3px solid transparent; background: transparent; padding: 10px 6px; border-radius: 0; font-size: 11px; letter-spacing: .06em; }
 .race-menu .menu-pages .btn[aria-pressed="true"] { border-bottom-color: #98f1be; background: #98f1be12; color: #b8ffd5; }
 .race-menu .menu-back { margin-top: 12px; background: transparent; min-height: 38px; font-size: 12px; }

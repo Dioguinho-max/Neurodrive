@@ -1,0 +1,14 @@
+const assert = require('node:assert/strict'), fs = require('node:fs'), vm = require('node:vm');
+const nodes = new Map();
+const get = id => { if (!nodes.has(id)) nodes.set(id, { open: false, focus() {}, showModal() { this.open = true; }, close() { this.open = false; }, addEventListener(name, fn) { this[name] = fn; } }); return nodes.get(id); };
+let reduced = false, camera, clears = 0;
+const window = { matchMedia: () => ({ matches: reduced }) }, document = { hidden: false };
+vm.runInNewContext(fs.readFileSync('output/neurodrive-intro.js','utf8'), { window, document });
+const intro = window.createNeuroIntro(get, p => camera = p, () => clears++);
+intro.start({ name: 'Serra Verde' }, true); assert(intro.active); assert.equal(camera, 0);
+intro.tick(2000); assert(camera > 0 && camera < 1);
+document.hidden = true; const before = camera; intro.tick(3000); assert.equal(camera, before);
+document.hidden = false; get('race-intro-skip').onclick(); assert(!intro.active); assert.equal(camera, null); assert(!get('race-intro').open);
+intro.start({name:'Veloz'},false); intro.tick(5500); assert(!intro.active); assert.equal(camera,null);
+reduced = true; intro.start({name:'Veloz'},false); assert(!intro.active); assert(clears >= 4);
+console.log('OK: intro duration, skip, hidden tab and reduced motion.');

@@ -63,6 +63,31 @@ const finisher = { ...ending.track.start, speed: 2, maxSpeed: 3.2, steering: 0, 
   done: false, inputs: [0, 0, 0, 0, 0], activations: [[], [], [0, 0]] };
 endingRenderer.update([finisher], finisher, false);
 assert.equal(ending.render().scene.children.filter((object) => object.name.startsWith('starting-grid-slot-')).length, 6);
+const engineers = ending.render().scene.children.filter(object => object.userData.pitEngineer);
+for (const width of [1100, 390]) {
+  const canvas = ending.elements['np-track-3d'];
+  const oldWidth = canvas.clientWidth;
+  canvas.clientWidth = width;
+  endingRenderer.setIntro(0.2);
+  endingRenderer.update([finisher], finisher, false);
+  const view = ending.render().camera;
+  assert.equal(view.near, 10, 'Vista aérea usa maior precisão de profundidade');
+  view.updateMatrixWorld(true);
+  for (const point of ending.track.points) {
+    const projected = new THREE.Vector3(point.x, ending.track.heightAt(point.x, point.y), point.y).project(view);
+    assert(Math.abs(projected.x) < 1 && Math.abs(projected.y) < 1 && projected.z < 1, 'Apresentação enquadra todo o traçado');
+  }
+  canvas.clientWidth = oldWidth;
+}
+endingRenderer.setIntro(null);
+endingRenderer.update([finisher], finisher, false);
+assert.equal(ending.render().camera.near, .5, 'Pilotagem restaura a visão de objetos próximos');
+assert.equal(engineers.length, 12, 'Duas estações em cada um dos seis boxes');
+for (let bay = 0; bay < 6; bay++) {
+  const team = engineers.filter(object => object.userData.bay === bay);
+  assert.equal(team.length, 2);
+  assert(team[0].position.distanceTo(team[1].position) > 1, 'Estações não se sobrepõem');
+}
 finisher.done = true; finisher.speed = 0;
 const frozenResult = JSON.stringify(finisher);
 endingRenderer.update([finisher], finisher, false, finisher, true);

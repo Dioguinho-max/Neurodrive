@@ -8,6 +8,12 @@ O projeto está em **beta**, com física de estilo arcade e melhorias contínuas
 
 ## Recursos
 
+- **Equipes nos seis boxes:** dois chefes por equipe trabalham nos computadores, com movimentos de digitação e telas de telemetria do respectivo carro. Cenário compartilhado pelo solo e online; estações distantes deixam de animar para poupar processamento.
+- **Apresentação online sincronizada:** câmera de abertura durante a saída automática dos boxes ou o início da contagem. Pode ser pulada e termina antes do controle manual ou no último segundo da contagem, sem pausar o servidor. Tetos dos boxes permanecem visíveis; a câmera acompanha pela frente aberta da garagem.
+- **Resumo após o pódio:** posição, melhor volta, evolução, recompensa e medalhas salvas aparecem em cartões no solo e online. “Mostrar tudo” pula a revelação; movimento reduzido mostra tudo imediatamente. Recompensas pendentes continuam sendo atualizadas após a confirmação do servidor. As medalhas exibidas são as do perfil, não necessariamente conquistadas nessa prova.
+- **Apresentação da sessão solo:** aproximação da pista e dos carros antes da classificação e da corrida, com duração de 5,5 segundos. Pode ser pulada com o botão, Esc ou controle; não consome tempo de prova. Respeita a preferência de movimento reduzido.
+- **Vitrine ampliada:** gire o carro por arraste, toque, teclado ou botões acessíveis pelo controle. Compare a seleção com a pintura equipada no mesmo ângulo e compre/equipe diretamente na prévia, com confirmação visual após o servidor salvar.
+- **Menu com garagem 3D:** carro equipado em destaque, iluminação de garagem, resumo do piloto, moedas e medalhas. Abas organizam corrida, perfil, garagem, ajustes e recordes. A câmera se move suavemente no desktop; no celular e com movimento reduzido, a prévia fica estática. O menu libera a prévia ao entrar na corrida.
 - **Corrida solo:** cinco adversários de IA, dificuldades selecionáveis e provas de 1, 3, 5, 10, 20 ou 50 voltas.
 - **Classificação:** saída dos boxes, volta de aquecimento e duas tentativas cronometradas. A melhor volta válida define o grid.
 - **Três circuitos:** Serra Verde, Autódromo Veloz e Vale Técnico, com relevos, arquibancadas, garagens e patrocinadores fictícios.

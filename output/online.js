@@ -1,6 +1,12 @@
 (() => {
   'use strict';
   const get = (id) => document.getElementById(id);
+  const resultReveal = window.createNeuroResults?.(get('online-result-reveal'), get('online-reward'), get('online-improvement'));
+  function revealResults() {
+    if (!latest || (latest.phase !== 'finished' && latest.stage !== 'waiting') || ceremonyElapsed !== null) return;
+    const player = latest.cars.find(car => car.id === latest.self);
+    if (player) resultReveal?.show(`${latest.raceId}:${latest.stage}`, `${playerPosition}º / ${latest.cars.length}`, lapTime(player.bestLap));
+  }
   const updateHUD = window.createRaceHUD(get);
   const updateSignals = window.createRaceSignals(get);
   const recordNotice = window.createNeuroRecordNotice?.(get);
@@ -18,6 +24,8 @@
     renderImprovement();
   }
   let socket, self, room, latest, renderer, trackId, ready = false;
+  const intro = window.createNeuroIntro?.(get, progress => renderer?.setIntro?.(progress), () => { keys.clear(); pointers.clear(); });
+  let introSession = '', introPrevious = null;
   let prediction, rtt = 0, playerPosition = 1;
   let frames = 0, fps = 0, measuredAt = performance.now();
   const motion = window.createOnlineBuffer();
@@ -33,11 +41,15 @@
   const send = (data) => { if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify(data)); };
   function clear() { keys.clear(); pointers.clear(); document.querySelectorAll('[data-drive]').forEach((button) => button.setAttribute('aria-pressed', 'false')); prediction?.input({ brake: true }, performance.now()); send({ type: 'input', brake: true }); }
   function menu() {
+    intro?.finish();
+    revealResults();
     clear();
     get('online-title').textContent = latest ? latest.stage === 'waiting' ? 'Grid definido' : latest.stage === 'qualifying' ? 'Classificação em andamento' : latest.phase === 'finished' ? 'Celebração no pódio' : 'Sua corrida continua' : room ? 'Prepare seu grid' : 'Dispute com seus amigos';
     if (!get('online-lobby').open) get('online-lobby').showModal();
   }
   function resetRoom() {
+    intro?.finish(); introSession = ''; introPrevious = null;
+    resultReveal?.reset();
     recordNotice?.clear(); recordSummaries = {}; get('online-improvement').hidden = true;
     get('neuro-race').setAttribute('data-ceremony', 'false');
     renderer?.setCeremony?.(null); ceremonyElapsed = null; ceremonyPrevious = null;
@@ -92,6 +104,7 @@
         } else if (message.type === 'state') {
           const stageChanged = latest && (message.stage || 'race') !== (latest.stage || 'race');
           if (stageChanged) {
+            resultReveal?.reset();
             motion.clear(); prediction = null; rankingKey = ''; clear();
             if (message.stage === 'race') { get('online-lobby').close(); get('online-grid').hidden = true; }
           }
@@ -107,6 +120,14 @@
             catch { renderer = null; say('Não foi possível iniciar WebGL.'); menu(); send({ type: 'leave' }); }
           }
           const player = latest.cars.find((car) => car.id === latest.self);
+          const introKey = `${latest.raceId}:${latest.stage}`;
+          const safeIntro = latest.phase === 'countdown' && latest.countdown > 1
+            || latest.stage === 'qualifying' && player.pitExit && !player.done;
+          if (introSession !== introKey) {
+            intro?.finish(); introSession = introKey; introPrevious = null;
+            if (safeIntro && renderer && !document.hidden) intro?.start(window.createNeuroTrack(trackId), latest.stage === 'qualifying');
+          }
+          if (!safeIntro && intro?.active) intro.finish();
           document.querySelectorAll('.race-shift').forEach((button) => { button.hidden = !player.manual; });
           get('online-ready').hidden = get('online-start').hidden = true;
           get('online-manual').disabled = true;
@@ -185,6 +206,7 @@
   get('online-sound').onchange = () => audio?.setEnabled(get('online-sound').checked);
   window.bindNeuroQuality(get('online-quality'), (quality) => renderer?.setQuality(quality));
   window.addEventListener('keydown', (event) => {
+    if (intro?.active) return;
     if (get('online-lobby').open || ['INPUT', 'SELECT'].includes(event.target.tagName)) return;
     if (actions[event.code]) { event.preventDefault(); keys.add(event.code); }
     if (event.code === 'Escape') menu();
@@ -202,7 +224,7 @@
   });
   const gamepad = window.createNeuroGamepad?.({
     menu,
-    back: () => { if (latest && latest.stage !== 'waiting') get('online-lobby').close(); },
+    back: () => { if (intro?.active) intro.finish(); else if (latest && latest.stage !== 'waiting') get('online-lobby').close(); },
     pit: () => { if (latest && !get('race-pit-request').disabled) send({ type: 'pit' }); },
     recover: () => { if (!get('online-recover').disabled) send({ type: 'recover' }); },
     disconnect: menu,
@@ -210,7 +232,7 @@
   setInterval(() => {
     if (!latest || latest.phase === 'finished') return;
     const input = { type: 'input' };
-    if (!get('online-lobby').open && !document.hidden) { Object.assign(input, gamepad?.input()); keys.forEach((key) => { input[actions[key]] = true; }); pointers.forEach((key) => { input[key] = true; }); }
+    if (!get('online-lobby').open && !intro?.active && !document.hidden) { Object.assign(input, gamepad?.input()); keys.forEach((key) => { input[actions[key]] = true; }); pointers.forEach((key) => { input[key] = true; }); }
     else input.brake = true;
     const encoded = JSON.stringify(input), now = performance.now();
     prediction?.input(input, now);
@@ -223,6 +245,8 @@
   function draw() {
     recordNotice?.update();
     const now = performance.now();
+    intro?.tick(introPrevious === null ? 0 : Math.min(100, Math.max(0, now - introPrevious)));
+    introPrevious = now;
     frames++;
     if (now - measuredAt >= 1000) { fps = Math.round(frames * 1000 / (now - measuredAt)); frames = 0; measuredAt = now; }
     if (latest && renderer && !document.hidden) {

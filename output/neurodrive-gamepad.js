@@ -36,6 +36,10 @@
       if (!elements.length) return;
       let index = elements.indexOf(document.activeElement);
       const current = elements[index];
+      if (current?.id === 'garage-preview-canvas' && (direction === 'left' || direction === 'right')) {
+        current.dispatchEvent(new KeyboardEvent('keydown', { key: direction === 'left' ? 'ArrowLeft' : 'ArrowRight', bubbles: true }));
+        return;
+      }
       if (current && (direction === 'left' || direction === 'right') && (current.tagName === 'SELECT' || current.type === 'range')) {
         const step = direction === 'left' ? -1 : 1;
         if (current.tagName === 'SELECT') {

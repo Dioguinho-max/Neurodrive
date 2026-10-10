@@ -5,6 +5,7 @@ const read = (file) => fs.readFileSync(path.join(__dirname, '..', file), 'utf8')
 const nodes = Object.fromEntries([...read('online.html').matchAll(/id="([^"]+)"/g)].map((m) => [m[1], {
   textContent: '', value: '', hidden: false, open: false, style: {}, dataset: {},
   setAttribute() {}, replaceChildren() {}, append() {}, showModal() { this.open = true; }, close() { this.open = false; },
+  focus() {}, addEventListener(type, fn) { this[type] = fn; },
 }]));
 const listeners = {}, intervals = new Map();
 const touchButtons = Object.fromEntries(['left', 'right', 'brake', 'accelerate', 'shiftDown', 'shiftUp'].map(action => [action, {
@@ -20,6 +21,7 @@ let socket;
 class Socket { static OPEN = 1; constructor() { socket = this; this.readyState = 1; this.sent = []; } send(data) { this.sent.push(JSON.parse(data)); } }
 for (const file of ['neuro-pista-track.js', 'neurodrive-race-engine.js', 'neurodrive-hud.js', 'neurodrive-online-buffer.js', 'neurodrive-prediction.js']) new Function('window', read(file))(windowMock);
 new Function('window','document',read('neurodrive-achievements.js'))(windowMock,documentMock);
+new Function('window','document',read('neurodrive-intro.js'))(windowMock,documentMock);
 new Function('window', 'document', 'WebSocket', 'fetch', 'performance', 'setInterval', 'requestAnimationFrame', read('online.js'))(
   windowMock, documentMock, Socket, async (url) => ({ ok: true, async json() { return url.endsWith('/config') ? { online: true, websocketUrl: 'ws://test' } : { ticket: 'test' }; } }),
   { now: () => now }, (fn, ms) => intervals.set(ms, fn), (fn) => { frame = fn; },
@@ -30,6 +32,15 @@ new Function('window', 'document', 'WebSocket', 'fetch', 'performance', 'setInte
   receive({ type: 'auth', id: '1', name: 'test' });
   const race = windowMock.createNeuroRace(windowMock.createNeuroTrack('serra'));
   for (let i = 0; i < 180; i++) race.step();
+  const opening = {type:'state', raceId:'intro-test',stage:'race',cars:race.cars,self:1,track:'serra',phase:'countdown',countdown:3,laps:3,elapsed:0};
+  receive(opening);
+  assert.equal(nodes['race-intro'].open,true,'Online countdown opens presentation');
+  nodes['race-intro-skip'].onclick(); receive(opening);
+  assert.equal(nodes['race-intro'].open,false,'Skipping is preserved across snapshots');
+  receive({...opening,raceId:'intro-next'});
+  assert.equal(nodes['race-intro'].open,true);
+  receive({...opening,raceId:'intro-next',countdown:1});
+  assert.equal(nodes['race-intro'].open,false,'Controls return before server countdown ends');
   receive({ type: 'state', raceId:'r1', cars: race.cars, self: 1, track: 'serra', phase: 'racing', laps: 3, elapsed: 0 });
   receive({type:'record',raceId:'r1',id:'r1:lap2',stage:'race',track:'serra',previous:47000,milliseconds:45000,improvement:2000,circuit:true,summary:{previous:47000,milliseconds:45000}});
   assert.match(nodes['online-improvement'].textContent,/2\.000 s/);
