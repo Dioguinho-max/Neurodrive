@@ -3,6 +3,20 @@
   const get = (id) => document.getElementById(id);
   const updateHUD = window.createRaceHUD(get);
   const updateSignals = window.createRaceSignals(get);
+  const recordNotice = window.createNeuroRecordNotice?.(get);
+  let recordSummaries = {};
+  function renderImprovement() {
+    const stage = latest?.stage === 'waiting' ? 'qualifying' : latest?.stage || 'race';
+    const summary = recordSummaries[stage];
+    get('online-improvement').hidden = !latest || (!summary && latest.phase !== 'finished' && latest.stage !== 'waiting');
+    get('online-improvement').textContent = summary ? (window.NeuroAchievements?.improvement(summary.previous, summary.milliseconds) || '') : 'Sem novo recorde competitivo confirmado nesta sessão.';
+  }
+  function receiveRecord(message) {
+    if (!latest || message.raceId !== latest.raceId) return;
+    recordNotice?.show(message);
+    if (message.summary) recordSummaries[message.stage] = message.summary;
+    renderImprovement();
+  }
   let socket, self, room, latest, renderer, trackId, ready = false;
   let prediction, rtt = 0, playerPosition = 1;
   let frames = 0, fps = 0, measuredAt = performance.now();
@@ -24,6 +38,7 @@
     if (!get('online-lobby').open) get('online-lobby').showModal();
   }
   function resetRoom() {
+    recordNotice?.clear(); recordSummaries = {}; get('online-improvement').hidden = true;
     get('neuro-race').setAttribute('data-ceremony', 'false');
     renderer?.setCeremony?.(null); ceremonyElapsed = null; ceremonyPrevious = null;
     finalRanking = []; get('online-podium').hidden = true; get('online-grid').hidden = true;
@@ -58,6 +73,7 @@
         const message = JSON.parse(event.data);
         if (message.type === 'auth') {
           self = message.id; get('online-connect').hidden = true; resetRoom(); say(`Conectado como ${message.name}. Crie uma sala ou informe o código.`);
+        } else if (message.type === 'record') { receiveRecord(message);
         } else if (message.type === 'pong') {
           const measured = Math.max(0, performance.now() - message.time);
           rtt = rtt ? rtt * 0.7 + measured * 0.3 : measured;
@@ -80,7 +96,11 @@
             if (message.stage === 'race') { get('online-lobby').close(); get('online-grid').hidden = true; }
           }
           if (!latest) { get('online-lobby').close(); audio?.unlock(); get('online-back').hidden = false; get('online-ready').disabled = true; get('online-start').disabled = true; }
-          latest = message; motion.push(message, performance.now());
+          latest = message;
+          if (message.recordSummary) recordSummaries[message.stage === 'waiting' ? 'qualifying' : message.stage || 'race'] = message.recordSummary;
+          if (message.recordNotice) receiveRecord(message.recordNotice);
+          renderImprovement();
+          motion.push(message, performance.now());
           if (trackId !== message.track) {
             renderer?.dispose(); trackId = message.track;
             try { renderer = window.createNeuroTrack3D((id) => get('np-' + id), { track: window.createNeuroTrack(trackId), racePresentation: true, showNames: false, quality: get('online-quality').value || 'performance', speedEffects: !window.matchMedia('(prefers-reduced-motion: reduce)').matches }); }
@@ -201,6 +221,7 @@
   }, 16);
   setInterval(() => { if (socket?.readyState === WebSocket.OPEN && self) send({ type: 'ping', time: performance.now() }); }, 1000);
   function draw() {
+    recordNotice?.update();
     const now = performance.now();
     frames++;
     if (now - measuredAt >= 1000) { fps = Math.round(frames * 1000 / (now - measuredAt)); frames = 0; measuredAt = now; }

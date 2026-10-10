@@ -48,6 +48,20 @@ CREATE TABLE IF NOT EXISTS neurodrive.lap_records (
 CREATE INDEX IF NOT EXISTS lap_records_ranking ON neurodrive.lap_records(track,season,milliseconds,achieved,player_id);
 ALTER TABLE neurodrive.record_seasons ENABLE ROW LEVEL SECURITY;
 ALTER TABLE neurodrive.lap_records ENABLE ROW LEVEL SECURITY;
+CREATE TABLE IF NOT EXISTS neurodrive.achievements (
+  player_id BIGINT NOT NULL REFERENCES neurodrive.players(id) ON DELETE CASCADE,
+  code TEXT NOT NULL CHECK(code IN ('first_win','first_podium','record_holder')),
+  achieved BIGINT NOT NULL, track TEXT, season TEXT,
+  PRIMARY KEY(player_id,code)
+);
+ALTER TABLE neurodrive.achievements ENABLE ROW LEVEL SECURITY;
+-- Existing results have reliable dates for wins/podiums, but not past circuit leaders.
+INSERT INTO neurodrive.achievements(player_id,code,achieved)
+SELECT player_id,'first_win',min(finished) FROM neurodrive.results WHERE place=1 GROUP BY player_id
+ON CONFLICT DO NOTHING;
+INSERT INTO neurodrive.achievements(player_id,code,achieved)
+SELECT player_id,'first_podium',min(finished) FROM neurodrive.results WHERE place BETWEEN 1 AND 3 GROUP BY player_id
+ON CONFLICT DO NOTHING;
 ALTER TABLE neurodrive.players ENABLE ROW LEVEL SECURITY;
 ALTER TABLE neurodrive.inventory ENABLE ROW LEVEL SECURITY;
 ALTER TABLE neurodrive.sessions ENABLE ROW LEVEL SECURITY;

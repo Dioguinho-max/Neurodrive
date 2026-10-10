@@ -28,7 +28,7 @@ function avatar(value) {
 }
 function publicPilot(player) {
   return { username: player.username, nickname: player.nickname || player.username, number: player.number ?? 0,
-    avatar: player.avatar || null, equipped: player.equipped, stats: player.stats, bestLaps: player.bestLaps || [] };
+    avatar: player.avatar || null, equipped: player.equipped, stats: player.stats, bestLaps: player.bestLaps || [], achievements: player.achievements || [] };
 }
 function storage(env = process.env, request = fetch) {
   const root = env.SUPABASE_URL?.replace(/\/$/, ''), key = env.SUPABASE_SERVICE_ROLE_KEY;

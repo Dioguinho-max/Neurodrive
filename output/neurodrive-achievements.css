@@ -1,0 +1,22 @@
+.pilot-medals { display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin:16px 0; }
+.pilot-medal { padding:14px 10px;border:1px solid #b8c7d129;border-radius:12px;background:#ffffff05; }
+.pilot-medal>span { display:block;font-size:30px; }
+.pilot-medal strong,.pilot-medal small { display:block;margin-top:6px; }
+.pilot-medal small,.pilot-medal p { color:#b2c4d0;font-size:11px;line-height:1.5; }
+.pilot-medal[data-earned="true"] { border-color:#e7cf7b99;background:#e7cf7b12; }
+.pilot-medal[data-earned="true"] small { color:#f3dc8f; }
+.pilot-medal[data-earned="false"]>span { filter:grayscale(1);opacity:.5; }
+.pilot-achievement-history { list-style:none;padding:0; }
+.pilot-achievement-history li { padding:12px 0;border-bottom:1px solid #ffffff15; }
+.pilot-achievement-history time,.pilot-achievement-history small { display:block;color:#b2c4d0;font-size:12px;margin-top:4px; }
+.record-celebration { position:absolute;z-index:5;left:50%;top:12%;transform:translateX(-50%);width:max-content;max-width:70%;box-sizing:border-box;padding:12px 18px;border:1px solid #8bf0ba77;border-radius:12px;background:#102831ee;color:#e5fff1;text-align:center;pointer-events:none; }
+.record-celebration[hidden] { display:none; }
+.record-celebration strong,.record-celebration span { display:block; }
+.record-celebration span { font-size:12px;margin-top:5px; }
+.record-celebration[data-circuit="true"] { border:2px solid #ead182;background:linear-gradient(125deg,#183d36f5,#40391cf5);box-shadow:0 0 28px #ffdf7333;animation:record-arrival .4s ease-out; }
+.record-celebration[data-circuit="true"] strong { color:#ffe7a0;letter-spacing:.08em; }
+.session-improvement { padding:12px;border-left:3px solid #8bf0ba;background:#8bf0ba12;font-variant-numeric:tabular-nums; }
+@keyframes record-arrival { from { opacity:0;transform:translate(-50%,-12px); } to { opacity:1;transform:translate(-50%,0); } }
+@media(max-width:600px) { .pilot-medals { grid-template-columns:1fr; } }
+@media(pointer:coarse),(max-width:900px) { .record-celebration { top:43%;max-width:80%;padding:9px 12px;font-size:12px; } }
+@media(prefers-reduced-motion:reduce) { .record-celebration[data-circuit="true"] { animation:none; } }

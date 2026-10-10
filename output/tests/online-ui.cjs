@@ -19,6 +19,7 @@ const documentMock = { hidden: false, getElementById: (id) => { assert(nodes[id]
 let socket;
 class Socket { static OPEN = 1; constructor() { socket = this; this.readyState = 1; this.sent = []; } send(data) { this.sent.push(JSON.parse(data)); } }
 for (const file of ['neuro-pista-track.js', 'neurodrive-race-engine.js', 'neurodrive-hud.js', 'neurodrive-online-buffer.js', 'neurodrive-prediction.js']) new Function('window', read(file))(windowMock);
+new Function('window','document',read('neurodrive-achievements.js'))(windowMock,documentMock);
 new Function('window', 'document', 'WebSocket', 'fetch', 'performance', 'setInterval', 'requestAnimationFrame', read('online.js'))(
   windowMock, documentMock, Socket, async (url) => ({ ok: true, async json() { return url.endsWith('/config') ? { online: true, websocketUrl: 'ws://test' } : { ticket: 'test' }; } }),
   { now: () => now }, (fn, ms) => intervals.set(ms, fn), (fn) => { frame = fn; },
@@ -29,7 +30,12 @@ new Function('window', 'document', 'WebSocket', 'fetch', 'performance', 'setInte
   receive({ type: 'auth', id: '1', name: 'test' });
   const race = windowMock.createNeuroRace(windowMock.createNeuroTrack('serra'));
   for (let i = 0; i < 180; i++) race.step();
-  receive({ type: 'state', cars: race.cars, self: 1, track: 'serra', phase: 'racing', laps: 3, elapsed: 0 });
+  receive({ type: 'state', raceId:'r1', cars: race.cars, self: 1, track: 'serra', phase: 'racing', laps: 3, elapsed: 0 });
+  receive({type:'record',raceId:'r1',id:'r1:lap2',stage:'race',track:'serra',previous:47000,milliseconds:45000,improvement:2000,circuit:true,summary:{previous:47000,milliseconds:45000}});
+  assert.match(nodes['online-improvement'].textContent,/2\.000 s/);
+  assert.equal(nodes['record-celebration'].hidden,false);
+  receive({type:'record',raceId:'old',id:'old:lap2',stage:'race',summary:{previous:47000,milliseconds:1000}});
+  assert.match(nodes['online-improvement'].textContent,/2\.000 s/,'Old room cannot overwrite result');
   assert.equal(nodes['online-lobby'].open, false);
   assert.equal(nodes['online-ready'].hidden, true, 'Pronto não aparece durante corrida');
   assert.equal(nodes['online-start'].hidden, true, 'Largar não aparece após largada');

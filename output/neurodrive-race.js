@@ -86,6 +86,7 @@
     else showResults();
   };
   const career = window.createNeuroCareer();
+  let sessionBestBefore = career.records[track.id] ?? null;
   let championship = null;
   let recordNoticeUntil = 0;
   const announcedLaps = new Map();
@@ -165,6 +166,7 @@
     get('race-results-note').textContent = race.qualifying
       ? 'A melhor volta válida de cada piloto define a ordem da largada. Pilotos sem tempo ficam no fim do grid.'
       : 'Resultado ao encerrar a prova do jogador. Quem ainda estava em pista é ordenado pelo progresso e não recebe um tempo de chegada.';
+    get('race-results-improvement').textContent = window.NeuroAchievements?.improvement(sessionBestBefore === null ? null : Math.round(sessionBestBefore * 1000), race.cars[0].bestLap === null ? null : Math.round(race.cars[0].bestLap * 1000)) || '';
     get('race-results-rows').innerHTML = get('race-ranking').innerHTML;
     get('race-results-table').hidden = !race.qualifying;
     get('race-podium').hidden = race.qualifying;
@@ -348,6 +350,7 @@
   }
 
   function startSession(qualifying) {
+    sessionBestBefore = career.records[track.id] ?? null;
     resultsReturnRemaining = null;
     resultsReturnScheduled = false;
     get('race-results-return').hidden = true;

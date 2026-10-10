@@ -15,7 +15,17 @@ function attachOnline(server, { origin, store, tickMs = 1000 / 60 }) {
       if (entry.pending || Date.now() < (entry.retryAt || 0)) continue;
       entry.pending = true;
       const record = entry.record;
-      Promise.resolve().then(() => store.saveRecord(entry.id, record)).then(() => {
+      Promise.resolve().then(() => store.saveRecord(entry.id, record)).then(result => {
+        const peer=users.get(String(entry.id));
+        if(result && peer?.room?.raceId===record.raceId){
+          const room=peer.room,key=`${entry.id}:${record.stage}`;
+          const prior=room.recordSummaries.get(key);
+          const summary={previous:prior?prior.previous:result.previous,milliseconds:result.milliseconds};
+          room.recordSummaries.set(key,summary);
+          const notice={...result,id:record.eventId,raceId:record.raceId,stage:record.stage};
+          room.recordNotices.set(String(entry.id),notice);
+          send(peer,{type:'record',...notice,summary});
+        }
         if (entry.record === record) recordQueue.delete(key);
       }).catch(() => { entry.retryAt = Date.now() + 5000; }).finally(() => { entry.pending = false; });
     }
@@ -50,7 +60,8 @@ function attachOnline(server, { origin, store, tickMs = 1000 / 60 }) {
     const race = room.race;
     const cars = race.cars.map((car) => ({ ...car, checkpointTimes: undefined, accountId: undefined, recordLap: undefined,
       reward: room.rewards.get(car.id)?.amount, rewardPending: room.stage === 'race' && car.done && car.finishTime !== null && !car.disconnected && car.player && !room.rewards.get(car.id)?.saved }));
-    for (const peer of room.peers) send(peer, { type: 'state', cars, stage: room.stage, grid: room.grid,
+    for (const peer of room.peers) send(peer, { type: 'state', cars, stage: room.stage, grid: room.grid, raceId:room.raceId,
+      recordNotice:room.recordNotices.get(String(peer.id)),recordSummary:room.recordSummaries.get(`${peer.id}:${room.stage==='waiting'?'qualifying':room.stage}`),
       waiting: room.stage === 'waiting' ? Math.ceil(room.waitTicks / 60) : 0,
       phase: room.stage === 'waiting' ? 'waiting' : race.phase, countdown: race.countdown,
       startLights: race.startLights, mode: room.mode, elapsed: race.elapsed, laps: race.laps, track: room.track, self: peer.carId });
@@ -64,6 +75,7 @@ function attachOnline(server, { origin, store, tickMs = 1000 / 60 }) {
     room.race = engine.createNeuroRace(engine.createNeuroTrack(room.track), 'normal', { online: true, humans: peers.map((_, i) => i + 1), session: 'qualifying', pitStart: true });
     room.rewards = new Map();
     room.recordSeen = new Map();
+    room.recordSummaries = new Map(); room.recordNotices = new Map();
     peers.forEach((peer, index) => {
       peer.carId = index + 1;
       const car = room.race.cars[index];
@@ -93,7 +105,7 @@ function attachOnline(server, { origin, store, tickMs = 1000 / 60 }) {
       for (const car of room.race.cars) {
         if (!store.saveRecord || !car.player || car.disconnected || !car.recordLap || room.recordSeen.get(car.id) === car.recordLap) continue;
         room.recordSeen.set(car.id, car.recordLap);
-        const record = { track: room.track, milliseconds: car.recordLap.milliseconds, achieved: Date.now(), skin: car.skin?.id || 'original' };
+        const record = { track: room.track, milliseconds: car.recordLap.milliseconds, achieved: Date.now(), skin: car.skin?.id || 'original', raceId:room.raceId,stage:room.stage,eventId:`${room.raceId}:${room.stage}:${car.id}:${car.recordLap.lap}` };
         const key = `${car.accountId}:${room.track}`, queued = recordQueue.get(key);
         if (!queued) recordQueue.set(key, { id: car.accountId, record, pending: false });
         else if (record.milliseconds < queued.record.milliseconds) queued.record = record;

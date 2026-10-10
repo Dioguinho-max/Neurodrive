@@ -55,7 +55,15 @@ O box do jogador também conta com dois chefes de equipe em estações de comput
 
 ## Controles
 
-### Mural de recordes
+### Conquistas e apresentação
+
+O perfil exibe medalhas de **Primeira vitória**, **Primeiro pódio** e **Recordista**, com histórico e datas. Vitórias e pódios anteriores são recuperados dos resultados salvos. Recordista passa a contar com esta atualização: exige uma marca estritamente melhor que a liderança da temporada (ou a primeira marca do circuito). Empatar não concede essa medalha. A medalha permanece mesmo depois de perder a liderança.
+
+Recordes pessoais do solo continuam com aviso de dez segundos. No online, a confirmação vem do banco: aviso discreto para melhoria pessoal, destaque dourado para recorde do circuito, sem pausar ou bloquear os controles. Avisos repetidos nos snapshots não reaparecem. A tela de resultados compara o tempo com a marca anterior à sessão; no online, apenas melhorias competitivas confirmadas entram na comparação. Classificação e corrida têm comparações separadas. Uma primeira marca aparece como tal, sem inventar um tempo anterior.
+
+Publique frontend e backend juntos. A tabela de conquistas e a recuperação do histórico são aplicadas na inicialização do backend; nenhuma nova variável de ambiente é necessária. No servidor local, vitórias e pódios vêm do banco SQLite; a medalha Recordista depende do mural online. Em caso de reinício antes da gravação de um recorde pendente, o aviso e a conquista podem não ser registrados.
+
+### Ranking por circuito
 
 A aba **Recordes** reúne as melhores voltas competitivas por circuito, temporada e histórico. Mostra o piloto líder, foto, pintura da conquista e data, além da sua posição e diferença para o líder. Há uma marca por conta, paginação e acesso ao perfil pelo nick. Recordes solo do navegador aparecem separados.
 

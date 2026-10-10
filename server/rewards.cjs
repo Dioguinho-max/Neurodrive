@@ -11,6 +11,12 @@ module.exports = function createRewards(db, now = Date.now) {
     claimed INTEGER, reward INTEGER, place INTEGER
   ); CREATE INDEX IF NOT EXISTS races_player ON races(player_id);`);
   return {
+    achievements(id) {
+      return ['first_win','first_podium'].flatMap(code => {
+        const row=db.prepare(`SELECT min(claimed) AS achieved FROM races WHERE player_id=? AND claimed IS NOT NULL AND ${code==='first_win'?'place=1':'place BETWEEN 1 AND 3'}`).get(id);
+        return row.achieved===null?[]:[{code,achieved:row.achieved,track:null,season:null}];
+      }).sort((a,b)=>a.achieved-b.achieved);
+    },
     stats(id) {
       return db.prepare('SELECT COUNT(*) AS races, COALESCE(SUM(place=1),0) AS wins, COALESCE(SUM(place<=3),0) AS podiums, NULL AS poles FROM races WHERE player_id=? AND claimed IS NOT NULL').get(id);
     },

@@ -9,9 +9,17 @@ function filters(params) {
 }
 async function save(pool,id,record) {
   if (!tracks.includes(record.track) || !Number.isInteger(record.milliseconds) || record.milliseconds<1000 || record.milliseconds>1800000) throw new Error('Invalid server lap');
+  // Caller holds a transaction. Serialize leader comparison and save within this season.
+  await pool.query('SELECT id FROM neurodrive.record_seasons WHERE id=$1 FOR UPDATE',[CURRENT]);
+  const previous=(await pool.query('SELECT milliseconds FROM neurodrive.lap_records WHERE season=$1 AND track=$2 AND player_id=$3',[CURRENT,record.track,id])).rows[0]?.milliseconds ?? null;
+  if(previous!==null && record.milliseconds>=previous)return null;
+  const leader=(await pool.query('SELECT min(milliseconds) AS time FROM neurodrive.lap_records WHERE season=$1 AND track=$2',[CURRENT,record.track])).rows[0]?.time ?? null;
   await pool.query(`INSERT INTO neurodrive.lap_records(season,track,player_id,milliseconds,achieved,skin) VALUES($1,$2,$3,$4,$5,$6)
     ON CONFLICT(season,track,player_id) DO UPDATE SET milliseconds=EXCLUDED.milliseconds,achieved=EXCLUDED.achieved,skin=EXCLUDED.skin
     WHERE EXCLUDED.milliseconds < neurodrive.lap_records.milliseconds`,[CURRENT,record.track,id,record.milliseconds,record.achieved,record.skin]);
+  const circuit = leader===null || record.milliseconds<leader;
+  if(circuit)await pool.query("INSERT INTO neurodrive.achievements(player_id,code,achieved,track,season) VALUES($1,'record_holder',$2,$3,$4) ON CONFLICT DO NOTHING",[id,record.achieved,record.track,CURRENT]);
+  return { previous, milliseconds:record.milliseconds, improvement:previous===null?null:previous-record.milliseconds, circuit, track:record.track, season:CURRENT };
 }
 async function board(pool,id,{track,season,offset}) {
   const seasons=(await pool.query('SELECT id,name FROM neurodrive.record_seasons ORDER BY id DESC')).rows;

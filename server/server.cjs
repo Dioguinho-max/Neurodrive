@@ -45,7 +45,7 @@ function createApp({ database = path.join(__dirname, 'data', 'neurodrive.sqlite'
   function profile(id) {
     const player = statement('SELECT id, username, nickname, driver_number, avatar, coins, equipped, last_bonus FROM players WHERE id=?', id);
     const owned = db.prepare('SELECT skin FROM inventory WHERE player_id=?').all(id).map((row) => row.skin);
-    return { username: player.username, nickname: player.nickname || player.username, number: player.driver_number, avatar: player.avatar, bestLaps: [], coins: player.coins, equipped: player.equipped, owned, stats: rewards.stats(id),
+    return { username: player.username, nickname: player.nickname || player.username, number: player.driver_number, avatar: player.avatar, bestLaps: [], coins: player.coins, equipped: player.equipped, owned, stats: rewards.stats(id), achievements: rewards.achievements(id),
       nextBonusAt: player.last_bonus ? player.last_bonus + DAY : 0 };
   }
   function token(req) {

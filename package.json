@@ -14,7 +14,7 @@
     "test:cloud": "node output/tests/cloud.cjs",
     "test:records": "node output/tests/record-laps.cjs && node output/tests/records.cjs",
     "test:online": "node output/tests/prediction.cjs && node output/tests/online-ui.cjs && node output/tests/online-buffer.cjs && node output/tests/online-stages.cjs",
-    "test:ui": "node output/tests/race-ui.cjs && node output/tests/gamepad.cjs"
+    "test:ui": "node output/tests/race-ui.cjs && node output/tests/gamepad.cjs && node output/tests/achievements.cjs"
   },
   "dependencies": {
     "pg": "^8.23.1",

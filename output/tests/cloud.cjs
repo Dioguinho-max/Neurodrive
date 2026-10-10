@@ -38,6 +38,12 @@ function messages(ws) {
   let server, a, b, inputs;
   try {
     await store.init(); await store.init();
+    const legacy = await store.create('legacy_pilot', 'hash', 'salt');
+    await pool.query('INSERT INTO neurodrive.results(id,player_id,reward,place,finished) VALUES($1,$2,0,1,123456)', ['legacy',legacy.id]);
+    await store.init(); await store.init();
+    const history=(await store.profile(legacy.id)).achievements;
+    assert.equal(history.length,2);assert(history.every(item=>item.achieved===123456));
+    assert(!history.some(item=>item.code==='record_holder'),'Do not infer old circuit records');
     server = createCloudServer({ store, frontendOrigin: 'https://game.example', backendOrigin: 'https://api.example' });
     server.listen(0, '127.0.0.1'); await once(server, 'listening');
     const base = `http://127.0.0.1:${server.address().port}`;
@@ -63,6 +69,10 @@ function messages(ws) {
     assert.equal(publicProfile.owned, undefined);
     assert.equal(publicProfile.coins, undefined);
     const cb = (await api('register', { username: 'player_two', password: 'SenhaSegura_456' })).cookie;
+    const recordOne=(await store.find('player_one')).id,recordTwo=(await store.find('player_two')).id;
+    const contenders=await Promise.all([recordOne,recordTwo].map(playerId=>store.saveRecord(playerId,{track:'veloz',milliseconds:40000,achieved:Date.now(),skin:'original'})));
+    assert.equal(contenders.filter(item=>item.circuit).length,1,'Equal concurrent times produce one circuit celebration');
+    assert.equal(await store.saveRecord(recordOne,{track:'veloz',milliseconds:40000,achieved:Date.now(),skin:'original'}),null,'Retry cannot duplicate celebration');
     assert.equal((await api('register', { username: 'PLAYER_ONE', password: 'SenhaSegura_123' })).status, 409);
     assert.equal((await api('buy', { skin: 'rubi' }, ca, 'https://bad.example')).status, 403);
     assert.equal((await api('equip', { skin: 'ouro' }, ca)).status, 403);
@@ -75,6 +85,9 @@ function messages(ws) {
     assert.deepEqual(awards, [110, 110]);
     assert.equal((await store.profile(id)).coins, 410);
     assert.equal((await store.profile(id)).stats.races, 1);
+    const medalsBefore=(await store.profile(id)).achievements;
+    assert.equal(medalsBefore.filter(item=>item.code==='first_win').length,1);
+    assert.equal(medalsBefore.filter(item=>item.code==='first_podium').length,1);
     const cup = await Promise.all([store.award(id, 'cup-one', 3, 1, 'tournament'), store.award(id, 'cup-one', 3, 1, 'tournament')]);
     assert.deepEqual(cup, [200, 200], 'Premiação do torneio deve ser idempotente');
     assert.equal((await store.profile(id)).coins, 610);

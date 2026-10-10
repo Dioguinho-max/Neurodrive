@@ -6,11 +6,14 @@
   <link rel="stylesheet" href="neuro-pista.css"><link rel="stylesheet" href="neurodrive-race.css"><link rel="stylesheet" href="online.css">
   <script src="vendor/three.min.js" defer></script><script src="neurodrive-podium.js" defer></script><link rel="stylesheet" href="neurodrive-podium.css"><script src="neuro-pista-track.js" defer></script>
   <script src="neurodrive-race-engine.js" defer></script><script src="neurodrive-prediction.js" defer></script>
-  <script src="neuro-pista-3d.js" defer></script><script src="neurodrive-audio.js?v=engine-only-2" defer></script><link rel="stylesheet" href="neurodrive-hud.css"><script src="neurodrive-hud.js" defer></script><script src="neurodrive-gamepad.js" defer></script><link rel="stylesheet" href="neurodrive-gamepad.css"><script src="neurodrive-online-buffer.js" defer></script><script src="online.js" defer></script>
+  <script src="neuro-pista-3d.js" defer></script><script src="neurodrive-audio.js?v=engine-only-2" defer></script><link rel="stylesheet" href="neurodrive-hud.css"><script src="neurodrive-hud.js" defer></script><script src="neurodrive-gamepad.js" defer></script><link rel="stylesheet" href="neurodrive-gamepad.css"><script src="neurodrive-online-buffer.js" defer></script>
   <link rel="stylesheet" href="neurodrive-menu.css?v=menus-2">
   <link rel="stylesheet" href="neurodrive-mobile.css">
+  <script src="neurodrive-achievements.js" defer></script><link rel="stylesheet" href="neurodrive-achievements.css">
+  <script src="online.js" defer></script>
 </head>
 <body><main id="neuro-race">
+  <aside id="record-celebration" class="record-celebration" role="status" aria-live="polite" hidden><strong id="record-celebration-title"></strong><span id="record-celebration-detail"></span></aside>
   <div class="race-stage"><canvas id="np-track-3d" aria-label="Corrida online 3D"></canvas><div id="race-banner" role="status"></div></div>
   <header class="viz-row game-toolbar"><div class="game-brand">NEURO<span>DRIVE ONLINE</span> <small class="beta-badge">BETA</small></div><button class="btn" id="online-menu">Sala (Esc)</button></header>
       <aside class="drive-hud" aria-label="Painel de pilotagem" id="online-hud" hidden>
@@ -72,7 +75,7 @@
       <p>WASD ou setas para dirigir. Q/E para trocar no manual. R reposiciona. Esc abre a sala.</p>
     </details>
     <div id="online-podium" hidden></div><section id="online-grid" hidden><h2 id="online-grid-title">Grid</h2><ol id="online-grid-rows"></ol></section>
-    <p id="online-reward" role="status"></p>
+    <p id="online-reward" role="status"></p><p id="online-improvement" class="session-improvement" hidden></p>
     <button class="btn" id="online-back" hidden>Voltar à pista</button>
   </dialog>
 </main></body></html>

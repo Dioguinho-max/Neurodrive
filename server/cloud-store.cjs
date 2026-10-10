@@ -15,7 +15,7 @@ function createPool(env = process.env) {
 class CloudStore {
   constructor(pool) { this.pool = pool; }
   async init() { await this.pool.query(fs.readFileSync(path.join(__dirname, 'cloud-schema.sql'), 'utf8')); }
-  async saveRecord(id, record) { return require('./records.cjs').save(this.pool, id, record); }
+  async saveRecord(id, record) { return this.transaction(db => require('./records.cjs').save(db, id, record)); }
   async records(id, filters) { return require('./records.cjs').board(this.pool, id, filters); }
   async transaction(fn) {
     const client = await this.pool.connect();
@@ -39,8 +39,9 @@ class CloudStore {
     const owned = (await this.pool.query('SELECT skin FROM neurodrive.inventory WHERE player_id=$1', [id])).rows.map((row) => row.skin);
     const stats = (await this.pool.query('SELECT count(*)::int AS races, count(*) FILTER(WHERE place=1)::int AS wins, count(*) FILTER(WHERE place<=3)::int AS podiums, count(*) FILTER(WHERE pole)::int AS poles FROM neurodrive.results WHERE player_id=$1', [id])).rows[0];
     const bestLaps = (await this.pool.query('SELECT track, min(best_lap) AS time FROM neurodrive.results WHERE player_id=$1 AND best_lap>0 AND track IS NOT NULL GROUP BY track', [id])).rows;
+    const achievements = (await this.pool.query('SELECT code,achieved,track,season FROM neurodrive.achievements WHERE player_id=$1 ORDER BY achieved,code', [id])).rows.map(row => ({ ...row, achieved: Number(row.achieved) }));
     return { username: player.username, nickname: player.nickname || player.username, number: player.driver_number, avatar: player.avatar, coins: player.coins, equipped: player.equipped, owned, stats, bestLaps,
-      nextBonusAt: Number(player.last_bonus) ? Number(player.last_bonus) + 86400000 : 0 };
+      achievements, nextBonusAt: Number(player.last_bonus) ? Number(player.last_bonus) + 86400000 : 0 };
   }
   async updatePilot(id, data) {
     await this.pool.query('UPDATE neurodrive.players SET nickname=$1,driver_number=$2 WHERE id=$3', [data.nickname, data.number, id]);
@@ -98,6 +99,9 @@ class CloudStore {
       const reward = Math.max(0, Math.min(200, 50 + 20 * laps + podiumBonus, 500 - paid));
       await db.query('INSERT INTO neurodrive.results(id,player_id,reward,place,finished,track,best_lap,pole) VALUES($1,$2,$3,$4,$5,$6,$7,$8)', [raceId, id, reward, place, now, performance.track || null, Number.isFinite(performance.bestLap) && performance.bestLap > 0 ? performance.bestLap : null, performance.pole === true]);
       await db.query('UPDATE neurodrive.players SET coins=coins+$1 WHERE id=$2', [reward, id]);
+      for (const code of [place === 1 && 'first_win', place >= 1 && place <= 3 && 'first_podium'].filter(Boolean)) {
+        await db.query('INSERT INTO neurodrive.achievements(player_id,code,achieved,track) VALUES($1,$2,$3,$4) ON CONFLICT DO NOTHING', [id,code,now,performance.track||null]);
+      }
       return reward;
     });
   }

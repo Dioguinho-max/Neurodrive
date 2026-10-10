@@ -27,7 +27,7 @@ function inbox(ws) {
   const online = attachOnline(server, { origin: 'http://test', store: {
     profile: async id => ({ username: `Pilot_${id}`, equipped: 'original' }),
     award: async (...args) => { awards.push(args); return 70; },
-    saveRecord: async (...args) => { records.push(args); },
+    saveRecord: async (...args) => { records.push(args); return {previous:47000,milliseconds:45000,improvement:2000,circuit:true,track:'serra',season:'beta-1'}; },
   } });
   let a, b;
   try {
@@ -55,6 +55,9 @@ function inbox(ws) {
     await new Promise(resolve=>setImmediate(resolve));
     assert.equal(records.length,1,'Clean qualifying lap saved once');
     assert.equal(records[0][1].milliseconds,45000);
+    const notice=await a.next(message=>message.type==='record');
+    assert.equal(notice.summary.previous,47000);assert.equal(notice.summary.milliseconds,45000);
+    assert.equal(notice.circuit,true);assert.equal(notice.stage,'qualifying');
     b.ws.close(); await once(b.ws, 'close'); await new Promise(resolve => setImmediate(resolve));
     for (let i = 0; i < 603; i++) { tick(); if (i % 15 === 0) await new Promise(resolve => setImmediate(resolve)); }
     const race = await a.next(m => m.stage === 'race');

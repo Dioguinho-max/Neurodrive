@@ -12,6 +12,7 @@
     <script src="neurodrive-race-engine.js" defer></script>
     <script src="neurodrive-audio.js?v=engine-only-2" defer></script>
     <script src="neurodrive-profile.js" defer></script>
+    <script src="neurodrive-achievements.js" defer></script><link rel="stylesheet" href="neurodrive-achievements.css">
     <script src="neurodrive-records.js" defer></script>
     <link rel="stylesheet" href="neurodrive-records.css">
     <script src="neurodrive-garage.js" defer></script>
@@ -193,6 +194,8 @@
                 <div class="pilot-stats"><div><strong id="pilot-races">0</strong><span>Corridas</span></div><div><strong id="pilot-wins">0</strong><span>Vitórias</span></div><div><strong id="pilot-podiums">0</strong><span>Pódios</span></div><div><strong id="pilot-poles">—</strong><span>Poles</span></div></div>
                 <p class="text-small">Resultados salvos na conta. Poles e voltas online passam a contar nas corridas concluídas após esta atualização.</p>
                 <h4>Minhas melhores voltas online</h4><ul id="pilot-laps" class="pilot-laps"></ul>
+                <h4>Minhas medalhas</h4><div id="pilot-medals" class="pilot-medals"></div>
+                <details><summary>Histórico de conquistas</summary><ul id="pilot-achievement-history" class="pilot-achievement-history"></ul><p class="text-small">Vitórias e pódios anteriores usam as datas salvas. Recordista começa nesta atualização e permanece mesmo se sua marca for superada.</p></details>
               </section>
               <details class="pilot-editor"><summary>Editar meu piloto</summary>
                 <form id="pilot-form"><fieldset id="pilot-fields"><label class="form-label">Nick do piloto<input id="pilot-nickname" required minlength="3" maxlength="24" autocomplete="nickname"></label><label class="form-label">Número do carro<input id="pilot-number" type="number" min="0" max="99" step="1" required></label><p class="text-small">O nome usado para entrar na conta continua o mesmo. O número identifica seu perfil; não é exclusivo.</p><button class="btn btn-primary" type="submit">Salvar piloto</button></fieldset></form>
@@ -238,6 +241,7 @@
         <p class="race-results-eyebrow" id="race-results-stage"></p>
         <h2 id="race-results-title">Resultados</h2>
         <p id="race-results-note"></p>
+        <p id="race-results-improvement" class="session-improvement"></p>
         <p id="race-results-return" class="text-small" hidden></p>
         <p id="race-reward" role="status"></p>
         <button class="btn" id="race-reward-retry" hidden>Tentar resgatar recompensa</button>

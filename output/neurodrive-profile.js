@@ -52,6 +52,11 @@
         const title=document.createElement('h4'); title.textContent=`#${String(pilot.number).padStart(2,'0')} · ${pilot.nickname}`;
         const info=document.createElement('p'); info.textContent=`@${pilot.username} · ${pilot.stats.races} corridas · ${pilot.stats.wins} vitórias · ${pilot.stats.podiums ?? 0} pódios · ${pilot.stats.poles ?? '—'} poles`;
         box.append(title,info);
+        if (window.NeuroAchievements) {
+          const medals=document.createElement('div'),history=document.createElement('ul');
+          medals.className='pilot-medals';history.className='pilot-achievement-history';
+          window.NeuroAchievements.render(medals,history,pilot.achievements||[]);box.append(medals,history);
+        }
         const car = preview(pilot.equipped); if (car) box.append(car);
         for (const [id,name] of Object.entries(tracks)) { const row=document.createElement('p'); row.textContent=`${name}: ${lap(pilot.bestLaps.find(item=>item.track===id)?.time)}`; box.append(row); }
         box.hidden=false; say('Perfil carregado.');
@@ -70,6 +75,7 @@
       else get('pilot-photo').removeAttribute('src');
       get('pilot-initials').textContent=(next.nickname || next.username).slice(0,2).toUpperCase();
       if (!busy) { get('pilot-nickname').value=next.nickname || next.username; get('pilot-number').value=next.number ?? 0; }
+      window.NeuroAchievements?.render(get('pilot-medals'),get('pilot-achievement-history'),next.achievements||[]);
       for (const key of ['races','wins','podiums','poles']) get('pilot-'+key).textContent=next.stats?.[key] ?? '—';
       const skin=skins.find(item=>item.id===next.equipped); get('pilot-car-name').textContent='Pintura equipada · '+(skin?.name || 'Original');
       const car=preview(next.equipped); get('pilot-car').replaceChildren(); if (car) get('pilot-car').append(car);
