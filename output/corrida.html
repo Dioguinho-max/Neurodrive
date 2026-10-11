@@ -26,6 +26,7 @@
 <link rel="stylesheet" href="neurodrive-weather.css">
 <link rel="stylesheet" href="neurodrive-i18n.css"><script src="neurodrive-i18n.js" defer></script>
 <link rel="stylesheet" href="neurodrive-account.css"><script src="neurodrive-account.js" defer></script>
+<link rel="stylesheet" href="neurodrive-forecast.css">
 </head>
   <body><div id="weather-rain" class="weather-rain" aria-hidden="true"></div>
     <main id="neuro-race">
@@ -257,7 +258,7 @@
           <a class="menu-lab" href="neuro-pista.html">Explorar o Laboratório de IA ↗</a>
         </div>
       </dialog>
-      <dialog id="race-intro" class="race-intro" aria-labelledby="race-intro-title"><div><p id="race-intro-stage"></p><h2 id="race-intro-title"></h2><p>Seu próximo desafio começa aqui.</p></div><button class="btn" id="race-intro-skip">Pular apresentação →</button></dialog>
+      <dialog id="race-intro" class="race-intro" aria-labelledby="race-intro-title"><div class="intro-circuit"><p id="race-intro-stage"></p><h2 id="race-intro-title"></h2><p>Seu próximo desafio começa aqui.</p></div><aside id="intro-forecast" class="intro-forecast" hidden data-weather="dry" aria-labelledby="intro-forecast-title"><div class="intro-forecast-heading"><h3 id="intro-forecast-title">Previsão do tempo</h3><span>FIM DE SEMANA</span></div><section id="intro-forecast-qualifying" class="intro-forecast-session" data-current="false"><svg class="intro-weather-icon" viewBox="0 0 48 48" aria-hidden="true"><g class="forecast-sun"><circle cx="18" cy="17" r="7"/><path d="M18 4v3m0 20v3M5 17h3m20 0h3M9 8l2 2m14 14 2 2M9 26l2-2M25 10l2-2"/></g><path class="forecast-cloud" d="M13 33h23a7 7 0 0 0 0-14 10 10 0 0 0-19-2 8 8 0 0 0-4 16Z"/><path class="forecast-rain" d="m18 38-2 4m10-4-2 4m10-4-2 4"/></svg><div><div class="intro-forecast-label"><span>Classificação</span><small id="intro-forecast-qualifying-now" hidden>ESTA SESSÃO</small></div><strong id="intro-forecast-qualifying-condition">Tempo seco</strong><p id="intro-forecast-qualifying-detail">Tempo firme do início ao fim.</p></div></section><section id="intro-forecast-race" class="intro-forecast-session" data-current="false"><svg class="intro-weather-icon" viewBox="0 0 48 48" aria-hidden="true"><g class="forecast-sun"><circle cx="18" cy="17" r="7"/><path d="M18 4v3m0 20v3M5 17h3m20 0h3M9 8l2 2m14 14 2 2M9 26l2-2M25 10l2-2"/></g><path class="forecast-cloud" d="M13 33h23a7 7 0 0 0 0-14 10 10 0 0 0-19-2 8 8 0 0 0-4 16Z"/><path class="forecast-rain" d="m18 38-2 4m10-4-2 4m10-4-2 4"/></svg><div><div class="intro-forecast-label"><span>Corrida</span><small id="intro-forecast-race-now" hidden>ESTA SESSÃO</small></div><strong id="intro-forecast-race-condition">Tempo seco</strong><p id="intro-forecast-race-detail">Tempo firme do início ao fim.</p></div></section><p id="intro-forecast-tyres" class="intro-forecast-tyres">Largada: pneus de seco</p></aside><button class="btn" id="race-intro-skip">Pular apresentação →</button></dialog>
       <dialog id="race-results" class="race-results" aria-labelledby="race-results-title">
         <p class="race-results-eyebrow" id="race-results-stage"></p>
         <h2 id="race-results-title">Resultados</h2>

@@ -112,12 +112,16 @@
             catch { renderer = null; say('Não foi possível iniciar WebGL.'); menu(); send({ type: 'leave' }); }
           }
           const player = latest.cars.find((car) => car.id === latest.self);
-          const introKey = `${latest.raceId}:${latest.stage}`;
+          const introKey = `${latest.raceId}:${latest.stage === 'waiting' ? 'race' : latest.stage}`;
           const safeIntro = latest.phase === 'countdown' && latest.countdown > 1
+            || latest.stage === 'waiting'
             || latest.stage === 'qualifying' && player.pitExit && !player.done;
-          if (introSession !== introKey) {
+          const startIntro = latest.stage === 'waiting' ? latest.waiting <= 8 && latest.waiting >= 7
+            : safeIntro;
+          if (introSession !== introKey && startIntro && renderer && !document.hidden) {
             intro?.finish(); introSession = introKey; introPrevious = null;
-            if (safeIntro && renderer && !document.hidden) intro?.start(window.createNeuroTrack(trackId), latest.stage === 'qualifying');
+            get('online-lobby').close();
+            intro?.start(window.createNeuroTrack(trackId), latest.stage === 'qualifying', player.weatherMode || room?.weather || 'dry');
           }
           if (!safeIntro && intro?.active) intro.finish();
           document.querySelectorAll('.race-shift').forEach((button) => { button.hidden = !player.manual; });

@@ -2,6 +2,12 @@
 (() => {
   'use strict';
   const dictionary = {
+    'Previsão do tempo':'Weather forecast', 'FIM DE SEMANA':'RACE WEEKEND', 'ESTA SESSÃO':'THIS SESSION',
+    'Classificação':'Qualifying', 'Corrida':'Race', 'Tempo seco':'Dry weather', 'Tempo variável':'Changeable weather', 'Tempo chuvoso':'Rainy weather',
+    'Tempo firme do início ao fim.':'Dry conditions throughout the session.',
+    'Chuva desde o início da sessão.':'Rain from the start of the session.',
+    'Início seco · chuva gradual · pista secando.':'Dry start · rain building · track drying.',
+    'Largada: pneus de seco':'Starting tires: dry', 'Largada: pneus de chuva':'Starting tires: wet',
     'Visão geral':'Overview', 'Conquistas':'Achievements', 'Editar perfil':'Edit profile', 'Segurança':'Security',
     'Painel da conta':'Account dashboard', 'Perfil do piloto':'Driver profile', 'Pintura equipada':'Equipped livery',
     'MINHA CARTEIRA':'MY WALLET', 'Sobre meus resultados':'About my results', 'Sobre minhas conquistas':'About my achievements',

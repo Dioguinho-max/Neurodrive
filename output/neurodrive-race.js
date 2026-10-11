@@ -385,7 +385,7 @@
     get('race-pause').textContent = 'Pausar (P)';
     get('race-pause').disabled = false;
     get('race-recover').disabled = false;
-    intro?.start(track, qualifying);
+    intro?.start(track, qualifying, race.cars[0].weatherMode);
     refresh();
   }
   get('race-start').onclick = () => startSession(true);

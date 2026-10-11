@@ -83,6 +83,12 @@ new Function('window', 'document', 'WebSocket', 'fetch', 'performance', 'setInte
   assert.equal(nodes['online-lobby'].open, true);
   assert.equal(nodes['online-grid'].hidden, false);
   assert.match(nodes['online-grid-title'].textContent, /10 s/);
+  receive({ type: 'state', stage: 'waiting', grid, waiting: 8, cars: qualifying.cars, self: 1, track: 'serra', phase: 'waiting', laps: 3, elapsed: 100 });
+  assert.equal(nodes['race-intro'].open, true, 'Race flyover uses the waiting interval');
+  assert.equal(nodes['online-lobby'].open, false);
+  nodes['race-intro-skip'].onclick();
+  receive({ type: 'state', stage: 'waiting', grid, waiting: 7, cars: qualifying.cars, self: 1, track: 'serra', phase: 'waiting', laps: 3, elapsed: 100 });
+  assert.equal(nodes['race-intro'].open, false, 'Waiting snapshots do not replay a skipped intro');
   receive({ type: 'state', stage: 'race', cars: race.cars, self: 1, track: 'serra', phase: 'countdown', laps: 5, elapsed: 0 });
   assert.equal(nodes['online-lobby'].open, false);
   assert.equal(nodes['online-grid'].hidden, true);

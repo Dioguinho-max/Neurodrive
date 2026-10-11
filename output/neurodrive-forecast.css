@@ -1,0 +1,53 @@
+
+/* Two-shot broadcast: establish the circuit, then introduce the weather. */
+.race-intro { --intro-gutter: clamp(20px, 5vw, 64px); }
+body:has(#race-intro[open]) :is(.game-toolbar, #race-session) { visibility: hidden; }
+.race-intro #race-intro-skip { position: absolute; right: var(--intro-gutter); bottom: 24px; z-index: 2; }
+.race-intro > .intro-circuit { max-width: calc(100% - 160px); }
+.race-intro[data-shot="flyby"] > .intro-circuit { position: absolute; top: 28px; left: var(--intro-gutter); border-left: 3px solid #9af0c6; padding-left: 18px; }
+.race-intro[data-shot="flyby"] .intro-circuit h2 { font-size: clamp(26px, 3vw, 40px); margin: 6px 0; }
+.race-intro[data-shot="flyby"] .intro-circuit p { margin: 4px 0; font-size: 10px; }
+.race-intro[data-shot="flyby"] .intro-circuit > p:last-child { display: none; }
+.intro-forecast[hidden] { display: none !important; }
+.intro-forecast { position: absolute; left: var(--intro-gutter); bottom: 90px; width: min(780px, calc(100% - 2 * var(--intro-gutter))); box-sizing: border-box; display: grid; grid-template-columns: 1fr 1fr; overflow: hidden; border: 1px solid #a2c6cd40; border-radius: 4px 20px 4px 4px; background: linear-gradient(110deg,#0b1c29fa,#16343aef); box-shadow: 0 18px 48px #0005; color: #eff8fc; animation: forecast-reveal .55s ease-out both; }
+.intro-forecast-heading { grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 13px 24px; background: #9af0c6; color: #0c3029; }
+.intro-forecast-heading h3 { margin: 0; font-size: 12px; text-transform: uppercase; letter-spacing: .18em; }
+.intro-forecast-heading > span { font-size: 9px; letter-spacing: .15em; }
+.intro-forecast-session { display: grid; grid-template-columns: 60px minmax(0,1fr); align-items: center; gap: 16px; padding: 24px; }
+.intro-forecast-session + .intro-forecast-session { border-left: 1px solid #b5e8e326; }
+.intro-forecast-session[data-current="true"] { background: #8ff1c109; }
+.intro-forecast-label { display: flex; align-items: center; justify-content: space-between; gap: 6px; color: #bbd3dc; font-size: 11px; }
+.intro-forecast-label small { font-size: 7px; color: #b5fbd4; letter-spacing: .08em; }
+.intro-forecast-session strong { display: block; margin-top: 8px; font-size: clamp(18px,2vw,23px); letter-spacing: -.025em; line-height: 1.15; }
+.race-intro .intro-forecast-session p { margin: 8px 0 0; color: #a6c1ce; font-size: 11px; line-height: 1.6; letter-spacing: 0; }
+.intro-weather-icon { width: 44px; height: 44px; fill: none; stroke-linecap: round; stroke-linejoin: round; stroke-width: 2; }
+.intro-weather-icon .forecast-sun { stroke: #f5ce77; }
+.intro-weather-icon .forecast-cloud { fill: #294758; stroke: #bddeeb; }
+.intro-weather-icon .forecast-rain { stroke: #6ac1f2; }
+[data-weather="dry"] :is(.forecast-cloud,.forecast-rain), [data-weather="rain"] .forecast-sun { display: none; }
+.race-intro .intro-forecast-tyres { margin: 14px 0 0; padding-top: 12px; border-top: 1px solid #abc8d122; font-size: 11px; letter-spacing: 0; color: #b8f0d4; }
+
+.intro-weather-icon { width: 60px; height: 60px; }
+.race-intro .intro-forecast-tyres { grid-column: 1 / -1; margin: 0; padding: 12px 24px; background: #07121a70; border-top: 1px solid #abc8d122; }
+@keyframes forecast-reveal { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
+@media(max-width:600px) {
+ .intro-forecast { grid-template-columns: 1fr; bottom: 88px; }
+ .intro-forecast-session { padding: 16px 20px; grid-template-columns: 48px minmax(0,1fr); }
+ .intro-forecast-session + .intro-forecast-session { border-left: 0; border-top: 1px solid #b5e8e326; }
+ .intro-weather-icon { width: 48px; height: 48px; }
+ .intro-forecast-heading { padding: 12px 20px; }
+ .intro-forecast-heading > span { display: none; }
+ .race-intro[data-shot="overview"] > .intro-circuit { max-width: 100%; margin-bottom: 70px; }
+}
+@media(max-height:550px) and (orientation:landscape) {
+ .race-intro[data-shot="flyby"] > .intro-circuit { top: 18px; }
+ .intro-forecast { width: min(690px,calc(100% - 2 * var(--intro-gutter))); bottom: 72px; }
+ .intro-forecast-heading { padding: 9px 16px; }
+ .intro-forecast-session { grid-template-columns: 40px minmax(0,1fr); padding: 12px 16px; gap: 10px; }
+ .intro-weather-icon { width: 40px; height: 40px; }
+ .intro-forecast-session strong { font-size: 18px; margin-top: 4px; }
+ .race-intro .intro-forecast-session p { margin-top: 4px; font-size: 10px; }
+ .race-intro .intro-forecast-tyres { padding: 8px 16px; }
+ .race-intro #race-intro-skip { bottom: 14px; min-height: 40px; padding: 9px 16px; }
+}
+@media(prefers-reduced-motion:reduce) { .intro-forecast { animation: none; } }

@@ -903,7 +903,7 @@
 
     let finishCameraAt = null;
     let ceremony = null;
-    let introProgress = null;
+    let introProgress = null, introDistance = 0;
     function render() {
       const width = canvas.clientWidth;
       const height = canvas.clientHeight;
@@ -937,7 +937,7 @@
       const desiredFov = introProgress !== null ? 45 : raceCamera ? 56 + speedRatio * 22 : 45;
       // A tomada aérea não precisa enxergar objetos a centímetros da lente.
       // Um near maior preserva a precisão entre asfalto, terreno e marcações.
-      const near = introProgress !== null && introProgress < .68 ? 10 : .5;
+      const near = introProgress !== null && introProgress < .3 ? 10 : .5;
       if (camera.near !== near) {
         camera.near = near; camera.far = 5000; camera.updateProjectionMatrix();
       }
@@ -948,9 +948,9 @@
       }
       if (introProgress !== null && car) {
         // Primeiro mostra o traçado inteiro; o carro só entra no segundo plano.
-        const close = clamp((introProgress - .68) / .32, 0, 1);
+        const close = clamp((introProgress - .3) / .7, 0, 1);
         const t = close * close * (3 - 2 * close);
-        if (introProgress < .68) {
+        if (introProgress < .3) {
           const bounds = track.bounds;
           const cx = (bounds.minX + bounds.maxX) / 2, cz = (bounds.minY + bounds.maxY) / 2;
           const radius = Math.hypot(bounds.maxX - bounds.minX, bounds.maxY - bounds.minY) / 2 + track.halfWidth + 40;
@@ -963,20 +963,14 @@
           const height = track.heightAt(cx, cz);
           camera.position.set(cx + Math.cos(angle) * distance * .38, height + distance * .925, cz + Math.sin(angle) * distance * .38);
           camera.lookAt(cx, height, cz);
-        } else if (car.pitExit || car.pitState) {
-          const nearest = track.nearest(car.x, car.y);
-          const tangent = Math.atan2(nearest.ty, nearest.tx);
-          const distance = 40 + (1 - t) * 25;
-          const x = car.x + Math.cos(tangent) * 8 + Math.sin(tangent) * distance;
-          const z = car.y + Math.sin(tangent) * 8 - Math.cos(tangent) * distance;
-          camera.position.set(x, Math.max(track.heightAt(x, z) + 5, track.heightAt(car.x, car.y) + 8), z);
-          camera.lookAt(car.x, track.heightAt(car.x, car.y) + 3, car.y);
         } else {
-        const angle = car.angle + .7 + (1 - t) * .7;
-        const radius = 45 + (1 - t) * 210;
-        const x = car.x - Math.cos(angle) * radius, z = car.y - Math.sin(angle) * radius;
-        camera.position.set(x, Math.max(track.heightAt(x, z) + 18, track.heightAt(car.x, car.y) + 24 + (1 - t) * 140), z);
-        camera.lookAt(car.x, track.heightAt(car.x, car.y) + 3, car.y);
+          // Constant-speed dolly above the road; look ahead through the curve.
+          const distance = introDistance + close * Math.min(180, track.length * .12);
+          const eye = track.pointAt(distance, 0);
+          const target = track.pointAt(distance + 85, 0);
+          const height = Math.max(track.heightAt(eye.x, eye.y), track.heightAt(target.x, target.y));
+          camera.position.set(eye.x, height + 48, eye.y);
+          camera.lookAt(target.x, track.heightAt(target.x, target.y) + 5, target.y);
         }
       } else if (ceremony) {
         const close = clamp((ceremony.time - 4) / 3, 0, 1);
@@ -1119,7 +1113,10 @@
     return {
       setQuality,
       setFinishCamera(active) { finishCameraAt = active ? Date.now() : null; },
-      setIntro(progress) { introProgress = progress; },
+      setIntro(progress) {
+        if (progress !== null && introProgress === null) introDistance = track.length * (.2 + Math.random() * .6);
+        introProgress = progress;
+      },
       setCeremony(ranking, milliseconds = 0) {
         if (!ranking) { ceremony?.podium.dispose(); ceremony = null; return; }
         if (!window.createNeuroPodiumScene) return;

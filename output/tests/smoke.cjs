@@ -79,6 +79,15 @@ for (const width of [1100, 390]) {
   }
   canvas.clientWidth = oldWidth;
 }
+endingRenderer.setIntro(.4);
+endingRenderer.update([finisher], finisher, false);
+const flybyStart = ending.render().camera.position.clone();
+endingRenderer.setIntro(.8);
+endingRenderer.update([finisher], finisher, false);
+const flybyEnd = ending.render().camera.position;
+assert(flybyEnd.distanceTo(flybyStart) > 10, 'Flyover moves along the track');
+assert(flybyEnd.y > ending.track.heightAt(flybyEnd.x, flybyEnd.z) + 40, 'Flyover clears the terrain');
+assert([flybyEnd.x, flybyEnd.y, flybyEnd.z].every(Number.isFinite));
 endingRenderer.setIntro(null);
 endingRenderer.update([finisher], finisher, false);
 assert.equal(ending.render().camera.near, .5, 'Pilotagem restaura a visão de objetos próximos');
