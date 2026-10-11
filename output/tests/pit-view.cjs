@@ -26,7 +26,7 @@ for (const config of host.NeuroTracks) {
   const car = race.cars[0];
   renderer.update(race.cars, car, false);
   scene.updateMatrixWorld(true); camera.updateMatrixWorld(true);
-  assert.equal(scene.children.filter(object => object.userData.pitEngineer).length, 2, 'Dois chefes nas estações de telemetria');
+  assert.equal(scene.children.filter(object => object.userData.pitEngineer).length, 12, 'Dois chefes em cada um dos seis boxes');
   const paved = (distance, lane) => {
     const point = track.pointAt(distance, lane);
     const down = new THREE.Raycaster(new THREE.Vector3(point.x, track.heightAt(point.x, point.y) + 1, point.y), new THREE.Vector3(0, -1, 0), 0, 2);

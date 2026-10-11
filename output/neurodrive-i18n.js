@@ -2,6 +2,12 @@
 (() => {
   'use strict';
   const dictionary = {
+    'Visão geral':'Overview', 'Conquistas':'Achievements', 'Editar perfil':'Edit profile', 'Segurança':'Security',
+    'Painel da conta':'Account dashboard', 'Perfil do piloto':'Driver profile', 'Pintura equipada':'Equipped livery',
+    'MINHA CARTEIRA':'MY WALLET', 'Sobre meus resultados':'About my results', 'Sobre minhas conquistas':'About my achievements',
+    'Identidade do piloto':'Driver identity', 'Escolher imagem':'Choose image', 'Conta conectada':'Signed-in account',
+    'Alteração de senha disponível nas contas online.':'Password changes are available for online accounts.',
+    'Seu progresso permanece salvo na conta.':'Your progress stays saved to your account.',
     'Jogar':'Play', 'Piloto':'Driver', 'Garagem':'Garage', 'Ajustes':'Settings', 'Recordes':'Records',
     'Idioma':'Language', 'Configurações':'Settings', 'DO SEU JEITO':'YOUR WAY', 'Menu (Esc)':'Menu (Esc)',
     'Continuar sessão':'Resume session', 'Nova disputa':'New event', 'Voltar aos resultados':'Back to results',

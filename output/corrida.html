@@ -25,6 +25,7 @@
   <link rel="stylesheet" href="neurodrive-home.css">
 <link rel="stylesheet" href="neurodrive-weather.css">
 <link rel="stylesheet" href="neurodrive-i18n.css"><script src="neurodrive-i18n.js" defer></script>
+<link rel="stylesheet" href="neurodrive-account.css"><script src="neurodrive-account.js" defer></script>
 </head>
   <body><div id="weather-rain" class="weather-rain" aria-hidden="true"></div>
     <main id="neuro-race">
@@ -172,8 +173,8 @@
             <h3 id="garage-title">Sua conta de piloto</h3>
             <p id="garage-status" role="status" aria-live="polite">Conectando à garagem…</p>
             <div id="garage-login-screen">
-            <p class="text-small">Seu piloto, suas pinturas, suas conquistas.</p>
-            <div class="garage-actions"><button class="btn" id="auth-login-mode" aria-pressed="true">Entrar</button><button class="btn" id="auth-register-mode" aria-pressed="false">Criar conta</button></div>
+            <div id="garage-auth-intro"><p class="text-small">Seu piloto, suas pinturas, suas conquistas.</p>
+            <div class="garage-actions"><button class="btn" id="auth-login-mode" aria-pressed="true">Entrar</button><button class="btn" id="auth-register-mode" aria-pressed="false">Criar conta</button></div></div>
             <form id="garage-auth">
               <fieldset id="garage-auth-fields">
                 <label class="form-label">Nome de piloto
@@ -188,29 +189,43 @@
               </fieldset>
             </form>
             <div id="garage-account" hidden>
-              <section class="pilot-card" aria-label="Perfil do piloto">
+              <header class="pilot-card account-hero" aria-label="Perfil do piloto">
                 <div class="pilot-hero">
                   <div class="pilot-portrait"><img id="pilot-photo" alt="Foto do piloto" hidden><span id="pilot-initials" aria-hidden="true">ND</span><b id="pilot-badge">#00</b></div>
                   <div><p class="menu-eyebrow">MEU PILOTO</p><h3 id="pilot-title"></h3><p id="pilot-handle"></p><p id="pilot-car-name"></p></div>
                 </div>
                 <div id="pilot-car" class="pilot-car" aria-label="Pintura equipada"></div>
-                <div class="pilot-stats"><div><strong id="pilot-races">0</strong><span>Corridas</span></div><div><strong id="pilot-wins">0</strong><span>Vitórias</span></div><div><strong id="pilot-podiums">0</strong><span>Pódios</span></div><div><strong id="pilot-poles">—</strong><span>Poles</span></div></div>
-                <p class="text-small">Resultados salvos na conta. Poles e voltas online passam a contar nas corridas concluídas após esta atualização.</p>
-                <h4>Minhas melhores voltas online</h4><ul id="pilot-laps" class="pilot-laps"></ul>
-                <h4>Minhas medalhas</h4><div id="pilot-medals" class="pilot-medals"></div>
-                <details><summary>Histórico de conquistas</summary><ul id="pilot-achievement-history" class="pilot-achievement-history"></ul><p class="text-small">Vitórias e pódios anteriores usam as datas salvas. Recordista começa nesta atualização e permanece mesmo se sua marca for superada.</p></details>
-              </section>
-              <details class="pilot-editor"><summary>Editar meu piloto</summary>
-                <form id="pilot-form"><fieldset id="pilot-fields"><label class="form-label">Nick do piloto<input id="pilot-nickname" required minlength="3" maxlength="24" autocomplete="nickname"></label><label class="form-label">Número do carro<input id="pilot-number" type="number" min="0" max="99" step="1" required></label><p class="text-small">O nome usado para entrar na conta continua o mesmo. O número identifica seu perfil; não é exclusivo.</p><button class="btn btn-primary" type="submit">Salvar piloto</button></fieldset></form>
-                <div class="pilot-photo-editor"><label class="form-label">Foto do perfil<input id="pilot-file" type="file" accept="image/jpeg,image/png,image/webp"></label><p class="text-small">Escolha uma foto de até 5 MB. Ajuste o corte quadrado e confirme. Sua foto aparecerá no perfil público.</p>
-                <div id="pilot-crop" hidden><canvas id="pilot-canvas" width="256" height="256" aria-label="Prévia do corte da foto"></canvas><label class="form-label">Zoom<input id="pilot-zoom" type="range" min="1" max="3" step="0.05" value="1"></label><label class="form-label">Horizontal<input id="pilot-x" type="range" min="0" max="100" value="50"></label><label class="form-label">Vertical<input id="pilot-y" type="range" min="0" max="100" value="50"></label><div class="garage-actions"><button class="btn btn-primary" id="pilot-upload" type="button">Usar esta foto</button><button class="btn" id="pilot-cancel-photo" type="button">Cancelar</button></div></div>
-                <button class="btn" id="pilot-remove-photo" type="button">Remover foto</button></div>
-              </details>
+              </header>
+              <div class="account-tabs" role="tablist" aria-label="Painel da conta">
+                <button type="button" class="btn" id="account-tab-overview" role="tab" aria-selected="true" aria-controls="account-overview" tabindex="0">Visão geral</button>
+                <button type="button" class="btn" id="account-tab-achievements" role="tab" aria-selected="false" aria-controls="account-achievements" tabindex="-1">Conquistas</button>
+                <button type="button" class="btn" id="account-tab-edit" role="tab" aria-selected="false" aria-controls="account-edit" tabindex="-1">Editar perfil</button>
+                <button type="button" class="btn" id="account-tab-security" role="tab" aria-selected="false" aria-controls="account-security" tabindex="-1">Segurança</button>
+              </div>
               <p id="pilot-status" role="status" aria-live="polite"></p>
-              <details class="pilot-search"><summary>Visitar outro piloto</summary><form id="pilot-search-form"><label class="form-label">Nome da conta<input id="pilot-search-name" required minlength="3" maxlength="20" placeholder="Nome usado no login"></label><button class="btn" type="submit" id="pilot-search-button">Ver perfil</button></form><div id="pilot-visitor" hidden></div></details>
-              <p class="garage-identity"><strong id="garage-name"></strong> · <strong id="garage-balance"></strong> moedas</p>
-              <p id="garage-stats" class="text-small"></p><div class="garage-actions"><button class="btn" id="garage-bonus">Resgatar bônus de 100 moedas</button><button class="btn" id="garage-logout">Sair da conta</button></div>
-              <p class="text-small" id="garage-bonus-note"></p>
+              <section id="account-overview" class="account-section" role="tabpanel" aria-labelledby="account-tab-overview" tabindex="0">
+                <div class="pilot-stats"><div><strong id="pilot-races">0</strong><span>Corridas</span></div><div><strong id="pilot-wins">0</strong><span>Vitórias</span></div><div><strong id="pilot-podiums">0</strong><span>Pódios</span></div><div><strong id="pilot-poles">—</strong><span>Poles</span></div></div>
+                <div class="account-overview-grid">
+                  <section class="account-wallet"><p class="menu-eyebrow">MINHA CARTEIRA</p><p class="account-balance"><strong id="garage-balance">0</strong><span>moedas</span></p><button class="btn" id="garage-bonus">Resgatar bônus de 100 moedas</button><p class="text-small" id="garage-bonus-note"></p></section>
+                  <section class="account-times"><h4>Minhas melhores voltas online</h4><ul id="pilot-laps" class="pilot-laps"></ul><details class="account-help"><summary>Sobre meus resultados</summary><p class="text-small">Resultados salvos na conta. Poles e voltas online passam a contar nas corridas concluídas após esta atualização.</p></details></section>
+                </div>
+                <details class="pilot-search"><summary>Visitar outro piloto</summary><form id="pilot-search-form"><label class="form-label">Nome da conta<input id="pilot-search-name" required minlength="3" maxlength="20" placeholder="Nome usado no login"></label><button class="btn" type="submit" id="pilot-search-button">Ver perfil</button></form><div id="pilot-visitor" hidden></div></details>
+              </section>
+              <section id="account-achievements" class="account-section" role="tabpanel" aria-labelledby="account-tab-achievements" tabindex="0" hidden>
+                <h4>Minhas medalhas</h4><div id="pilot-medals" class="pilot-medals"></div>
+                <details class="account-history" open><summary>Histórico de conquistas</summary><ul id="pilot-achievement-history" class="pilot-achievement-history"></ul></details><details class="account-help"><summary>Sobre minhas conquistas</summary><p class="text-small">Vitórias e pódios anteriores usam as datas salvas. Recordista começa nesta atualização e permanece mesmo se sua marca for superada.</p></details>
+              </section>
+              <section id="account-edit" class="account-section" role="tabpanel" aria-labelledby="account-tab-edit" tabindex="0" hidden>
+              <div class="account-edit-grid"><section class="pilot-editor"><h4>Identidade do piloto</h4>
+                <form id="pilot-form"><fieldset id="pilot-fields"><label class="form-label">Nick do piloto<input id="pilot-nickname" required minlength="3" maxlength="24" autocomplete="nickname"></label><label class="form-label">Número do carro<input id="pilot-number" type="number" min="0" max="99" step="1" required></label><p class="text-small">O nome usado para entrar na conta continua o mesmo. O número identifica seu perfil; não é exclusivo.</p><button class="btn btn-primary" type="submit">Salvar piloto</button></fieldset></form>
+                </section><section class="pilot-photo-editor"><h4>Foto do perfil</h4><label class="form-label">Escolher imagem<input id="pilot-file" type="file" accept="image/jpeg,image/png,image/webp"></label><p class="text-small">Escolha uma foto de até 5 MB. Ajuste o corte quadrado e confirme. Sua foto aparecerá no perfil público.</p>
+                <div id="pilot-crop" hidden><canvas id="pilot-canvas" width="256" height="256" aria-label="Prévia do corte da foto"></canvas><label class="form-label">Zoom<input id="pilot-zoom" type="range" min="1" max="3" step="0.05" value="1"></label><label class="form-label">Horizontal<input id="pilot-x" type="range" min="0" max="100" value="50"></label><label class="form-label">Vertical<input id="pilot-y" type="range" min="0" max="100" value="50"></label><div class="garage-actions"><button class="btn btn-primary" id="pilot-upload" type="button">Usar esta foto</button><button class="btn" id="pilot-cancel-photo" type="button">Cancelar</button></div></div>
+                <button class="btn" id="pilot-remove-photo" type="button">Remover foto</button></section></div>
+              </section>
+              <section id="account-security" class="account-section" role="tabpanel" aria-labelledby="account-tab-security" tabindex="0" hidden>
+              <div class="account-identity"><span>Conta conectada</span><strong id="garage-name" translate="no"></strong></div>
+              <p id="garage-stats" hidden></p>
+              <p id="account-security-note" class="text-small" hidden>Alteração de senha disponível nas contas online.</p>
               <form id="garage-password-form" hidden>
                 <h4>Alterar senha</h4>
                 <label class="form-label">Senha atual<input id="garage-current-password" type="password" autocomplete="current-password" minlength="10" maxlength="128" required></label>
@@ -219,6 +234,8 @@
                 <button class="btn" id="garage-change-password" type="submit">Salvar nova senha</button>
                 <p class="text-small">As outras sessões da conta serão encerradas.</p>
               </form>
+              <div class="account-signout"><p class="text-small">Seu progresso permanece salvo na conta.</p><button class="btn" id="garage-logout">Sair da conta</button></div>
+              </section>
             </div>
             </div>
             <div id="garage-store-screen" hidden>

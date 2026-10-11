@@ -1,0 +1,83 @@
+/* Painel do piloto: resumo primeiro, edição e segurança em espaços próprios. */
+#race-menu[data-page="account"] .home-pilot { display: none; }
+#race-menu[data-page="account"] .menu-content { max-width: none; }
+#race-menu[data-page="account"] #race-menu-status { display: none; }
+#race-menu[data-page="account"] #garage-title { margin: 20px 0 12px; }
+#garage-panel #garage-status { font-size: 12px; color: #b6cbd4; margin: 8px 0 16px; overflow-wrap: anywhere; }
+#garage-panel #garage-status:empty, #garage-account #pilot-status:empty { display: none; }
+#garage-account .account-hero { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 20px; margin: 16px 0; }
+#garage-account .pilot-hero { gap: 18px; min-width: 0; }
+#garage-account .pilot-hero > div:last-child { min-width: 0; }
+#garage-account .pilot-hero h3 { font-size: clamp(22px, 2.5vw, 32px); line-height: 1.15; }
+#garage-account .pilot-hero .menu-eyebrow { margin-top: 0; }
+#garage-account #pilot-car-name { font-size: 12px; line-height: 1.5; }
+#garage-account .pilot-car { flex: 0 0 160px; margin: 0; pointer-events: none; }
+#garage-account .pilot-car svg { width: 100%; height: auto; }
+#garage-account .pilot-car .garage-preview { min-height: 0; }
+#garage-account .pilot-car :is(.garage-preview-controls,.garage-preview-palette) { display: none; }
+.account-tabs { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; padding: 5px; border: 1px solid #91bdb426; border-radius: 12px; background: #101f2a; }
+#garage-account .account-tabs .btn { min-height: 44px; border: 1px solid transparent; background: transparent; padding: 9px 6px; font-size: 12px; border-radius: 8px; }
+#garage-account .account-tabs .btn[aria-selected="true"] { background: #284c43; color: #c2ffe0; border-color: #95eac366; }
+.account-section { padding: 18px 0 0; outline-offset: 4px; }
+.account-section h4 { font-size: 15px; margin: 0 0 14px; }
+#garage-account .pilot-stats { margin: 0 0 16px; gap: 10px; }
+#garage-account .pilot-stats div { padding: 15px 8px; border: 1px solid #84b1ab1f; background: #11222c; }
+#garage-account .pilot-stats span { margin-top: 4px; font-size: 12px; }
+.account-overview-grid { display: grid; grid-template-columns: minmax(0, .85fr) minmax(0, 1.15fr); gap: 16px; }
+.account-wallet, .account-times, .account-edit-grid > section { border: 1px solid #8ba5b02b; border-radius: 12px; padding: 18px; background: #12202b; min-width: 0; }
+.account-wallet { background: linear-gradient(145deg,#29413b,#14262d); }
+.account-wallet .menu-eyebrow { margin: 0; }
+.account-balance { display: flex; align-items: baseline; flex-wrap: wrap; gap: 8px; margin: 12px 0 18px; }
+.account-balance strong { font-size: clamp(23px,3vw,34px); line-height: 1.2; color: #b0f5d1; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.account-balance span { font-size: 12px; color: #b6c8ca; }
+#garage-account #garage-bonus { width: 100%; font-size: 12px; padding: 10px; }
+#garage-account #garage-bonus-note { margin-bottom: 0; overflow-wrap: anywhere; }
+.account-times .pilot-laps { margin: 0 0 12px; }
+.account-times .pilot-laps li { align-items: center; }
+.account-times .pilot-laps strong { white-space: nowrap; font-variant-numeric: tabular-nums; color: #b6edce; }
+.account-help { color: #9fb7c2; font-size: 12px; }
+.account-help summary, .account-history summary { cursor: pointer; padding: 8px 0; }
+#garage-account .pilot-search { margin-top: 16px; border: 1px solid #8ba5b02b; padding: 0 18px; border-radius: 12px; }
+#garage-account .pilot-search summary { display: list-item; padding: 14px 0; min-height: 44px; box-sizing: border-box; font-size: 13px; }
+#pilot-search-form { display: flex; align-items: flex-end; gap: 12px; padding-bottom: 16px; }
+#pilot-search-form .form-label { flex: 1; margin: 8px 0 0; }
+#pilot-visitor { margin-bottom: 16px; }
+#garage-account .pilot-medals { margin: 0 0 18px; }
+.account-history { padding: 12px 18px; background: #12202b; border: 1px solid #8ba5b02b; border-radius: 12px; margin-bottom: 14px; }
+.account-history .pilot-achievement-history { margin: 0; }
+.account-edit-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; align-items: start; }
+#garage-account .pilot-editor, #garage-account .pilot-photo-editor { margin: 0; padding: 18px; }
+#garage-account .form-label { display: grid; gap: 8px; font-size: 13px; }
+#garage-account input { box-sizing: border-box; min-width: 0; }
+#garage-account input[type="file"] { font-size: 12px; padding: 10px 6px; }
+#garage-account input[type="file"]::file-selector-button { background: #28483e; color: #d3ffe6; border: 0; border-radius: 4px; padding: 7px; margin-right: 8px; cursor: pointer; }
+#garage-account #pilot-number { max-width: 120px; }
+#garage-account #pilot-status:not(:empty) { padding: 12px 16px; margin: 12px 0 0; border-left: 3px solid #8bf0ba; background: #8bf0ba0d; border-radius: 4px; min-height: 0; }
+.account-identity { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 10px; padding: 16px; background: #142b2c; border-radius: 10px; }
+.account-identity span { color: #9fbdba; font-size: 13px; }
+.account-identity strong { overflow-wrap: anywhere; }
+#garage-account #garage-password-form { max-width: 520px; margin-top: 22px; }
+.account-signout { margin-top: 24px; border-top: 1px solid #ffffff18; padding-top: 18px; display: flex; justify-content: space-between; align-items: center; gap: 16px; }
+#garage-account #garage-logout { border-color: #d6818155; color: #efbbbb; background: #44272d55; flex-shrink: 0; }
+#garage-login-screen:has(#garage-account[hidden]) { max-width: 500px; padding: 22px; border: 1px solid #8ba5b02b; border-radius: 14px; background: #12202b; }
+@media(min-width:851px) {
+  #race-menu[open][data-page="account"] { grid-template-columns: minmax(180px,.35fr) minmax(0,1.65fr); }
+  #race-menu[data-page="account"] .menu-hero h2 { font-size: clamp(38px,4vw,60px); }
+}
+@media(max-width:850px) {
+  #race-menu[open][data-page="account"] { display: block; }
+  #race-menu[data-page="account"] .menu-hero { position: static; }
+  #race-menu[data-page="account"] .menu-hero .beta-notice { display: none; }
+}
+@media(max-width:650px) {
+  #garage-account .account-hero { padding: 16px; }
+  #garage-account .pilot-car { display: none; }
+  .account-overview-grid, .account-edit-grid { grid-template-columns: 1fr; }
+  #garage-account .pilot-stats { gap: 6px; }
+  #garage-account .pilot-stats div { padding: 12px 4px; }
+  #garage-account .pilot-stats span { font-size: 10px; }
+  #garage-account .account-tabs .btn { font-size: 11px; }
+  .account-wallet, .account-times { padding: 16px; }
+  .account-signout { align-items: flex-start; flex-direction: column; gap: 6px; }
+}
+@media(max-width:370px) { .account-tabs { grid-template-columns: repeat(2,minmax(0,1fr)); } #pilot-search-form { flex-direction: column; align-items: stretch; } }

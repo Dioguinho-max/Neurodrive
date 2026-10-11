@@ -210,6 +210,8 @@
     previewActions();
     pilotPanel?.render(player, skins);
     window.NeuroHome?.update(player, skins);
+    window.NeuroAccount?.setPlayer(player?.username);
+    get('garage-auth-intro').hidden = Boolean(player);
     get('garage-auth').hidden = Boolean(player);
     get('auth-login-mode').hidden = get('auth-register-mode').hidden = Boolean(player);
     get('garage-auth-fields').disabled = busy || !online;
@@ -219,6 +221,7 @@
     get('garage-retry').disabled = busy;
     get('garage-store-login').hidden = Boolean(player);
     get('garage-password-form').hidden = !player || !capabilities.online;
+    get('account-security-note').hidden = !player || capabilities.online;
     get('garage-change-password').disabled = busy;
     get('garage-rewards-info').textContent = `${capabilities.online ? 'Conclua corridas nas salas online' : 'Conclua corridas conectado'}: 50 moedas + 20 por volta, até 200 por corrida e 500 por dia (UTC). Copa Neuro online: bônus de 90, 60 ou 30 moedas para o pódio, dentro dos mesmos limites. A classificação não dá moedas.`;
     get('garage-store-balance').textContent = player ? `Seu saldo: ${player.coins} moedas` : 'Entre na conta para guardar suas compras.';
@@ -360,7 +363,7 @@
   };
   if (window.ResizeObserver) new window.ResizeObserver(() => showroom?.draw()).observe(previewCanvas);
   pilotPanel = window.createNeuroPilot?.({ request, updated: next => { player = next; render(); }, preview: id => { const skin = skins.find(item => item.id === id); return skin ? createSkinPreview(skin, false) : null; } });
-  recordsPanel = window.createNeuroRecords?.({ request, player: () => player, visit: username => { showPage('account'); get('pilot-search-name').value = username; get('pilot-search-form').closest('details').open = true; get('pilot-search-form').requestSubmit(); get('pilot-search-form').scrollIntoView({ block: 'center' }); } });
+  recordsPanel = window.createNeuroRecords?.({ request, player: () => player, visit: username => { showPage('account'); window.NeuroAccount?.show('overview'); get('pilot-search-name').value = username; get('pilot-search-form').closest('details').open = true; get('pilot-search-form').requestSubmit(); get('pilot-search-form').scrollIntoView({ block: 'center' }); } });
   setAuthMode('login');
   connect();
 })();

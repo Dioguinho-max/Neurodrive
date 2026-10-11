@@ -82,7 +82,7 @@ assert(crew?.visible, 'Mecânicos aparecem durante o atendimento');
 assert.equal(crew.children.filter(part => part.userData.tyreAssistant).length, 4, 'Um auxiliar entrega cada roda');
 assert.equal(crew.children.filter(part => part.userData.deliveryWheel && part.visible).length, 4, 'Rodas entregues durante a troca');
 assert(models[0].position.y > groundedPosition.y + .8, 'Macaco levanta o carro');
-const wheels = models[0].children.filter(part => part.isGroup);
+const wheels = models[0].children.filter(part => part.userData.wheelPivot);
 assert.equal(wheels.length, 4);
 for (const pivot of wheels) {
   assert.equal(pivot.children[0].geometry.parameters.radiusTop, 1.65);
