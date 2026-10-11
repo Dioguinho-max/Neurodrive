@@ -52,3 +52,33 @@
 @media (max-width: 600px) {
   .game-toolbar .game-brand { display: none; }
 }
+
+/* Keep pit actions in the middle, outside steering and pedal touch zones. */
+@media (pointer: coarse), (max-width: 900px) {
+  #neuro-race .race-pit-panel {
+    top: var(--mobile-top); left: 50%; right: auto; transform: translateX(-50%);
+    width: min(440px, calc(100% - 328px)); padding: 8px 10px;
+    display: grid; grid-template-columns: minmax(0, 1fr) minmax(90px, .85fr); gap: 5px 8px;
+    z-index: 5;
+  }
+  #neuro-race .race-pit-panel[hidden] { display: none; }
+  #race-tyres { grid-column: 1; font-size: 11px; align-self: center; }
+  #neuro-race .race-pit-panel progress { grid-column: 2; margin: 0; align-self: center; }
+  #neuro-race .race-pit-panel p { grid-column: 1 / -1; margin: 0; font-size: 10px; }
+  .race-pit-panel[data-condition="normal"][data-pit-active="false"] #race-pit-status { display: none; }
+  .race-pit-panel .pit-compound-label { grid-column: 1; font-size: 9px; gap: 2px; }
+  .race-pit-panel .pit-compound-buttons button { min-height: 44px; font-size: 11px; }
+  #neuro-race #race-pit-request { grid-column: 2; align-self: end; min-height: 44px; font-size: 10px; line-height: 1.2; }
+  #race-banner { inset: 48% 22% auto; font-size: clamp(14px, 2.3vw, 22px); }
+}
+@media (max-width: 600px) and (orientation: portrait) {
+  #neuro-race .race-pit-panel { top: calc(env(safe-area-inset-top, 0px) + 160px); width: calc(100% - 32px); }
+}
+.mobile-screen-gate { box-sizing: border-box; width: min(440px, calc(100% - 32px)); max-height: calc(100dvh - 32px); overflow: auto; border: 1px solid #87eac3; border-radius: 18px; background: #0c202c; color: #edf8ff; padding: 24px; }
+.mobile-screen-gate::backdrop { background: #030a12d9; }
+.mobile-screen-gate h2 { font-size: 24px; margin: 0 0 12px; }
+.mobile-screen-gate p { font-size: 14px; line-height: 1.5; color: #b9d0dc; }
+.mobile-screen-gate > div { display: flex; flex-wrap: wrap; gap: 10px; }
+.mobile-screen-gate button { min-height: 48px; flex: 1; }
+.mobile-screen-gate button[hidden] { display: none; }
+html:fullscreen, html:fullscreen body { width: 100%; height: 100%; margin: 0; }

@@ -79,6 +79,7 @@
     const panel = get('race-pit-panel');
     if (panel) {
       panel.hidden = !car.tyreWearEnabled || car.done || phase === 'finished';
+      panel.setAttribute('data-pit-active', String(Boolean(car.pitState || car.pitRequested)));
       const life = Math.ceil((car.tyreLife ?? 1) * 100);
       panel.setAttribute('data-condition', car.tyreBurst ? 'burst' : life <= 10 ? 'critical' : life <= 30 ? 'worn' : 'normal');
       get('race-tyres').textContent = car.tyreBurst ? 'PNEU ESTOURADO' : `${car.tyreCompound === 'wet' ? 'Chuva' : 'Seco'} · ${life}%`;

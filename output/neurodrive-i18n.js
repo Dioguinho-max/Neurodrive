@@ -2,6 +2,10 @@
 (() => {
   'use strict';
   const dictionary = {
+    'Jogue em tela cheia':'Play in fullscreen',
+    'Mais espaço para a pista e os controles.':'More room for the track and controls.',
+    'Entrar em tela cheia':'Enter fullscreen', 'Continuar no navegador':'Continue in browser',
+    'O navegador não permitiu tela cheia. Tente novamente ou continue no navegador.':'The browser did not allow fullscreen. Try again or continue in the browser.',
     'Previsão do tempo':'Weather forecast', 'FIM DE SEMANA':'RACE WEEKEND', 'ESTA SESSÃO':'THIS SESSION',
     'Classificação':'Qualifying', 'Corrida':'Race', 'Tempo seco':'Dry weather', 'Tempo variável':'Changeable weather', 'Tempo chuvoso':'Rainy weather',
     'Tempo firme do início ao fim.':'Dry conditions throughout the session.',
