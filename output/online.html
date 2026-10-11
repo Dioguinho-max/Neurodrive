@@ -6,14 +6,15 @@
   <link rel="stylesheet" href="neuro-pista.css"><link rel="stylesheet" href="neurodrive-race.css"><link rel="stylesheet" href="online.css">
   <script src="vendor/three.min.js" defer></script><script src="neurodrive-podium.js" defer></script><link rel="stylesheet" href="neurodrive-podium.css"><script src="neuro-pista-track.js" defer></script>
   <script src="neurodrive-race-engine.js" defer></script><script src="neurodrive-prediction.js" defer></script>
-  <script src="neuro-pista-3d.js" defer></script><script src="neurodrive-audio.js?v=engine-only-2" defer></script><link rel="stylesheet" href="neurodrive-hud.css"><script src="neurodrive-hud.js" defer></script><script src="neurodrive-gamepad.js" defer></script><link rel="stylesheet" href="neurodrive-gamepad.css"><script src="neurodrive-online-buffer.js" defer></script>
+  <script src="neuro-pista-3d.js" defer></script><script src="neurodrive-audio.js?v=engine-only-2" defer></script><link rel="stylesheet" href="neurodrive-hud.css"><script src="neurodrive-weather.js" defer></script><script src="neurodrive-hud.js" defer></script><script src="neurodrive-gamepad.js" defer></script><link rel="stylesheet" href="neurodrive-gamepad.css"><script src="neurodrive-online-buffer.js" defer></script>
   <link rel="stylesheet" href="neurodrive-menu.css?v=menus-2">
   <link rel="stylesheet" href="neurodrive-mobile.css">
   <script src="neurodrive-achievements.js" defer></script><link rel="stylesheet" href="neurodrive-achievements.css">
   <script src="neurodrive-intro.js" defer></script><script src="online.js" defer></script>
 <link rel="stylesheet" href="neurodrive-home.css">
+<link rel="stylesheet" href="neurodrive-weather.css">
 </head>
-<body><main id="neuro-race">
+<body><div id="weather-rain" class="weather-rain" aria-hidden="true"></div><p id="weather-status" class="weather-status" role="status"></p><main id="neuro-race">
   <aside id="record-celebration" class="record-celebration" role="status" aria-live="polite" hidden><strong id="record-celebration-title"></strong><span id="record-celebration-detail"></span></aside>
   <div class="race-stage"><canvas id="np-track-3d" aria-label="Corrida online 3D"></canvas><div id="race-banner" role="status"></div></div>
   <header class="viz-row game-toolbar"><div class="game-brand">NEURO<span>DRIVE ONLINE</span> <small class="beta-badge">BETA</small></div><button class="btn" id="online-menu">Sala (Esc)</button></header>
@@ -35,7 +36,7 @@
 <strong id="race-tyres">Pneus ? 100%</strong>
 <progress id="race-tyre-life" max="100" value="100" aria-label="Condi??o dos pneus"></progress>
 <p id="race-pit-status" role="status"></p>
-<button class="btn" id="race-pit-request" type="button">Chamar boxes (B)</button>
+<div class="pit-compound-label"><span id="pit-compound-title">Pr&#243;xima troca</span><input id="race-pit-compound" type="hidden" value="dry"><div class="pit-compound-buttons" role="group" aria-labelledby="pit-compound-title"><button id="pit-tyre-dry" type="button" aria-pressed="true">Seco</button><button id="pit-tyre-wet" type="button" aria-pressed="false">Chuva</button></div></div><button class="btn" id="race-pit-request" type="button">Chamar boxes (B)</button>
 </aside>
   <ol id="online-ranking" aria-label="Posições da corrida"></ol>
   <div class="viz-controls race-touch" aria-label="Controles de dire&#231;&#227;o">
@@ -55,7 +56,7 @@
     <p id="online-message" role="status">Entre na conta no menu principal antes de conectar.</p>
     <p id="online-connection">Conexão ainda não medida.</p>
     <button class="btn btn-primary" id="online-connect">Entrar no multiplayer</button>
-    <div id="online-options" hidden>
+    <div id="online-options" hidden><label class="form-label">Clima<select class="form-select" id="online-weather"><option value="dry">Seco</option><option value="rain">Chuva</option><option value="changing">Variável · chuva durante a prova</option></select></label>
       <label class="form-label">Disputa<select class="form-select" id="online-mode"><option value="race">Corrida com amigos</option><option value="tournament">Copa Neuro · torneio de 3 voltas</option></select></label>
       <p class="tournament-rules">Copa Neuro: entrada gratuita, 2–6 jogadores e três voltas. Quem terminar recebe 110 moedas; bônus de pódio: +90 / +60 / +30. Limites: 200 por prova e 500 por dia UTC. Abandono não premia. Saldo validado pelo servidor e salvo na conta.</p>
       <div class="viz-controls"><label class="form-label">Circuito<select class="form-select" id="online-track"><option value="serra">Serra Verde</option><option value="veloz">Autódromo Veloz</option><option value="tecnico">Vale Técnico</option></select></label>

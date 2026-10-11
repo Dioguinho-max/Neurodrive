@@ -62,13 +62,34 @@
       banner.textContent = 'VAI!';
     }
   };
-  window.createRaceHUD = (get) => (car, position, total, laps, elapsed, phase = 'racing') => {
+  window.createRaceHUD = (get) => {
+    const choice = get('race-pit-compound');
+    const tyreButtons = [['dry', get('pit-tyre-dry')], ['wet', get('pit-tyre-wet')]];
+    function syncTyres() {
+      for (const [value, button] of tyreButtons) if (button) {
+        button.disabled = Boolean(choice?.disabled);
+        button.setAttribute('aria-pressed', String((choice?.value || 'dry') === value));
+      }
+    }
+    for (const [value, button] of tyreButtons) if (button) button.onclick = () => {
+      if (!choice || choice.disabled) return;
+      choice.value = value; syncTyres();
+    };
+    return (car, position, total, laps, elapsed, phase = 'racing') => {
     const panel = get('race-pit-panel');
     if (panel) {
       panel.hidden = !car.tyreWearEnabled || car.done || phase === 'finished';
       const life = Math.ceil((car.tyreLife ?? 1) * 100);
       panel.setAttribute('data-condition', car.tyreBurst ? 'burst' : life <= 10 ? 'critical' : life <= 30 ? 'worn' : 'normal');
-      get('race-tyres').textContent = car.tyreBurst ? 'PNEU ESTOURADO' : `Pneus · ${life}%`;
+      get('race-tyres').textContent = car.tyreBurst ? 'PNEU ESTOURADO' : `${car.tyreCompound === 'wet' ? 'Chuva' : 'Seco'} · ${life}%`;
+      const compound = get('race-pit-compound');
+      if (compound) compound.disabled = Boolean(car.pitState || car.pitRequested);
+      syncTyres();
+      const weather = get('weather-status'), rain = get('weather-rain');
+      if (weather) weather.textContent = car.weatherMode && car.weatherMode !== 'dry'
+        ? `${car.rainIntensity ? 'CHUVA' : car.wetness > .05 ? 'SECANDO' : 'TEMPO SECO'} · pista ${Math.round((car.wetness || 0) * 100)}% molhada${car.wetness > .35 && car.tyreCompound !== 'wet' ? ' · Troque para pneus de chuva!' : ''}` : '';
+      if (rain) { rain.style.opacity = String(car.rainIntensity || 0); rain.setAttribute('data-active', String(Boolean(car.rainIntensity))); }
+      window.NeuroWeather?.update(car.rainIntensity, car.speed);
       get('race-tyre-life').value = life;
       get('race-pit-status').textContent = car.pitState === 'service'
         ? `Troca de pneus · ${Math.ceil(car.pitTimer / 60)} s`
@@ -92,5 +113,6 @@
     get('race-position').textContent = `${position} / ${total}`;
     get('race-lap').textContent = `${Math.max(1, Math.min(laps, car.completedLaps + 1))} / ${laps}`;
     get('race-time').textContent = `${Math.floor(elapsed / 60)}:${(elapsed % 60).toFixed(2).padStart(5, '0')}`;
+    };
   };
 })();

@@ -95,6 +95,7 @@
           say('Compartilhe o código com seus amigos.');
         } else if (message.type === 'state') {
           const stageChanged = latest && (message.stage || 'race') !== (latest.stage || 'race');
+          if (!latest || stageChanged) get('race-pit-compound').value = message.cars.find(car => car.id === message.self)?.tyreCompound || 'dry';
           if (stageChanged) {
             motion.clear(); prediction = null; rankingKey = ''; clear();
             if (message.stage === 'race') { get('online-lobby').close(); get('online-grid').hidden = true; }
@@ -183,13 +184,13 @@
   };
   get('online-mode').onchange();
   get('online-create').onclick = () => send({ type: 'create', track: get('online-track').value,
-    mode: get('online-mode').value, laps: Number(get('online-laps').value) });
+    mode: get('online-mode').value, weather: get('online-weather').value, laps: Number(get('online-laps').value) });
   get('online-join').onsubmit = (event) => { event.preventDefault(); send({ type: 'join', code: get('online-code').value.trim().toUpperCase() }); };
   get('online-ready').onclick = () => { audio?.unlock(); send({ type: 'ready', ready: !ready, manual: get('online-manual').checked }); };
   get('online-manual').onchange = () => { if (room) send({ type: 'ready', ready: false, manual: get('online-manual').checked }); };
   get('online-start').onclick = () => send({ type: 'start' });
   get('online-leave').onclick = () => send({ type: 'leave' });
-  get('race-pit-request').onclick = () => send({ type: 'pit' });
+  get('race-pit-request').onclick = () => send({ type: 'pit', compound: get('race-pit-compound').value });
   get('online-recover').onclick = () => send({ type: 'recover' });
   get('online-menu').onclick = menu;
   get('online-back').onclick = () => get('online-lobby').close();
@@ -201,7 +202,7 @@
     if (get('online-lobby').open || ['INPUT', 'SELECT'].includes(event.target.tagName)) return;
     if (actions[event.code]) { event.preventDefault(); keys.add(event.code); }
     if (event.code === 'Escape') menu();
-    if (event.code === 'KeyB' && !event.repeat) send({ type: 'pit' });
+    if (event.code === 'KeyB' && !event.repeat) send({ type: 'pit', compound: get('race-pit-compound').value });
     if (event.code === 'KeyR' && !event.repeat) send({ type: 'recover' });
   });
   window.addEventListener('keyup', (event) => keys.delete(event.code));
@@ -216,7 +217,7 @@
   const gamepad = window.createNeuroGamepad?.({
     menu,
     back: () => { if (intro?.active) intro.finish(); else if (latest && latest.stage !== 'waiting') get('online-lobby').close(); },
-    pit: () => { if (latest && !get('race-pit-request').disabled) send({ type: 'pit' }); },
+    pit: () => { if (latest && !get('race-pit-request').disabled) send({ type: 'pit', compound: get('race-pit-compound').value }); },
     recover: () => { if (!get('online-recover').disabled) send({ type: 'recover' }); },
     disconnect: menu,
   });

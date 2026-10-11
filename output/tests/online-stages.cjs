@@ -38,12 +38,14 @@ function inbox(ws) {
       await next(m => m.type === 'auth'); return { ws, next, send: data => ws.send(JSON.stringify(data)) };
     }
     a = await connect('a'); b = await connect('b');
-    a.send({ type: 'create', track: 'serra', laps: 5 }); const room = await a.next(m => m.type === 'lobby');
+    a.send({ type: 'create', track: 'serra', laps: 5, weather: 'changing' }); const room = await a.next(m => m.type === 'lobby');
+    assert.equal(room.weather, 'changing');
     b.send({ type: 'join', code: room.code }); await b.next(m => m.type === 'lobby');
     a.send({ type: 'ready', ready: true }); b.send({ type: 'ready', ready: true });
     await a.next(m => m.type === 'lobby' && m.players.length === 2 && m.players.every(p => p.ready));
     a.send({ type: 'start' }); const first = await a.next(m => m.type === 'state');
     assert.equal(first.stage, 'qualifying'); assert(first.cars.every(car => car.pitExit));
+    assert(first.cars.every(car => car.weatherMode === 'changing' && car.wetness === 0));
     assert.equal(first.laps, 3); assert(first.cars.every(car => !car.rewardPending));
     races[0].cars.forEach((car, index) => { car.bestLap = 50 - index; car.finishTime = 100; car.done = true; });
     races[0].cars[0].recordLap = {lap:2,milliseconds:45000};
@@ -62,6 +64,7 @@ function inbox(ws) {
     for (let i = 0; i < 603; i++) { tick(); if (i % 15 === 0) await new Promise(resolve => setImmediate(resolve)); }
     const race = await a.next(m => m.stage === 'race');
     assert.equal(race.phase, 'countdown'); assert.equal(race.laps, 5);
+    assert(race.cars.every(car => car.weatherMode === 'changing'), 'Clima da sala continua na corrida');
     assert.equal(race.cars.find(car => car.id === 6).progress, 0, 'Pole usa melhor volta');
     assert.equal(race.cars[0].progress, -150, 'Jogador conserva identidade no novo grid');
     assert(race.cars[1].disconnected && race.cars[1].done, 'DesconexÃ£o nÃ£o reaparece na largada');

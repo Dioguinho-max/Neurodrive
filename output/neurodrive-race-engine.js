@@ -8,8 +8,11 @@
     command.brake || analog(command.braking) > 0 ? -(command.brake ? 1 : analog(command.braking)) : command.accelerate ? 1 : analog(command.throttle),
   ];
   const wrap = (angle) => Math.atan2(Math.sin(angle), Math.cos(angle));
-  const tyreGripFactor = car => !car.tyreWearEnabled ? 1 : car.tyreBurst ? .16
-    : 1 - .5 * Math.pow(1 - clamp(car.tyreLife ?? 1, 0, 1), 1.7);
+  const tyreGripFactor = car => {
+    const wear = !car.tyreWearEnabled ? 1 : car.tyreBurst ? .16 : 1 - .5 * Math.pow(1 - clamp(car.tyreLife ?? 1, 0, 1), 1.7);
+    const wet = clamp(car.wetness || 0, 0, 1);
+    return wear * (car.tyreCompound === 'wet' ? .85 - wet * .13 : 1 - wet * .84);
+  };
 
   // Transmissão automática simplificada: faixas de velocidade e força por marcha.
   const MAX_RACE_SPEED = 205 / 54;
@@ -42,8 +45,10 @@
     }
     const drag = 0.0015 + 0.0006 * (car.speed / 3.2) ** 2;
     car.brake += clamp(Math.max(0, -pedal) - car.brake, -0.08, 0.045);
-    const force = car.brake > 0 ? -car.brake * 0.026
-      : car.shiftTicks || (car.manual && car.limiter) ? 0 : pedal * gearForce[car.gear - 1];
+    const wet = clamp(car.wetness || 0, 0, 1);
+    const traction = car.tyreCompound === 'wet' ? .85 - wet * .13 : 1 - wet * .84;
+    const force = car.brake > 0 ? -car.brake * 0.026 * traction
+      : car.shiftTicks || (car.manual && car.limiter) ? 0 : pedal * gearForce[car.gear - 1] * Math.sqrt(traction);
     car.speed = clamp(car.speed + force - drag, 0, maximumSpeed);
     const targetRpm = clamp(900 + car.speed * 54 / gearLimits[car.gear - 1] * 5900, 900, REV_LIMIT);
     // Embreagem acopla gradualmente após a largada, sem trocar marchas parado.
@@ -93,7 +98,8 @@
     if (car.tyreWearEnabled) {
       car.tyreDistance = (car.tyreDistance || 0) + car.speed;
       car.tyreLife = Math.max(0, (car.tyreLife ?? 1) - car.speed / track.length * .28
-        * (1 + Math.min(1, Math.max(0, car.gripUsage - 1)) * .55 + car.brake * .18 + Number(car.offRoad) * .2));
+        * (1 + Math.min(1, Math.max(0, car.gripUsage - 1)) * .55 + car.brake * .18 + Number(car.offRoad) * .2)
+        * (car.tyreCompound === 'wet' ? 1 + 1.5 * (1 - (car.wetness || 0)) : 1));
       if (car.tyreLife <= 0 && !car.tyreBurst) {
         car.tyreBurst = true;
         car.burstWheel = car.steering >= 0 ? 2 : 3;
@@ -157,6 +163,9 @@
 
   window.createNeuroRace = function createNeuroRace(track, difficulty = 'normal', options = {}) {
     const qualifying = options.session === 'qualifying';
+    const weatherMode = ['dry', 'rain', 'changing'].includes(options.weather) ? options.weather : 'dry';
+    let wetness = weatherMode === 'rain' ? 1 : 0;
+    let rainIntensity = weatherMode === 'rain' ? 1 : 0;
     const pitStart = qualifying && options.pitStart === true;
     const pitRoutes = pitStart ? Array.from({ length: 6 }, (_, index) => track.pit.route(index)) : [];
     const requestedGrid = options.grid || [];
@@ -205,7 +214,7 @@
         gripUsage: 0, sliding: false, offRoad: false, bodyRoll: 0,
         progress: distance - startDistance, checkpoint: 0,
         finishTime: null, place: null, cooldown: 0, stalled: 0, wallContact: false, wallCooldown: 0,
-        tyreWearEnabled: !qualifying && laps >= 5, tyreLife: 1, tyreBurst: false, burstWheel: -1, tyreDistance: 0, pitRequested: false, pitState: null, pitTimer: 0, pitStops: 0,
+        tyreCompound: weatherMode === 'rain' ? 'wet' : 'dry', pitCompound: weatherMode === 'rain' ? 'wet' : 'dry', wetness, rainIntensity, weatherMode, tyreWearEnabled: weatherMode !== 'dry' || !qualifying && laps >= 5, tyreLife: 1, tyreBurst: false, burstWheel: -1, tyreDistance: 0, pitRequested: false, pitState: null, pitTimer: 0, pitStops: 0,
         bestLap: null, lastLap: null, lastLapKind: '', checkpointTimes: [],
         lapStart: 0, completedLaps: 0, invalidLap: false,
         recordLapInvalid: false, recordLapStarted: false, recordLap: null,
@@ -343,9 +352,11 @@
       }
     }
 
-    function requestPit(id) {
+    function requestPit(id, compound) {
       const car = cars.find((candidate) => candidate.id === id);
       if (!car || !car.tyreWearEnabled || car.done || car.pitState || car.cooldown || phase !== 'racing') return false;
+      if (compound !== undefined && !['dry', 'wet'].includes(compound)) return false;
+      car.pitCompound = compound || car.tyreCompound || 'dry';
       car.pitRequested = !car.pitRequested;
       return true;
     }
@@ -379,6 +390,7 @@
         car.speed = 0;
         if (--car.pitTimer <= 0) {
           car.tyreLife = 1; car.tyreBurst = false; car.burstWheel = -1; car.tyreDistance = 0;
+          car.tyreCompound = car.pitCompound || 'dry';
           car.pitStops++; car.pitState = 'exit'; journey.node++;
         }
         return;
@@ -449,6 +461,10 @@
 
     function step(input = {}) {
       if (phase === 'finished') return;
+      // Relógio fixo compartilhado: nenhuma decisão meteorológica no cliente online.
+      rainIntensity = weatherMode === 'rain' ? 1 : weatherMode === 'changing' && elapsed >= 35 && elapsed < 110 ? 1 : 0;
+      wetness = clamp(wetness + (rainIntensity ? 1 / 1200 : -1 / 3600), 0, 1);
+      for (const car of cars) { car.wetness = wetness; car.rainIntensity = rainIntensity; car.weatherMode = weatherMode; }
       for (const player of cars.filter((car) => car.player)) {
       const command = options.online ? input[player.id] || {} : input;
       const shift = command.shiftUp ? 1 : command.shiftDown ? -1 : 0;
@@ -488,7 +504,12 @@
         if (car.pitExit) { exitPit(car); continue; }
         if (car.wallCooldown > 0) car.wallCooldown--;
         if (car.cooldown > 0) { car.cooldown--; continue; }
-        if (!car.player && !car.pitState && car.tyreWearEnabled && (car.tyreBurst || car.tyreLife < .55 && laps - car.progress / track.length > .4)) car.pitRequested = true;
+        if (!car.player && !car.pitState && car.tyreWearEnabled) {
+          const compound = wetness > .35 ? 'wet' : wetness < .15 ? 'dry' : car.tyreCompound;
+          if (compound !== car.tyreCompound || car.tyreBurst || car.tyreLife < .55 && laps - car.progress / track.length > .4) {
+            car.pitRequested = true; car.pitCompound = compound;
+          }
+        }
         if (car.pitRequested && !car.pitState) {
           const s = track.nearest(car.x, car.y).progress;
           if (s >= track.pit.entry && s < track.pit.entry + 18 && Math.cos(car.angle - pointAt(s).angle) > 0.7) startPitStop(car);

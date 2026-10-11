@@ -39,7 +39,10 @@
       get('home-car-name').textContent = skin?.name || 'Original';
       get('home-pilot-name').textContent = player?.nickname || player?.username || 'Piloto visitante';
       get('home-pilot-detail').textContent = player ? `${player.achievements?.length || 0} medalhas · ${player.stats?.wins || 0} vitórias` : 'Entre para salvar seu progresso';
-      get('home-pilot-coins').textContent = player ? `${player.coins} moedas` : 'Entrar →';
+      const balance = get('home-pilot-coins');
+      const coins = Number(player?.coins) || 0;
+      balance.textContent = player ? `${new Intl.NumberFormat('pt-BR', coins >= 10000 ? { notation: 'compact', maximumFractionDigits: 1 } : {}).format(coins)} moedas` : 'Entrar →';
+      balance.title = player ? `${new Intl.NumberFormat('pt-BR').format(coins)} moedas` : 'Entrar na conta';
       const avatar = get('home-avatar'); avatar.replaceChildren();
       if (player?.avatar) { const img = document.createElement('img'); img.src = player.avatar; img.alt = ''; avatar.append(img); }
       else avatar.textContent = (player?.nickname || player?.username || 'ND').slice(0,2).toUpperCase();

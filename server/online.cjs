@@ -36,7 +36,7 @@ function attachOnline(server, { origin, store, tickMs = 1000 / 60 }) {
     if (peer.ws.readyState === WebSocket.OPEN && peer.ws.bufferedAmount < 256000) peer.ws.send(JSON.stringify(data));
   };
   function lobby(room) {
-    const data = { type: 'lobby', code: room.code, track: room.track, laps: room.laps, mode: room.mode, owner: room.owner,
+    const data = { type: 'lobby', code: room.code, track: room.track, laps: room.laps, weather: room.weather, mode: room.mode, owner: room.owner,
       players: [...room.peers].map((p) => ({ id: p.id, name: (p.profile.nickname || p.profile.username), ready: p.ready })) };
     room.peers.forEach((p) => send(p, data));
   }
@@ -72,7 +72,7 @@ function attachOnline(server, { origin, store, tickMs = 1000 / 60 }) {
     room.raceId = crypto.randomUUID();
     const peers = [...room.peers];
     room.stage = 'qualifying';
-    room.race = engine.createNeuroRace(engine.createNeuroTrack(room.track), 'normal', { online: true, humans: peers.map((_, i) => i + 1), session: 'qualifying', pitStart: true });
+    room.race = engine.createNeuroRace(engine.createNeuroTrack(room.track), 'normal', { online: true, humans: peers.map((_, i) => i + 1), session: 'qualifying', pitStart: true, weather: room.weather });
     room.rewards = new Map();
     room.recordSeen = new Map();
     room.recordSummaries = new Map(); room.recordNotices = new Map();
@@ -91,7 +91,7 @@ function attachOnline(server, { origin, store, tickMs = 1000 / 60 }) {
           const qualifiers = room.race.cars;
           room.race = engine.createNeuroRace(engine.createNeuroTrack(room.track), 'normal', {
             online: true, humans: qualifiers.filter(car => car.player).map(car => car.id),
-            laps: room.laps, grid: room.grid.map(car => car.id),
+            laps: room.laps, grid: room.grid.map(car => car.id), weather: room.weather,
           });
           for (const car of room.race.cars) {
             const prior = qualifiers.find(item => item.id === car.id);
@@ -175,7 +175,7 @@ function attachOnline(server, { origin, store, tickMs = 1000 / 60 }) {
           let code;
           do { code = crypto.randomBytes(3).toString('hex').toUpperCase(); } while (rooms.has(code));
           const mode = msg.mode === 'tournament' ? 'tournament' : 'race';
-          const room = { code, owner: peer.id, track: msg.track, mode, laps: mode === 'tournament' ? 3 : msg.laps, peers: new Set([peer]) };
+          const room = { weather: ['dry', 'rain', 'changing'].includes(msg.weather) ? msg.weather : 'dry', code, owner: peer.id, track: msg.track, mode, laps: mode === 'tournament' ? 3 : msg.laps, peers: new Set([peer]) };
           peer.room = room; peer.ready = false; rooms.set(code, room); lobby(room);
         } else if (msg.type === 'join') {
           if (peer.room) throw new Error('Saia da sala atual primeiro.');
@@ -192,7 +192,7 @@ function attachOnline(server, { origin, store, tickMs = 1000 / 60 }) {
           }
           peer.lastInput = Date.now();
         } else if (msg.type === 'recover' && peer.room?.race) peer.room.race.recoverCar(peer.carId);
-        else if (msg.type === 'pit' && peer.room?.race) peer.room.race.requestPit(peer.carId);
+        else if (msg.type === 'pit' && peer.room?.race) peer.room.race.requestPit(peer.carId, msg.compound);
       } catch (error) { send(peer, { type: 'error', message: error.status ? error.message : ['SyntaxError'].includes(error.name) ? 'Mensagem inválida.' : error.message }); }
     });
     ws.on('error', () => {});

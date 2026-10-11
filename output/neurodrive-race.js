@@ -369,11 +369,12 @@
     }
     race = window.createNeuroRace(track, sessionDifficulty, {
       session: qualifying ? 'qualifying' : 'race', grid: qualifyingGrid, laps: Number(get('race-laps').value),
-      transmission: get('race-transmission').value, pitStart: qualifying,
+      transmission: get('race-transmission').value, pitStart: qualifying, weather: get('menu-weather').value,
     });
     get('race-reward').textContent = qualifying ? 'A classificação define o grid. As moedas são concedidas na corrida.' : '';
     get('race-reward-retry').hidden = true;
     window.NeuroGarage?.beginRace(qualifying ? null : { track: track.id, laps: race.laps });
+    get('race-pit-compound').value = race.cars[0].tyreCompound;
     started = true;
     paused = false;
     accumulator = 0;
@@ -432,7 +433,7 @@
     refresh();
   };
   get('race-pause').onclick = () => { if (paused) resumeFromMenu(); else openMenu(); refresh(); };
-  get('race-pit-request').onclick = () => { if (started && !paused) race.requestPit(1); };
+  get('race-pit-request').onclick = () => { if (started && !paused) race.requestPit(1, get('race-pit-compound').value); };
   get('race-recover').onclick = () => { if (!paused) race.recoverPlayer(); };
 
   window.addEventListener('keydown', (event) => {
@@ -447,7 +448,7 @@
     }
     if (event.repeat) return;
     if (event.code === 'KeyP') get('race-pause').onclick();
-    if (event.code === 'KeyB' && !event.repeat && started && !paused) race.requestPit(1);
+    if (event.code === 'KeyB' && !event.repeat && started && !paused) race.requestPit(1, get('race-pit-compound').value);
     if (event.code === 'KeyR' && started && !paused) race.recoverPlayer();
   });
   window.addEventListener('keyup', (event) => heldKeys.delete(event.code));

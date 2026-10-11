@@ -18,13 +18,14 @@
     <script src="neurodrive-home.js" defer></script><script src="neurodrive-garage.js" defer></script>
     <link rel="stylesheet" href="neurodrive-profile.css">
     <link rel="stylesheet" href="neurodrive-hud.css">
-    <script src="neurodrive-hud.js" defer></script><script src="neurodrive-gamepad.js" defer></script><link rel="stylesheet" href="neurodrive-gamepad.css">
+    <script src="neurodrive-weather.js" defer></script><script src="neurodrive-hud.js" defer></script><script src="neurodrive-gamepad.js" defer></script><link rel="stylesheet" href="neurodrive-gamepad.css">
     <script src="neurodrive-intro.js" defer></script><script src="neurodrive-race.js" defer></script>
     <link rel="stylesheet" href="neurodrive-menu.css?v=menus-2">
   <link rel="stylesheet" href="neurodrive-mobile.css">
   <link rel="stylesheet" href="neurodrive-home.css">
+<link rel="stylesheet" href="neurodrive-weather.css">
 </head>
-  <body>
+  <body><div id="weather-rain" class="weather-rain" aria-hidden="true"></div><p id="weather-status" class="weather-status" role="status"></p>
     <main id="neuro-race">
       <header class="viz-row game-toolbar">
         <div class="game-brand">NEURO<span>DRIVE</span> <small class="beta-badge">BETA</small></div>
@@ -72,7 +73,7 @@
 <strong id="race-tyres">Pneus ? 100%</strong>
 <progress id="race-tyre-life" max="100" value="100" aria-label="Condi??o dos pneus"></progress>
 <p id="race-pit-status" role="status"></p>
-<button class="btn" id="race-pit-request" type="button">Chamar boxes (B)</button>
+<div class="pit-compound-label"><span id="pit-compound-title">Pr&#243;xima troca</span><input id="race-pit-compound" type="hidden" value="dry"><div class="pit-compound-buttons" role="group" aria-labelledby="pit-compound-title"><button id="pit-tyre-dry" type="button" aria-pressed="true">Seco</button><button id="pit-tyre-wet" type="button" aria-pressed="false">Chuva</button></div></div><button class="btn" id="race-pit-request" type="button">Chamar boxes (B)</button>
 </aside>
       <section id="race-finale" class="race-finale" hidden aria-label="Encerramento da sessão">
         <div class="finale-card"><span class="chequered-flag" aria-hidden="true"></span><p id="finale-eyebrow"></p><h2 id="finale-title" role="status"></h2><p id="finale-detail"></p><div class="finale-progress" aria-hidden="true"><i id="finale-progress-fill"></i></div><button class="btn" id="finale-skip" type="button">Ver resultados agora</button></div>
@@ -127,7 +128,7 @@
           <label class="form-label">Modo<select class="form-select" id="menu-mode"><option value="single">Corrida avulsa</option><option value="championship">Campeonato · 3 etapas</option></select></label>
           <details class="menu-help"><summary>Regras do campeonato</summary><p class="text-small">Serra Verde → Autódromo Veloz → Vale Técnico. Pontos: 25, 18, 15, 12, 10 e 8. Desempate por vitórias e ordem inicial dos pilotos. Progresso válido nesta sessão; as moedas da Copa Neuro são disputadas no online.</p></details>
           <details class="menu-help"><summary>Meus tempos neste dispositivo</summary><p class="text-small" id="menu-records"></p></details>
-          <div class="menu-settings">
+          <div class="menu-settings"><label class="form-label">Clima<select class="form-select" id="menu-weather"><option value="dry">Seco</option><option value="rain">Chuva</option><option value="changing">Variável · chuva durante a prova</option></select></label>
             <label class="form-label">Circuito
               <select class="form-select" id="menu-track"><option value="serra">Serra Verde</option><option value="veloz">Autódromo Veloz</option><option value="tecnico">Vale Técnico</option></select>
             </label>
@@ -240,7 +241,7 @@
         <p class="race-results-eyebrow" id="race-results-stage"></p>
         <h2 id="race-results-title">Resultados</h2>
         <p id="race-results-note"></p>
-        
+
 <p id="race-results-improvement" class="session-improvement"></p>
         <p id="race-results-return" class="text-small" hidden></p>
         <p id="race-reward" role="status"></p>

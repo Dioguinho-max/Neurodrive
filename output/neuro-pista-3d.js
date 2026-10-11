@@ -57,6 +57,8 @@
     asphaltMap.needsUpdate = true;
     textures.push(asphaltMap);
     const asphalt = material('#555c65', { map: asphaltMap, roughness: 0.96 });
+    const dryAsphaltColor = asphalt.color.clone(), wetAsphaltColor = asphalt.color.clone().multiplyScalar(.6);
+    const drySkyColor = scene.background.clone(), rainySkyColor = new THREE.Color('#627789');
     let environmentMap = null;
     function getEnvironment() {
       if (environmentMap) return environmentMap;
@@ -110,11 +112,17 @@
       for (let step = 0; step < count; step++) {
         const i = (from + step) % track.points.length;
         const next = (i + 1) % track.points.length;
-        const a = track.offset(i, inner), b = track.offset(i, outer);
-        const c = track.offset(next, inner), d = track.offset(next, outer);
+        // A malha deve acompanhar o relevo também na largura do asfalto.
+        const bands = Math.max(1, Math.ceil(Math.abs(outer - inner) / 8));
+        for (let band = 0; band < bands; band++) {
+        const lo = inner + (outer - inner) * band / bands;
+        const hi = inner + (outer - inner) * (band + 1) / bands;
+        const a = track.offset(i, lo), b = track.offset(i, hi);
+        const c = track.offset(next, lo), d = track.offset(next, hi);
         for (const point of [a, c, b, b, c, d]) {
           vertices.push(point.x, track.heightAt(point.x, point.y) + 0.15, point.y);
           uv.push(point.x / 12, point.y / 12);
+        }
         }
       }
       const geometry = new THREE.BufferGeometry();
@@ -541,6 +549,8 @@
     cabinGeometry.computeVertexNormals();
     const roofGeometry = roundedBox(5.5, 0.5, 5.8, 0.2);
     const wheelRadius = 1.65;
+    const wetBandGeometry = new THREE.TorusGeometry(wheelRadius * .86, .045, 4, 24);
+    const wetBandMaterial = material('#57b8ed', { roughness: .8 });
     const wheelGeometry = new THREE.CylinderGeometry(wheelRadius, wheelRadius, 1.2, 16);
     wheelGeometry.rotateX(Math.PI / 2);
     const ultraWheelGeometry = new THREE.CylinderGeometry(wheelRadius, wheelRadius, 1.2, 32);
@@ -751,7 +761,7 @@
           const disc = addMesh(new THREE.CylinderGeometry(.82, .82, .14, 24), alloy,
             group, [x, wheelRadius, side * 3.72]);
           disc.rotation.x = Math.PI / 2;
-          addMesh(roundedBox(.3, .65, .24, .08), red, group, [x + .65, wheelRadius, side * 3.76]);
+          const caliper = addMesh(roundedBox(.3, .65, .24, .08), red, group, [x + .65, wheelRadius, side * 3.76]);
           const hub = addMesh(new THREE.CylinderGeometry(.2, .2, .3, 12), alloy,
             group, [x, wheelRadius, side * 3.85]);
           hub.rotation.x = Math.PI / 2;
@@ -763,6 +773,13 @@
           for (const face of [-1, 1]) {
             addMesh(rimGeometry, alloy, wheel, [0, 0, face * 0.64]);
             addMesh(sidewallGeometry, tireRubber, wheel, [0, 0, face * 0.56]);
+            const wetBand = addMesh(wetBandGeometry, wetBandMaterial, wheel, [0, 0, face * .65]);
+            wetBand.userData.wetTyre = true; wetBand.visible = false;
+          }
+          // Freio e cubo acompanham a roda, não a inclinação da carroceria.
+          for (const part of [disc, caliper, hub]) {
+            part.position.sub(pivot.position);
+            pivot.add(part);
           }
           wheels.push({ pivot, wheel, x, z });
           if (x > 0) frontWheels.push(pivot);
@@ -775,6 +792,20 @@
       }
       scene.add(group);
       return { group, body, roof, frontWheels, wheels, brakes, stripes, playerPaint, playerStripe, lastX: null, lastY: null, spin: 0 };
+    }
+
+    // Mola criticamente amortecida: retorna sem oscilar e independe do FPS.
+    function smoothSuspension(model, key, target, dt, frequency, reset) {
+      const state = model[key] ||= { value: target, velocity: 0 };
+      if (reset) { state.value = target; state.velocity = 0; }
+      else if (dt > 0) {
+        const offset = state.value - target;
+        const impulse = state.velocity + frequency * offset;
+        const decay = Math.exp(-frequency * dt);
+        state.value = target + (offset + impulse * dt) * decay;
+        state.velocity = (state.velocity - frequency * impulse * dt) * decay;
+      }
+      return state.value;
     }
 
     function updateNameplate(model, car, isSelf) {
@@ -1083,7 +1114,7 @@
         model.position.set(0, 0, 0); model.rotation.set(0, 0, 0); model.visible = true;
         model.children.filter((part) => part.isGroup).forEach((pivot) => {
           pivot.position.y = wheelRadius; pivot.position.z = Math.sign(pivot.position.z) * 4;
-          pivot.rotation.y = 0; pivot.children[0].visible = true; pivot.children[0].scale.set(1, 1, 1);
+          pivot.rotation.set(0, 0, 0); pivot.children[0].visible = true; pivot.children[0].scale.set(1, 1, 1);
         });
         const geometries = new Set(), surfaces = new Set();
         model.traverse((part) => {
@@ -1166,6 +1197,12 @@
         renderer.dispose();
       },
       update(population, leader, showSensors, target = leader, finished = false) {
+        const wet = clamp(leader?.wetness || 0, 0, 1);
+        const rain = clamp(leader?.rainIntensity || 0, 0, 1);
+        asphalt.roughness = .96 - wet * .63;
+        asphalt.color.lerpColors(dryAsphaltColor, wetAsphaltColor, wet);
+        scene.background.lerpColors(drySkyColor, rainySkyColor, rain);
+        sun.intensity = 3 - rain * 1.8;
         const engineerTime = Date.now();
         for (const engineer of pitEngineers) {
           // Não anima nem redesenha monitores fora do alcance da câmera.
@@ -1238,8 +1275,32 @@
             - track.heightAt(car.x - forwardX * 8, car.y - forwardY * 8), 16);
           const bank = -Math.atan2(track.heightAt(car.x - forwardY * 4, car.y + forwardX * 4)
             - track.heightAt(car.x + forwardY * 4, car.y - forwardX * 4), 8);
-          model.group.rotation.set(bank, -car.angle, pitch, 'YZX');
+          const suspensionTime = Date.now();
+          const suspensionDt = Math.min(.1, Math.max(0, (suspensionTime - (model.suspensionTime ?? suspensionTime)) / 1000));
+          const headingDelta = model.lastHeading === undefined ? 0 : Math.atan2(Math.sin(car.angle - model.lastHeading), Math.cos(car.angle - model.lastHeading));
+          const teleported = model.lastX !== null && Math.hypot(car.x - model.lastX, car.y - model.lastY) > 30;
+          // Online: deriva a aceleração lateral do movimento interpolado, sem novas mensagens.
+          const lateral = suspensionDt > 0 ? headingDelta / suspensionDt * Math.max(0, car.speed) * 15 : 0;
+          const desiredRoll = service || car.pitExit || car.cooldown || teleported ? 0
+            : clamp(Number.isFinite(car.bodyRoll) ? car.bodyRoll : lateral / 9.81 * .075, -.085, .085);
+          const resetSuspension = teleported || Boolean(car.cooldown);
+          model.rollSpring ||= { value: 0, velocity: 0 };
+          model.suspensionRoll = smoothSuspension(model, 'rollSpring', desiredRoll, suspensionDt, 7, resetSuspension);
+          const visualBank = smoothSuspension(model, 'bankSpring', bank, suspensionDt, 12, resetSuspension);
+          const visualPitch = smoothSuspension(model, 'pitchSpring', pitch, suspensionDt, 12, resetSuspension);
+          const visualHeight = smoothSuspension(model, 'heightSpring', track.heightAt(car.x, car.y) + .15, suspensionDt, 14, resetSuspension);
+          const roadHeight = track.heightAt(car.x, car.y) + .15;
+          model.group.position.y = clamp(visualHeight, roadHeight - .35, roadHeight + .35) + lift;
+          model.lastHeading = car.angle; model.suspensionTime = suspensionTime;
+          model.group.rotation.set(visualBank + model.suspensionRoll, -car.angle, visualPitch, 'YZX');
           model.group.updateMatrixWorld(true);
+          // Limite de compressão: protege assoalho e para-choques nas cristas.
+          let clearance = 0;
+          for (const x of [-8.3, 0, 8.3]) for (const z of [-3.9, 0, 3.9]) {
+            const underside = model.group.localToWorld(new THREE.Vector3(x, 1.2, z));
+            clearance = Math.max(clearance, track.heightAt(underside.x, underside.z) + .25 - underside.y);
+          }
+          if (clearance > 0) { model.group.position.y += clearance; model.group.updateMatrixWorld(true); }
           const distance = model.lastX === null ? 0 : Math.hypot(car.x - model.lastX, car.y - model.lastY);
           model.fxTravel = (model.fxTravel || 0) + distance;
           // O pedal responde imediatamente; a força física do freio sobe gradualmente.
@@ -1265,6 +1326,8 @@
           model.lastX = car.x; model.lastY = car.y;
           const up = new THREE.Vector3(0, 1, 0).applyQuaternion(model.group.quaternion);
           model.wheels.forEach(({ pivot, wheel, x, z }, wheelIndex) => {
+            // Contra-inclinação e altura independentes mantêm o pneu apoiado.
+            pivot.rotation.x = -model.suspensionRoll;
             const contact = model.group.localToWorld(new THREE.Vector3(x, wheelRadius, z));
             const height = track.heightAt(contact.x, contact.z) + 0.15 + wheelRadius + lift;
             pivot.position.y = wheelRadius + (height - contact.y) / up.y;
@@ -1274,7 +1337,20 @@
             wheel.rotation.z = model.spin;
             const flat = car.tyreBurst && car.burstWheel === wheelIndex;
             wheel.scale.set(flat ? .8 : 1, flat ? .65 : 1, 1);
-            if (flat) pivot.position.y -= .4;
+            wheel.children.filter(part => part.userData.wetTyre).forEach(part => { part.visible = car.tyreCompound === 'wet'; });
+            pivot.rotation.y = x > 0 ? -car.steering * .4 : 0;
+            // Confere toda a banda de rodagem, inclusive as bordas e pneus furados.
+            // Repete porque mover no eixo local também altera a posição no relevo.
+            for (let pass = 0; pass < 2; pass++) {
+              wheel.updateWorldMatrix(true, false);
+              let correction = -Infinity;
+              for (let sample = 0; sample < 16; sample++) for (const side of [-.6, .6]) {
+                const angle = sample * Math.PI / 8;
+                const point = new THREE.Vector3(Math.cos(angle) * wheelRadius, Math.sin(angle) * wheelRadius, side).applyMatrix4(wheel.matrixWorld);
+                correction = Math.max(correction, track.heightAt(point.x, point.z) + .19 + lift - point.y);
+              }
+              pivot.position.y += correction / up.y;
+            }
           });
           const customized = car.skin;
           if (customized) {

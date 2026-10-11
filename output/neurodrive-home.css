@@ -16,14 +16,14 @@ body:has(#race-intro[open]) :is(.race-tower, .race-touch, .drive-hud, #race-pit-
 #race-menu #garage-compare[aria-pressed="true"] { border-color: #f2d091; color: #f2d091; }
 #garage-equipped-notice { color: #a1f1c8; min-height: 20px; font-size: 13px; }
 @media (max-width: 600px) { .race-intro[open] { flex-direction: column; justify-content: flex-end; align-items: flex-start; } #race-menu[data-page="store"] .home-pilot { display: none; } }
-#race-menu { background: radial-gradient(ellipse at 15% 15%, #1c43384a, transparent 55%), #080f19; padding: 30px clamp(20px, 3vw, 56px); }
-#race-menu[open] { grid-template-columns: minmax(0, 1.15fr) minmax(360px, 1fr); gap: clamp(24px, 4vw, 64px); align-items: start; }
+#race-menu { background: radial-gradient(ellipse at 15% 15%, #1c43384a, transparent 55%), #080f19; padding: 30px max(24px, calc((100vw - 1440px) / 2)); }
+#race-menu[open] { grid-template-columns: minmax(0, .9fr) minmax(360px, 1fr); gap: clamp(24px, 4vw, 64px); align-items: start; }
 #race-menu .menu-hero { position: sticky; top: 0; min-height: 0; padding: 12px 0; background: none; }
-#race-menu .menu-hero h2 { font-size: clamp(42px, 5.4vw, 84px); margin: 18px 0 28px; line-height: .95; }
-#race-menu .menu-hero h2 span { display: inline; }
+#race-menu .menu-hero h2 { font-size: clamp(48px, 5.4vw, 78px); margin: 18px 0 24px; line-height: .9; }
+#race-menu .menu-hero h2 span { display: block; margin-top: 4px; }
 #race-menu .menu-hero > p:not(.menu-eyebrow), #race-menu .menu-lights { display: none; }
 #race-menu .menu-eyebrow { color: #92b4b4; font-size: 10px; letter-spacing: .18em; }
-.home-showroom { position: relative; height: clamp(240px, 38vh, 430px); overflow: hidden; border: 1px solid #789f9e2a; border-radius: 16px; background: radial-gradient(ellipse at 50% 70%, #245449, #0a1421 70%); }
+.home-showroom { position: relative; height: clamp(240px, 34vh, 340px); overflow: hidden; border: 1px solid #789f9e2a; border-radius: 12px; background: radial-gradient(ellipse at 50% 70%, #245449, #0a1421 70%); }
 #home-car-canvas { width: 100%; height: 100%; display: block; }
 #home-car-fallback { position: absolute; inset: 0; display: grid; align-content: center; text-align: center; color: #a0f1c8; font-size: 22px; font-weight: 800; letter-spacing: .08em; }
 #home-car-fallback span { display: block; color: #8aa0ad; font-size: 12px; margin-top: 12px; font-weight: 400; letter-spacing: 0; }
@@ -34,9 +34,10 @@ body:has(#race-intro[open]) :is(.race-tower, .race-touch, .drive-hud, #race-pit-
 .home-pilot { width: 100%; margin: 16px 0; display: flex; align-items: center; text-align: left; gap: 12px; padding: 14px; border: 1px solid #7eaaa52e; border-radius: 12px; background: #12212b; color: #edf6f6; cursor: pointer; }
 .home-avatar { width: 42px; height: 42px; flex-shrink: 0; display: grid; place-items: center; background: #294637; color: #a3f4c9; border-radius: 50%; overflow: hidden; font-weight: 800; }
 .home-avatar img { width: 100%; height: 100%; object-fit: cover; }
+.home-pilot > span:nth-child(2) { min-width: 0; flex: 1; }
 .home-pilot strong { display: block; overflow-wrap: anywhere; }
 .home-pilot small { display: block; margin-top: 4px; color: #8ea7b4; font-size: 11px; }
-#home-pilot-coins { margin-left: auto; color: #efd394; font-size: 12px; white-space: nowrap; }
+#home-pilot-coins { margin-left: auto; color: #efd394; font-size: 12px; white-space: nowrap; padding: 8px 10px; border-radius: 8px; background: #eac76b0a; border: 1px solid #eac76b22; }
 #race-menu .menu-content { padding: 0; background: none; }
 #race-menu .menu-pages { margin: 0 0 18px; gap: 4px; padding: 6px; border: 1px solid #9ebcc425; border-radius: 12px; background: #14212e; }
 #race-menu .menu-pages .btn { border: 0; border-radius: 7px; min-height: 44px; font-size: 12px; letter-spacing: 0; }
@@ -52,6 +53,8 @@ body:has(#race-intro[open]) :is(.race-tower, .race-touch, .drive-hud, #race-pit-
 #race-menu .menu-help { border: 0; border-bottom: 1px solid #8295a425; padding: 12px 0; margin: 0; font-size: 12px; color: #a9bdc9; }
 #race-menu .menu-help summary { cursor: pointer; min-height: 26px; align-content: center; }
 #race-menu-play, #race-menu-resume { width: 100%; border-radius: 10px; margin-top: 16px; box-shadow: 0 5px 24px #73ecaa12; }
+#race-menu-resume { margin-bottom: 12px; }
+#race-menu .menu-back { width: auto; min-height: 36px; margin: 0 0 16px; padding: 6px 0; border: 0; color: #a7bdc9; }
 #race-menu .pause-actions .btn { border-radius: 10px; }
 #race-menu .menu-lab { display: block; margin-top: 24px; color: #7c99a9; }
 #race-menu[data-page="account"] .home-showroom, #race-menu[data-page="store"] .home-showroom, #race-menu[data-page="settings"] .home-showroom, #race-menu[data-page="records"] .home-showroom { display: none; }

@@ -106,6 +106,49 @@ endingRenderer.update([finisher], finisher, false);
 assert(Math.abs(visualCar.position.x - finisher.x) < 1e-6);
 console.log('OK: grid de seis vagas, desaceleração visual, parada e reinício sem modificar resultados.');
 
+// Carroceria inclina sem levantar os pneus nem alterar o estado da corrida.
+finisher.bodyRoll = .08;
+const suspensionSnapshot = JSON.stringify(finisher);
+const restingRoll = visualCar.rotation.x;
+ending.setTime(8100); endingRenderer.update([finisher], finisher, false);
+const rolled = visualCar.rotation.x;
+assert(rolled - restingRoll > .01);
+assert(rolled - restingRoll < .08, 'Carroceria se aproxima gradualmente da inclinação, sem salto');
+visualCar.updateMatrixWorld(true);
+const suspensionWheels = visualCar.children.filter(part => part.isGroup);
+assert.equal(suspensionWheels.length, 4);
+for (const pivot of suspensionWheels) {
+  const center = pivot.getWorldPosition(new THREE.Vector3());
+  assert(Math.abs(center.y - ending.track.heightAt(center.x, center.z) - .15 - 1.65) < .2, 'Pneu permanece no terreno');
+  assert(pivot.rotation.x < 0, 'Roda compensa a inclinação da carroceria');
+}
+assert.equal(JSON.stringify(finisher), suspensionSnapshot);
+endingRenderer.update([finisher], finisher, false);
+assert.equal(visualCar.rotation.x, rolled, 'Sem tempo decorrido não há animação adicional');
+finisher.bodyRoll = -.08;
+for (let step = 1; step <= 10; step++) { ending.setTime(8100 + step * 100); endingRenderer.update([finisher], finisher, false); }
+assert(visualCar.rotation.x < rolled, 'Transferência de peso acompanha a inversão da curva');
+console.log('OK: inclinação, contato dos quatro pneus, pausa e estado autoritativo preservado.');
+for (let sample = 0; sample < 12; sample++) {
+  const point = ending.track.offset(Math.floor(sample * ending.track.points.length / 12), sample % 2 ? ending.track.halfWidth - 5 : 0);
+  Object.assign(finisher, { x: point.x, y: point.y, angle: point.angle, bodyRoll: sample % 2 ? .08 : -.08 });
+  ending.setTime(10000 + sample * 100);
+  endingRenderer.update([finisher], finisher, false);
+  visualCar.updateMatrixWorld(true);
+  for (const pivot of suspensionWheels) {
+    const tire = pivot.children[0], positions = tire.geometry.attributes.position;
+    let contactGap = Infinity;
+    for (let vertex = 0; vertex < positions.count; vertex++) {
+      const world = new THREE.Vector3().fromBufferAttribute(positions, vertex).applyMatrix4(tire.matrixWorld);
+      const gap = world.y - ending.track.heightAt(world.x, world.z) - .15;
+      assert(gap > -.05, 'Banda de rodagem não atravessa o relevo');
+      contactGap = Math.min(contactGap, gap);
+    }
+    assert(contactGap < .2, 'Pneu continua apoiado, sem flutuar');
+  }
+}
+console.log('OK: contato dos pneus em doze trechos e bordas da pista.');
+
 const app = setup(true);
 const ui = app.elements;
 assert.equal(ui['np-track'].hidden, true);
