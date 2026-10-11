@@ -1,0 +1,7 @@
+.language-settings { margin: 12px 0 20px; border: 0; padding: 0; min-width: 0; }
+.language-settings legend { margin-bottom: 8px; font-size: 13px; color: #bed1df; }
+.language-options { display: flex; flex-wrap: wrap; gap: 8px; }
+.language-options button { display: flex; align-items: center; gap: 9px; min-height: 44px; padding: 10px 16px; }
+.language-options button[aria-pressed="true"] { border-color: #9df1c7; background: #20493f; color: #dcfff0; }
+.language-options button:focus-visible { outline: 2px solid #9df1c7; outline-offset: 3px; }
+.language-options svg { width: 28px; height: 20px; flex-shrink: 0; border-radius: 3px; }

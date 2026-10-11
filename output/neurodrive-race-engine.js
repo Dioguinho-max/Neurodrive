@@ -8,10 +8,14 @@
     command.brake || analog(command.braking) > 0 ? -(command.brake ? 1 : analog(command.braking)) : command.accelerate ? 1 : analog(command.throttle),
   ];
   const wrap = (angle) => Math.atan2(Math.sin(angle), Math.cos(angle));
+  const weatherGripFactor = car => {
+    const wet = clamp(car.wetness || 0, 0, 1);
+    // A primeira umidade pouco afeta o slick; a perda cresce com o acúmulo de água.
+    return car.tyreCompound === 'wet' ? .88 - wet * .10 : 1 - .72 * wet * wet;
+  };
   const tyreGripFactor = car => {
     const wear = !car.tyreWearEnabled ? 1 : car.tyreBurst ? .16 : 1 - .5 * Math.pow(1 - clamp(car.tyreLife ?? 1, 0, 1), 1.7);
-    const wet = clamp(car.wetness || 0, 0, 1);
-    return wear * (car.tyreCompound === 'wet' ? .85 - wet * .13 : 1 - wet * .84);
+    return wear * weatherGripFactor(car);
   };
 
   // Transmissão automática simplificada: faixas de velocidade e força por marcha.
@@ -45,8 +49,7 @@
     }
     const drag = 0.0015 + 0.0006 * (car.speed / 3.2) ** 2;
     car.brake += clamp(Math.max(0, -pedal) - car.brake, -0.08, 0.045);
-    const wet = clamp(car.wetness || 0, 0, 1);
-    const traction = car.tyreCompound === 'wet' ? .85 - wet * .13 : 1 - wet * .84;
+    const traction = weatherGripFactor(car);
     const force = car.brake > 0 ? -car.brake * 0.026 * traction
       : car.shiftTicks || (car.manual && car.limiter) ? 0 : pedal * gearForce[car.gear - 1] * Math.sqrt(traction);
     car.speed = clamp(car.speed + force - drag, 0, maximumSpeed);
@@ -97,9 +100,9 @@
     if (car.offRoad) car.speed = Math.max(0, car.speed - 0.0009 - car.speed * 0.00034);
     if (car.tyreWearEnabled) {
       car.tyreDistance = (car.tyreDistance || 0) + car.speed;
-      car.tyreLife = Math.max(0, (car.tyreLife ?? 1) - car.speed / track.length * .28
+      car.tyreLife = Math.max(0, (car.tyreLife ?? 1) - car.speed / track.length * (car.tyreWearRate ?? .28)
         * (1 + Math.min(1, Math.max(0, car.gripUsage - 1)) * .55 + car.brake * .18 + Number(car.offRoad) * .2)
-        * (car.tyreCompound === 'wet' ? 1 + 1.5 * (1 - (car.wetness || 0)) : 1));
+        * (car.tyreCompound === 'wet' ? 1 + .4 * (1 - (car.wetness || 0)) : 1));
       if (car.tyreLife <= 0 && !car.tyreBurst) {
         car.tyreBurst = true;
         car.burstWheel = car.steering >= 0 ? 2 : 3;
@@ -214,7 +217,7 @@
         gripUsage: 0, sliding: false, offRoad: false, bodyRoll: 0,
         progress: distance - startDistance, checkpoint: 0,
         finishTime: null, place: null, cooldown: 0, stalled: 0, wallContact: false, wallCooldown: 0,
-        tyreCompound: weatherMode === 'rain' ? 'wet' : 'dry', pitCompound: weatherMode === 'rain' ? 'wet' : 'dry', wetness, rainIntensity, weatherMode, tyreWearEnabled: weatherMode !== 'dry' || !qualifying && laps >= 5, tyreLife: 1, tyreBurst: false, burstWheel: -1, tyreDistance: 0, pitRequested: false, pitState: null, pitTimer: 0, pitStops: 0,
+        tyreCompound: weatherMode === 'rain' ? 'wet' : 'dry', pitCompound: weatherMode === 'rain' ? 'wet' : 'dry', wetness, rainIntensity, weatherMode, tyreWearRate: qualifying ? .06 : laps < 5 ? .08 : .28, tyreWearEnabled: weatherMode !== 'dry' || !qualifying && laps >= 5, tyreLife: 1, tyreBurst: false, burstWheel: -1, tyreDistance: 0, pitRequested: false, pitState: null, pitTimer: 0, pitStops: 0,
         bestLap: null, lastLap: null, lastLapKind: '', checkpointTimes: [],
         lapStart: 0, completedLaps: 0, invalidLap: false,
         recordLapInvalid: false, recordLapStarted: false, recordLap: null,
@@ -462,8 +465,11 @@
     function step(input = {}) {
       if (phase === 'finished') return;
       // Relógio fixo compartilhado: nenhuma decisão meteorológica no cliente online.
-      rainIntensity = weatherMode === 'rain' ? 1 : weatherMode === 'changing' && elapsed >= 35 && elapsed < 110 ? 1 : 0;
-      wetness = clamp(wetness + (rainIntensity ? 1 / 1200 : -1 / 3600), 0, 1);
+      const ease = value => { const t = clamp(value, 0, 1); return t * t * (3 - 2 * t); };
+      rainIntensity = weatherMode === 'rain' ? 1 : weatherMode === 'changing'
+        ? ease((elapsed - 35) / 25) * (1 - ease((elapsed - 140) / 30)) : 0;
+      // Água leva um minuto de chuva forte para acumular e dois para evaporar.
+      wetness = clamp(wetness + rainIntensity / 3600 - (1 - rainIntensity) / 7200, 0, 1);
       for (const car of cars) { car.wetness = wetness; car.rainIntensity = rainIntensity; car.weatherMode = weatherMode; }
       for (const player of cars.filter((car) => car.player)) {
       const command = options.online ? input[player.id] || {} : input;
@@ -505,7 +511,7 @@
         if (car.wallCooldown > 0) car.wallCooldown--;
         if (car.cooldown > 0) { car.cooldown--; continue; }
         if (!car.player && !car.pitState && car.tyreWearEnabled) {
-          const compound = wetness > .35 ? 'wet' : wetness < .15 ? 'dry' : car.tyreCompound;
+          const compound = wetness > .45 ? 'wet' : wetness < .12 && rainIntensity < .1 ? 'dry' : car.tyreCompound;
           if (compound !== car.tyreCompound || car.tyreBurst || car.tyreLife < .55 && laps - car.progress / track.length > .4) {
             car.pitRequested = true; car.pitCompound = compound;
           }

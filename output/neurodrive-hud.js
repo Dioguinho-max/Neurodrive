@@ -85,9 +85,7 @@
       const compound = get('race-pit-compound');
       if (compound) compound.disabled = Boolean(car.pitState || car.pitRequested);
       syncTyres();
-      const weather = get('weather-status'), rain = get('weather-rain');
-      if (weather) weather.textContent = car.weatherMode && car.weatherMode !== 'dry'
-        ? `${car.rainIntensity ? 'CHUVA' : car.wetness > .05 ? 'SECANDO' : 'TEMPO SECO'} · pista ${Math.round((car.wetness || 0) * 100)}% molhada${car.wetness > .35 && car.tyreCompound !== 'wet' ? ' · Troque para pneus de chuva!' : ''}` : '';
+      const rain = get('weather-rain');
       if (rain) { rain.style.opacity = String(car.rainIntensity || 0); rain.setAttribute('data-active', String(Boolean(car.rainIntensity))); }
       window.NeuroWeather?.update(car.rainIntensity, car.speed);
       get('race-tyre-life').value = life;

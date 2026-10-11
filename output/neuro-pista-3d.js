@@ -551,6 +551,33 @@
     const wheelRadius = 1.65;
     const wetBandGeometry = new THREE.TorusGeometry(wheelRadius * .86, .045, 4, 24);
     const wetBandMaterial = material('#57b8ed', { roughness: .8 });
+    const dryBandMaterial = material('#48db86', { roughness: .8 });
+    const damperMaterial = material('#d4a83e', { metalness: .65, roughness: .32 });
+    const springMaterial = material('#dc5551', { metalness: .55, roughness: .35 });
+    const suspensionCylinder = new THREE.CylinderGeometry(1, 1, 1, 8);
+    const coilPoints = Array.from({ length: 97 }, (_, i) => {
+      const t = i / 96, angle = t * Math.PI * 12;
+      return new THREE.Vector3(Math.cos(angle) * .25, t, Math.sin(angle) * .25);
+    });
+    const springGeometry = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(coilPoints), 96, .045, 4, false);
+    const suspensionUp = new THREE.Vector3(0, 1, 0);
+    function placeSuspension(wheel) {
+      const { strut, arms, pivot, x, z } = wheel;
+      const bottom = new THREE.Vector3(x, pivot.position.y + .15, z - Math.sign(z) * .15);
+      const top = new THREE.Vector3(x - .2, 3.4, z - Math.sign(z) * .4);
+      const delta = top.clone().sub(bottom);
+      strut.position.copy(bottom);
+      strut.quaternion.setFromUnitVectors(suspensionUp, delta.clone().normalize());
+      strut.scale.y = Math.max(.25, delta.length());
+      arms.forEach((arm, i) => {
+        const inner = new THREE.Vector3(x + (i ? .75 : -.75), 1.15, Math.sign(z) * 2.6);
+        const outer = bottom.clone(); outer.y -= .25;
+        const span = outer.clone().sub(inner);
+        arm.position.copy(inner).add(outer).multiplyScalar(.5);
+        arm.quaternion.setFromUnitVectors(suspensionUp, span.clone().normalize());
+        arm.scale.set(.075, span.length(), .075);
+      });
+    }
     const wheelGeometry = new THREE.CylinderGeometry(wheelRadius, wheelRadius, 1.2, 16);
     wheelGeometry.rotateX(Math.PI / 2);
     const ultraWheelGeometry = new THREE.CylinderGeometry(wheelRadius, wheelRadius, 1.2, 32);
@@ -766,22 +793,37 @@
             group, [x, wheelRadius, side * 3.85]);
           hub.rotation.x = Math.PI / 2;
           const pivot = new THREE.Group();
-          pivot.position.set(x, wheelRadius, z); group.add(pivot);
+          pivot.position.set(x, wheelRadius, z); pivot.userData.wheelPivot = true; group.add(pivot);
           const wheel = addMesh(options.quality === 'ultra' ? ultraWheelGeometry : wheelGeometry, tireRubber, pivot);
           addMesh(hubGeometry, rubber, wheel);
           for (let spoke = 0; spoke < 3; spoke++) addMesh(spokeGeometry, alloy, wheel).rotation.z = spoke * Math.PI / 3;
           for (const face of [-1, 1]) {
             addMesh(rimGeometry, alloy, wheel, [0, 0, face * 0.64]);
             addMesh(sidewallGeometry, tireRubber, wheel, [0, 0, face * 0.56]);
-            const wetBand = addMesh(wetBandGeometry, wetBandMaterial, wheel, [0, 0, face * .65]);
-            wetBand.userData.wetTyre = true; wetBand.visible = false;
+            const band = addMesh(wetBandGeometry, dryBandMaterial, wheel, [0, 0, face * .65]);
+            band.userData.tyreBand = true;
           }
           // Freio e cubo acompanham a roda, não a inclinação da carroceria.
           for (const part of [disc, caliper, hub]) {
             part.position.sub(pivot.position);
             pivot.add(part);
           }
-          wheels.push({ pivot, wheel, x, z });
+          // Fixação superior na carroceria; conjunto telescópico segue a altura do cubo.
+          const strut = new THREE.Group(); strut.userData.suspension = true; group.add(strut);
+          const housing = addMesh(suspensionCylinder, damperMaterial, strut, [0, .27, 0]);
+          housing.scale.set(.15, .54, .15);
+          const piston = addMesh(suspensionCylinder, alloy, strut, [0, .7, 0]);
+          piston.scale.set(.065, .6, .065);
+          const coil = addMesh(springGeometry, springMaterial, strut, [0, .18, 0]);
+          coil.scale.y = .7; coil.userData.suspensionSpring = true;
+          for (const y of [.16, .9]) {
+            const seat = addMesh(suspensionCylinder, alloy, strut, [0, y, 0]);
+            seat.scale.set(.31, .055, .31);
+          }
+          const arms = [-1, 1].map(() => addMesh(suspensionCylinder, alloy, group));
+          const assembly = { pivot, wheel, x, z, strut, arms };
+          placeSuspension(assembly);
+          wheels.push(assembly);
           if (x > 0) frontWheels.push(pivot);
         }
       }
@@ -1112,12 +1154,19 @@
         const view = new THREE.PerspectiveCamera(38, 1, 0.1, 200);
         const model = source.group.clone(true);
         model.position.set(0, 0, 0); model.rotation.set(0, 0, 0); model.visible = true;
-        model.children.filter((part) => part.isGroup).forEach((pivot) => {
+        model.children.filter((part) => part.userData.wheelPivot).forEach((pivot) => {
           pivot.position.y = wheelRadius; pivot.position.z = Math.sign(pivot.position.z) * 4;
           pivot.rotation.set(0, 0, 0); pivot.children[0].visible = true; pivot.children[0].scale.set(1, 1, 1);
         });
+        source.wheels.forEach(({ pivot, strut, arms, x, z }) => {
+          const clone = part => model.children[source.group.children.indexOf(part)];
+          const previewArms = arms.map(clone); previewArms.forEach(arm => { arm.visible = true; });
+          placeSuspension({ pivot: clone(pivot), strut: clone(strut), arms: previewArms, x, z });
+        });
         const geometries = new Set(), surfaces = new Set();
         model.traverse((part) => {
+          if (part.userData.suspension) part.visible = true;
+          if (part.userData.tyreBand) part.material = dryBandMaterial;
           if (part.isSprite) part.visible = false;
           if (part.userData.pitCrew) part.visible = false;
           if (part.geometry) { part.geometry = part.geometry.clone(); geometries.add(part.geometry); }
@@ -1182,7 +1231,8 @@
       },
       dispose() {
         listeners.forEach(([type, handler, settings]) => canvas.removeEventListener(type, handler, settings));
-        const geometries = new Set(), materials = new Set();
+        const geometries = new Set([springGeometry, suspensionCylinder, wetBandGeometry]);
+        const materials = new Set([dryBandMaterial, wetBandMaterial, damperMaterial, springMaterial]);
         scene.traverse((object) => {
           if (object.geometry) geometries.add(object.geometry);
           if (object.material) materials.add(object.material);
@@ -1325,7 +1375,8 @@
           }
           model.lastX = car.x; model.lastY = car.y;
           const up = new THREE.Vector3(0, 1, 0).applyQuaternion(model.group.quaternion);
-          model.wheels.forEach(({ pivot, wheel, x, z }, wheelIndex) => {
+          model.wheels.forEach((assembly, wheelIndex) => {
+            const { pivot, wheel, x, z, strut, arms } = assembly;
             // Contra-inclinação e altura independentes mantêm o pneu apoiado.
             pivot.rotation.x = -model.suspensionRoll;
             const contact = model.group.localToWorld(new THREE.Vector3(x, wheelRadius, z));
@@ -1337,7 +1388,9 @@
             wheel.rotation.z = model.spin;
             const flat = car.tyreBurst && car.burstWheel === wheelIndex;
             wheel.scale.set(flat ? .8 : 1, flat ? .65 : 1, 1);
-            wheel.children.filter(part => part.userData.wetTyre).forEach(part => { part.visible = car.tyreCompound === 'wet'; });
+            wheel.children.filter(part => part.userData.tyreBand).forEach(part => {
+              part.material = car.tyreCompound === 'wet' ? wetBandMaterial : dryBandMaterial;
+            });
             pivot.rotation.y = x > 0 ? -car.steering * .4 : 0;
             // Confere toda a banda de rodagem, inclusive as bordas e pneus furados.
             // Repete porque mover no eixo local também altera a posição no relevo.
@@ -1351,6 +1404,9 @@
               }
               pivot.position.y += correction / up.y;
             }
+            const detailVisible = camera.position.distanceTo(model.group.position) < (options.quality === 'performance' ? 100 : 220);
+            strut.visible = detailVisible; arms.forEach(arm => { arm.visible = detailVisible; });
+            if (detailVisible) placeSuspension(assembly);
           });
           const customized = car.skin;
           if (customized) {

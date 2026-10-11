@@ -3,7 +3,11 @@
   const get = id => document.getElementById(id);
   const menu = get('race-menu'), canvas = get('home-car-canvas');
   if (!menu || !canvas) return;
-  let factory, preview, skin, page = 'race', frame = 0, last = 0;
+  let factory, preview, skin, page = 'race', frame = 0, last = 0, identityName = null;
+  function showIdentity() {
+    get('home-pilot-name').textContent = identityName || (window.NeuroI18n?.t('Piloto visitante') || 'Piloto visitante');
+  }
+  window.addEventListener('neurodrive:language', showIdentity);
   const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
   const compact = window.matchMedia('(max-width: 850px), (pointer: coarse)');
   function stop() {
@@ -37,7 +41,7 @@
     update(player, skins) {
       skin = skins.find(item => item.id === player?.equipped) || skins[0];
       get('home-car-name').textContent = skin?.name || 'Original';
-      get('home-pilot-name').textContent = player?.nickname || player?.username || 'Piloto visitante';
+      identityName = player?.nickname || player?.username || null; showIdentity();
       get('home-pilot-detail').textContent = player ? `${player.achievements?.length || 0} medalhas · ${player.stats?.wins || 0} vitórias` : 'Entre para salvar seu progresso';
       const balance = get('home-pilot-coins');
       const coins = Number(player?.coins) || 0;

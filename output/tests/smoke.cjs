@@ -115,8 +115,11 @@ const rolled = visualCar.rotation.x;
 assert(rolled - restingRoll > .01);
 assert(rolled - restingRoll < .08, 'Carroceria se aproxima gradualmente da inclinação, sem salto');
 visualCar.updateMatrixWorld(true);
-const suspensionWheels = visualCar.children.filter(part => part.isGroup);
+const suspensionWheels = visualCar.children.filter(part => part.userData.wheelPivot);
 assert.equal(suspensionWheels.length, 4);
+const struts = visualCar.children.filter(part => part.userData.suspension);
+assert.equal(struts.length, 4, 'Quatro conjuntos de mola e amortecedor');
+assert(struts.every(strut => strut.children.some(part => part.userData.suspensionSpring)));
 for (const pivot of suspensionWheels) {
   const center = pivot.getWorldPosition(new THREE.Vector3());
   assert(Math.abs(center.y - ending.track.heightAt(center.x, center.z) - .15 - 1.65) < .2, 'Pneu permanece no terreno');
@@ -148,6 +151,26 @@ for (let sample = 0; sample < 12; sample++) {
   }
 }
 console.log('OK: contato dos pneus em doze trechos e bordas da pista.');
+
+ending.elements['np-camera'].value = 'chase';
+finisher.tyreCompound = 'dry';
+endingRenderer.update([finisher], finisher, false);
+endingRenderer.update([finisher], finisher, false);
+for (const pivot of suspensionWheels) {
+  const bands = pivot.children[0].children.filter(part => part.userData.tyreBand);
+  assert.equal(bands.length, 2);
+  assert(bands.every(band => band.material.color.getHexString() === '48db86'));
+}
+finisher.tyreCompound = 'wet'; finisher.pitState = 'service'; finisher.pitTimer = 264;
+endingRenderer.update([finisher], finisher, false);
+endingRenderer.update([finisher], finisher, false);
+assert(suspensionWheels.every(pivot => !pivot.children[0].visible), 'Rodas retiradas durante o serviço');
+assert(struts.every(strut => strut.visible && strut.scale.y > 0), 'Suspensão permanece visível sem a roda');
+for (const pivot of suspensionWheels) {
+  assert(pivot.children[0].children.filter(part => part.userData.tyreBand).every(band => band.material.color.getHexString() === '57b8ed'));
+}
+finisher.pitState = null;
+console.log('OK: faixas dos compostos e suspensão visível durante a troca.');
 
 const app = setup(true);
 const ui = app.elements;

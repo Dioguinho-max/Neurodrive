@@ -15,6 +15,7 @@
     "test:records": "node output/tests/record-laps.cjs && node output/tests/records.cjs",
     "test:online": "node output/tests/prediction.cjs && node output/tests/online-ui.cjs && node output/tests/online-buffer.cjs && node output/tests/online-stages.cjs",
     "test:weather": "node output/tests/weather.cjs",
+    "test:language": "node output/tests/language.cjs",
     "test:ui": "node output/tests/race-ui.cjs && node output/tests/gamepad.cjs && node output/tests/achievements.cjs && node output/tests/home.cjs && node output/tests/intro.cjs"
   },
   "dependencies": {

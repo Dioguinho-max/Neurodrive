@@ -8,7 +8,9 @@ O projeto está em **beta**, com física de estilo arcade e melhorias contínuas
 
 ## Recursos
 
-- **Chuva e pneus:** escolha Seco, Chuva ou Variável ao montar a disputa solo ou a sala online. No variável, chove dos 35 aos 110 segundos de cada sessão; a pista leva cerca de 20 segundos para encharcar e 60 para secar. Pneus de seco perdem fortemente a capacidade de fazer curvas, acelerar e frear no molhado. Selecione o composto em “Próxima troca” antes de chamar os boxes. A troca só acontece durante o serviço. Pneus de chuva desgastam mais no seco; a IA adapta sua estratégia. Em eventos com chuva, desgaste e boxes ficam ativos mesmo nas provas curtas e na classificação. O modo Chuva já larga com pneus adequados; Variável começa com pneus de seco. O servidor controla as condições de todos no online.
+- **Idiomas:** Português com bandeira do Brasil e English com bandeira dos EUA, em **Ajustes → Idioma** no solo e no menu da sala online. A escolha é salva neste navegador e compartilhada entre os dois modos; não exige reiniciar a partida. Nicks e nomes das pinturas e circuitos são preservados.
+- **Acabamento dos pneus e suspensão:** pneus de seco têm faixa verde e os de chuva, azul. As caixas de roda têm amortecedor, haste, mola e braços de suspensão que acompanham a altura das rodas. Os detalhes aparecem de perto na corrida e durante a troca nos boxes, no solo e no online; são ocultados à distância para poupar renderização.
+- **Chuva e pneus:** escolha Seco, Chuva ou Variável ao montar a disputa solo ou a sala online. No variável, a chuva chega gradualmente entre 35 e 60 segundos e diminui entre 140 e 170 segundos de cada sessão. A pista leva cerca de um minuto de chuva forte para encharcar e dois minutos sem chuva para secar. Pneus de seco perdem aderência aos poucos, conforme a água acumula. Selecione o composto em “Próxima troca” antes de chamar os boxes. A troca só acontece durante o serviço. Pneus de chuva desgastam mais no seco; a IA adapta sua estratégia. Em eventos com chuva, desgaste e boxes ficam ativos também nas provas curtas e na classificação, com desgaste reduzido nessas sessões para evitar estouros prematuros. O modo Chuva já larga com pneus adequados; Variável começa com pneus de seco. O servidor controla as condições de todos no online.
 - **Suspensão visual:** a carroceria inclina suavemente nas curvas, com rodas, cubos e freios independentes acompanhando o terreno. Vale para jogadores e IA, no solo e online, sem mudar a física ou as regras da corrida.
 - **Equipes nos seis boxes:** dois chefes por equipe trabalham nos computadores, com movimentos de digitação e telas de telemetria do respectivo carro. Cenário compartilhado pelo solo e online; estações distantes deixam de animar para poupar processamento.
 - **Apresentação online sincronizada:** câmera de abertura durante a saída automática dos boxes ou o início da contagem. Pode ser pulada e termina antes do controle manual ou no último segundo da contagem, sem pausar o servidor. Tetos dos boxes permanecem visíveis; a câmera acompanha pela frente aberta da garagem.
@@ -178,6 +180,7 @@ Depois de instalar as dependências:
 ```bash
 npm run test:ui
 npm run test:online
+npm run test:language
 npm run test:accounts
 npm run test:cloud
 node output/tests/pit-stop.cjs
