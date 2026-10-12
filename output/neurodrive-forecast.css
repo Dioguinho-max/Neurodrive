@@ -4,10 +4,10 @@
 body:has(#race-intro[open]) :is(.game-toolbar, #race-session) { visibility: hidden; }
 .race-intro #race-intro-skip { position: absolute; right: var(--intro-gutter); bottom: 24px; z-index: 2; }
 .race-intro > .intro-circuit { max-width: calc(100% - 160px); }
-.race-intro[data-shot="flyby"] > .intro-circuit { position: absolute; top: 28px; left: var(--intro-gutter); border-left: 3px solid #9af0c6; padding-left: 18px; }
-.race-intro[data-shot="flyby"] .intro-circuit h2 { font-size: clamp(26px, 3vw, 40px); margin: 6px 0; }
-.race-intro[data-shot="flyby"] .intro-circuit p { margin: 4px 0; font-size: 10px; }
-.race-intro[data-shot="flyby"] .intro-circuit > p:last-child { display: none; }
+.race-intro:is([data-shot="flyby"], [data-shot="car"]) > .intro-circuit { position: absolute; top: 28px; left: var(--intro-gutter); border-left: 3px solid #9af0c6; padding-left: 18px; }
+.race-intro:is([data-shot="flyby"], [data-shot="car"]) .intro-circuit h2 { font-size: clamp(26px, 3vw, 40px); margin: 6px 0; }
+.race-intro:is([data-shot="flyby"], [data-shot="car"]) .intro-circuit p { margin: 4px 0; font-size: 10px; }
+.race-intro:is([data-shot="flyby"], [data-shot="car"]) .intro-circuit > p:last-child { display: none; }
 .intro-forecast[hidden] { display: none !important; }
 .intro-forecast { position: absolute; left: var(--intro-gutter); bottom: 90px; width: min(780px, calc(100% - 2 * var(--intro-gutter))); box-sizing: border-box; display: grid; grid-template-columns: 1fr 1fr; overflow: hidden; border: 1px solid #a2c6cd40; border-radius: 4px 20px 4px 4px; background: linear-gradient(110deg,#0b1c29fa,#16343aef); box-shadow: 0 18px 48px #0005; color: #eff8fc; animation: forecast-reveal .55s ease-out both; }
 .intro-forecast-heading { grid-column: 1 / -1; display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 13px 24px; background: #9af0c6; color: #0c3029; }
@@ -40,7 +40,7 @@ body:has(#race-intro[open]) :is(.game-toolbar, #race-session) { visibility: hidd
  .race-intro[data-shot="overview"] > .intro-circuit { max-width: 100%; margin-bottom: 70px; }
 }
 @media(max-height:550px) and (orientation:landscape) {
- .race-intro[data-shot="flyby"] > .intro-circuit { top: 18px; }
+ .race-intro:is([data-shot="flyby"], [data-shot="car"]) > .intro-circuit { top: 18px; }
  .intro-forecast { width: min(690px,calc(100% - 2 * var(--intro-gutter))); bottom: 72px; }
  .intro-forecast-heading { padding: 9px 16px; }
  .intro-forecast-session { grid-template-columns: 40px minmax(0,1fr); padding: 12px 16px; gap: 10px; }

@@ -188,7 +188,7 @@ function createApp({ database = path.join(__dirname, 'data', 'neurodrive.sqlite'
       let resolved;
       try { resolved = fs.realpathSync(file); } catch { throw fail(404, 'Arquivo não encontrado.'); }
       if (!resolved.startsWith(publicRoot + path.sep) || !fs.statSync(resolved).isFile()) throw fail(404, 'Arquivo não encontrado.');
-      const types = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.txt': 'text/plain; charset=utf-8' };
+      const types = { '.png': 'image/png', '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.txt': 'text/plain; charset=utf-8' };
       if (!types[path.extname(file)] || relative.includes('/tests/')) throw fail(404, 'Arquivo não encontrado.');
       res.writeHead(200, { 'Content-Type': types[path.extname(file)], 'Cache-Control': 'no-cache' });
       if (req.method === 'HEAD') return res.end();

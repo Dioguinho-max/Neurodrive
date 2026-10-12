@@ -18,7 +18,7 @@
     renderImprovement();
   }
   let socket, self, room, latest, renderer, trackId, ready = false;
-  const intro = window.createNeuroIntro?.(get, progress => renderer?.setIntro?.(progress), () => { keys.clear(); pointers.clear(); });
+  const intro = window.createNeuroIntro?.(get, progress => renderer?.setIntro?.(progress), () => { keys.clear(); pointers.clear(); }, () => audio);
   let introSession = '', introPrevious = null;
   let prediction, rtt = 0, playerPosition = 1;
   let frames = 0, fps = 0, measuredAt = performance.now();
@@ -31,6 +31,7 @@
   const keys = new Set(), pointers = new Map();
   const actions = { KeyW: 'accelerate', ArrowUp: 'accelerate', KeyS: 'brake', ArrowDown: 'brake', KeyA: 'left', ArrowLeft: 'left', KeyD: 'right', ArrowRight: 'right', KeyQ: 'shiftDown', KeyE: 'shiftUp' };
   const audio = window.createNeuroAudio?.();
+  const easterEgg = window.createNeuroEasterEgg?.(get('neuro-race'), () => Boolean(latest && latest.phase === 'racing' && !latest.cars.find(car => car.id === latest.self)?.done && !intro?.active && !get('online-lobby').open));
   const say = (message) => { get('online-message').textContent = message; };
   const send = (data) => { if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify(data)); };
   function clear() { keys.clear(); pointers.clear(); document.querySelectorAll('[data-drive]').forEach((button) => button.setAttribute('aria-pressed', 'false')); prediction?.input({ brake: true }, performance.now()); send({ type: 'input', brake: true }); }
@@ -41,6 +42,7 @@
     if (!get('online-lobby').open) get('online-lobby').showModal();
   }
   function resetRoom() {
+    easterEgg?.reset();
     intro?.finish(); introSession = ''; introPrevious = null;
     recordNotice?.clear(); recordSummaries = {}; get('online-improvement').hidden = true;
     get('neuro-race').setAttribute('data-ceremony', 'false');
@@ -202,6 +204,7 @@
   get('online-sound').onchange = () => audio?.setEnabled(get('online-sound').checked);
   window.bindNeuroQuality(get('online-quality'), (quality) => renderer?.setQuality(quality));
   window.addEventListener('keydown', (event) => {
+    easterEgg?.keydown(event);
     if (intro?.active) return;
     if (get('online-lobby').open || ['INPUT', 'SELECT'].includes(event.target.tagName)) return;
     if (actions[event.code]) { event.preventDefault(); keys.add(event.code); }
@@ -259,6 +262,7 @@
       cars[index] = player;
       updateHUD(player, playerPosition, cars.length, latest.laps, latest.elapsed, latest.phase);
       const spectator = player.done && latest.stage === 'qualifying' ? cars.find(car => !car.done && !car.pitExit) || player : player;
+      easterEgg?.update(renderer);
       renderer.update(cars, player, false, spectator, latest.phase === 'finished'); audio?.update(player, latest, !player.done && !document.hidden);
     }
     requestAnimationFrame(draw);

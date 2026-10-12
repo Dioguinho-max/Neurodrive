@@ -47,9 +47,10 @@ function createCloudServer({ store, frontendOrigin, backendOrigin, avatarStorage
         const target = path.resolve(root, '.' + name);
         let real;
         try { real = fs.realpathSync(target); } catch { throw fail(404, 'Arquivo não encontrado.'); }
-        const types = { '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.txt': 'text/plain' };
+        const types = { '.png': 'image/png', '.html': 'text/html', '.js': 'text/javascript', '.css': 'text/css', '.txt': 'text/plain' };
         if (!real.startsWith(root + path.sep) || name.includes('/tests/') || !types[path.extname(real)] || !fs.statSync(real).isFile()) throw fail(404, 'Arquivo não encontrado.');
-        res.writeHead(200, { 'Content-Type': types[path.extname(real)] + '; charset=utf-8', 'Cache-Control': 'no-cache' });
+        const type = types[path.extname(real)];
+        res.writeHead(200, { 'Content-Type': type + (type.startsWith('text/') ? '; charset=utf-8' : ''), 'Cache-Control': 'no-cache' });
         if (req.method === 'HEAD') return res.end();
         fs.createReadStream(real).on('error', () => res.destroy()).pipe(res); return;
       }

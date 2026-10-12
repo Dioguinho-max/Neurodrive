@@ -22,10 +22,11 @@
   let qualifyingGrid = null;
   let sessionDifficulty = 'normal';
   let renderer;
-  const intro = window.createNeuroIntro?.(get, progress => renderer?.setIntro?.(progress), () => { clearInput(); accumulator = 0; });
+  const intro = window.createNeuroIntro?.(get, progress => renderer?.setIntro?.(progress), () => { clearInput(); accumulator = 0; }, () => audio);
   window.bindNeuroQuality(get('race-quality'), (quality) => renderer?.setQuality(quality));
   let started = false;
   let paused = false;
+  const easterEgg = window.createNeuroEasterEgg?.(get('neuro-race'), () => started && !paused && !intro?.active && race.phase === 'racing' && !race.cars[0].done);
   let accumulator = 0;
   let previousTime = null;
   let lastTimingUpdate = -1;
@@ -307,6 +308,7 @@
     const spectator = started && race.qualifying && player.done && race.phase !== 'finished'
       ? race.cars.find((car) => !car.done && !car.pitExit) || player : player;
     if (finale && !race.qualifying) renderer?.setCeremony?.(race.standings(), finale.elapsed);
+    easterEgg?.update(renderer);
     renderer?.update(race.cars, player, false, spectator, race.phase === 'finished');
     const ranking = race.standings();
     updateHUD(player, ranking.indexOf(player) + 1, ranking.length, race.laps, race.elapsed, race.phase);
@@ -352,6 +354,7 @@
   }
 
   function startSession(qualifying) {
+    easterEgg?.reset();
     intro?.finish();
     sessionBestBefore = career.records[track.id] ?? null;
     resultsReturnRemaining = null;
@@ -437,6 +440,7 @@
   get('race-recover').onclick = () => { if (!paused) race.recoverPlayer(); };
 
   window.addEventListener('keydown', (event) => {
+    easterEgg?.keydown(event);
     if (intro?.active) return;
     if (get('race-menu').open || get('race-results').open) return;
     if (event.code === 'Escape' && !event.repeat) { event.preventDefault(); openMenu(); return; }

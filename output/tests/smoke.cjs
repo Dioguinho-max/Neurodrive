@@ -82,14 +82,30 @@ for (const width of [1100, 390]) {
 endingRenderer.setIntro(.4);
 endingRenderer.update([finisher], finisher, false);
 const flybyStart = ending.render().camera.position.clone();
-endingRenderer.setIntro(.8);
+endingRenderer.setIntro(.65);
 endingRenderer.update([finisher], finisher, false);
 const flybyEnd = ending.render().camera.position;
 assert(flybyEnd.distanceTo(flybyStart) > 10, 'Flyover moves along the track');
 assert(flybyEnd.y > ending.track.heightAt(flybyEnd.x, flybyEnd.z) + 40, 'Flyover clears the terrain');
 assert([flybyEnd.x, flybyEnd.y, flybyEnd.z].every(Number.isFinite));
+for (const pitExit of [false, true]) {
+  finisher.pitExit = pitExit;
+  endingRenderer.setIntro(.75); endingRenderer.update([finisher], finisher, false);
+  const startDistance = Math.hypot(ending.render().camera.position.x-finisher.x, ending.render().camera.position.z-finisher.y);
+  endingRenderer.setIntro(.99); endingRenderer.update([finisher], finisher, false);
+  const eye = ending.render().camera.position;
+  assert(Math.hypot(eye.x-finisher.x,eye.z-finisher.y) < startDistance - 25, 'Final shot approaches the car');
+  assert(eye.y >= ending.track.heightAt(eye.x,eye.z) + 5, 'Closeup stays above terrain');
+}
+finisher.pitExit = false;
 endingRenderer.setIntro(null);
+endingRenderer.setCockpit(true);
 endingRenderer.update([finisher], finisher, false);
+assert(ending.render().camera.view.enabled, 'Cockpit frames the transparent windshield');
+assert(Math.hypot(ending.render().camera.position.x - finisher.x, ending.render().camera.position.z - finisher.y) < 3, 'Cockpit stays inside the car');
+endingRenderer.setCockpit(false);
+endingRenderer.update([finisher], finisher, false);
+assert(!ending.render().camera.view.enabled, 'Normal view restores projection');
 assert.equal(ending.render().camera.near, .5, 'Pilotagem restaura a visão de objetos próximos');
 assert.equal(engineers.length, 12, 'Duas estações em cada um dos seis boxes');
 for (let bay = 0; bay < 6; bay++) {

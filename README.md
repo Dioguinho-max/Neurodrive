@@ -8,6 +8,7 @@ O projeto está em **beta**, com física de estilo arcade e melhorias contínuas
 
 ## Recursos
 
+- **Easter egg:** uma surpresa foi adicionada ao jogo.
 - **Previsão na apresentação:** painel com as condições da classificação e da corrida, destaque da sessão atual e indicação do pneu para largar. Compartilhado pelo solo e online, usa o clima da disputa e acompanha a seleção de idioma. No tempo variável, informa início seco, chuva gradual e secagem; não altera o relógio ou a largada do servidor.
 - **Idiomas:** Português com bandeira do Brasil e English com bandeira dos EUA, em **Ajustes → Idioma** no solo e no menu da sala online. A escolha é salva neste navegador e compartilhada entre os dois modos; não exige reiniciar a partida. Nicks e nomes das pinturas e circuitos são preservados.
 - **Painel do piloto:** foto e identidade no topo; abas de Visão geral, Conquistas, Editar perfil e Segurança. Saldo, bônus diário e melhores voltas ficam no resumo, sem misturar formulários. Navegação por teclado e layout adaptado ao celular; alternar as abas preserva alterações ainda não salvas.

@@ -52,9 +52,9 @@ class FakeAudioContext {
   createBiquadFilter() { return { ...node(), frequency: parameter(), Q: parameter() }; }
   get sampleRate() { return 44100; }
   createBuffer() { return { getChannelData: () => new Float32Array(44100) }; }
-  createBufferSource() { const source = { ...node(), start() { this.started = true; }, stop() { this.stopped = true; } }; buffers.push(source); return source; }
+  createBufferSource() { const source = { ...node(), start(at) { this.started = true; this.startedAt = at; }, stop(at) { this.stopped = true; this.stoppedAt = at; } }; buffers.push(source); return source; }
   createPeriodicWave(real, imaginary) { return { real, imaginary }; }
-  createOscillator() { const result = { ...node(), frequency: parameter(), start() {}, stop() {}, setPeriodicWave(wave) { this.wave = wave; } }; oscillators.push(result); return result; }
+  createOscillator() { const result = { ...node(), frequency: parameter(), start(at) { this.startedAt = at; }, stop(at) { this.stoppedAt = at; }, setPeriodicWave(wave) { this.wave = wave; } }; oscillators.push(result); return result; }
 }
 host.AudioContext = FakeAudioContext;
 new Function('window', read('neurodrive-audio.js'))(host);
@@ -109,6 +109,26 @@ new Function('window', read('neurodrive-audio.js'))(host);
   assert.equal(gains[0].gain.value, 0.5);
   audio.update(car, race, false);
   assert.equal(gains[0].gain.value, 0);
+  const introStart = oscillators.length;
+  await audio.playIntro('overview', 'dry');
+  assert(oscillators.slice(introStart).some(voice => voice.type === 'sawtooth'), 'Rhythmic bass and lead');
+  assert(buffers.length > 1, 'Drum percussion is scheduled');
+  const openingVoices = oscillators.length;
+  assert(oscillators.slice(introStart).every(voice => voice.startedAt >= 1 && voice.startedAt < 3.4), 'First bar ends at camera cut');
+  audio.update(car, {phase:'finished'}, false);
+  assert.equal(gains[0].gain.value, .5, 'Intro can play during online waiting');
+  await audio.playIntro('forecast', 'rain');
+  assert(oscillators.length > openingVoices, 'Forecast continues the arrangement');
+  assert(oscillators.slice(openingVoices).every(voice => voice.stoppedAt <= 6.45), 'Final chord ends before presentation finishes');
+  audio.stopIntro();
+  for (const voice of oscillators.slice(introStart)) assert.equal(voice.stoppedAt, 1.12, 'Skip stops scheduled voices');
+  for (const voice of buffers.slice(1)) assert.equal(voice.stoppedAt, 1.12, 'Skip also stops drums');
+  const afterIntro = oscillators.length;
+  audio.setEnabled(false); await audio.playIntro('overview');
+  assert.equal(oscillators.length, afterIntro, 'Muted intro creates no voices');
+  audio.setEnabled(true);
+  const lateIntro = audio.playIntro('overview'); audio.stopIntro(); await lateIntro;
+  assert.equal(oscillators.length, afterIntro, 'Skipping while unlock resolves prevents late audio');
   audio.dispose();
   assert(buffers[0].stopped);
   console.log('OK: giro parado, alívio do acelerador, cinco trocas no corte, áudio por gesto, bipes, volume e silêncio na pausa.');

@@ -1,0 +1,4 @@
+.et-cockpit { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: fill; pointer-events: none; user-select: none; z-index: 1; }
+.et-cockpit[hidden] { display: none; }
+#neuro-race:has(.et-cockpit:not([hidden])) #race-session { z-index: 2; }
+#neuro-race:has(.et-cockpit:not([hidden])) #race-banner { z-index: 2; inset: auto 23% 18px 38%; font-size: clamp(12px, 1.4vw, 18px); }

@@ -908,7 +908,7 @@
     let chaseOrbit = 0;
     let elevation = 0.85;
     let zoom = 1;
-    let snapshot = null;
+    let snapshot = null, cockpit = false;
     let dragging = null;
     let viewportWidth = 0;
     let viewportHeight = 0;
@@ -931,6 +931,9 @@
 
       const mode = finishCameraAt !== null ? 'finish' : element('camera').value;
       const car = snapshot?.target;
+      const cockpitView = cockpit && car && !car.done && introProgress === null && !ceremony && finishCameraAt === null;
+      if (cockpitView) camera.setViewOffset(width, height, -width * .10, height * .17, width, height);
+      else if (camera.view?.enabled) camera.clearViewOffset();
       pitRoofs.forEach((roof) => {
         roof.visible = true;
         roof.material.opacity = 1;
@@ -947,7 +950,7 @@
       }
       const speedRatio = car ? Math.min(1, car.speed / (car.maxSpeed || 3.2)) : 0;
       const raceCamera = options.speedEffects && mode === 'chase';
-      const desiredFov = introProgress !== null ? 45 : raceCamera ? 56 + speedRatio * 22 : 45;
+      const desiredFov = cockpitView ? 78 : introProgress !== null ? 45 : raceCamera ? 56 + speedRatio * 22 : 45;
       // A tomada aérea não precisa enxergar objetos a centímetros da lente.
       // Um near maior preserva a precisão entre asfalto, terreno e marcações.
       const near = introProgress !== null && introProgress < .3 ? 10 : .5;
@@ -961,7 +964,7 @@
       }
       if (introProgress !== null && car) {
         // Primeiro mostra o traçado inteiro; o carro só entra no segundo plano.
-        const close = clamp((introProgress - .3) / .7, 0, 1);
+        const close = clamp((introProgress - .75) / .25, 0, 1);
         const t = close * close * (3 - 2 * close);
         if (introProgress < .3) {
           const bounds = track.bounds;
@@ -976,14 +979,32 @@
           const height = track.heightAt(cx, cz);
           camera.position.set(cx + Math.cos(angle) * distance * .38, height + distance * .925, cz + Math.sin(angle) * distance * .38);
           camera.lookAt(cx, height, cz);
-        } else {
+        } else if (introProgress < .75) {
           // Constant-speed dolly above the road; look ahead through the curve.
-          const distance = introDistance + close * Math.min(180, track.length * .12);
+          const distance = introDistance + (introProgress - .3) / .45 * Math.min(180, track.length * .12);
           const eye = track.pointAt(distance, 0);
           const target = track.pointAt(distance + 85, 0);
           const height = Math.max(track.heightAt(eye.x, eye.y), track.heightAt(target.x, target.y));
           camera.position.set(eye.x, height + 48, eye.y);
           camera.lookAt(target.x, track.heightAt(target.x, target.y) + 5, target.y);
+        } else {
+          // Final dolly toward the player; pit garages are viewed from their open side.
+          const distance = 65 - t * 35;
+          let x, z, height;
+          if (car.pitExit || car.pitState) {
+            const nearest = track.nearest(car.x, car.y);
+            const tangent = Math.atan2(nearest.ty, nearest.tx);
+            x = car.x + Math.cos(tangent) * 10 + Math.sin(tangent) * distance;
+            z = car.y + Math.sin(tangent) * 10 - Math.cos(tangent) * distance;
+            height = 10 - t * 3;
+          } else {
+            const angle = car.angle + .55 + (1 - t) * .25;
+            x = car.x + Math.cos(angle) * distance;
+            z = car.y + Math.sin(angle) * distance;
+            height = 24 - t * 14;
+          }
+          camera.position.set(x, Math.max(track.heightAt(x, z) + 5, track.heightAt(car.x, car.y) + height), z);
+          camera.lookAt(car.x, track.heightAt(car.x, car.y) + 3, car.y);
         }
       } else if (ceremony) {
         const close = clamp((ceremony.time - 4) / 3, 0, 1);
@@ -992,6 +1013,12 @@
         eye.applyAxisAngle(new THREE.Vector3(0, 1, 0), -origin.angle);
         camera.position.set(origin.x + eye.x, ceremony.height + eye.y, origin.y + eye.z);
         camera.lookAt(origin.x, ceremony.height + 7, origin.y);
+      } else if (cockpitView) {
+        const forwardX = Math.cos(car.angle), forwardZ = Math.sin(car.angle);
+        const x = car.x + forwardX * 2, z = car.y + forwardZ * 2;
+        camera.position.set(x, track.heightAt(x, z) + 5.5, z);
+        const aheadX = x + forwardX * 70, aheadZ = z + forwardZ * 70;
+        camera.lookAt(aheadX, track.heightAt(aheadX, aheadZ) + 5.5, aheadZ);
       } else if (car?.pitState === 'service') {
         const x = car.x + Math.cos(car.angle) * 15 + Math.sin(car.angle) * 24;
         const z = car.y + Math.sin(car.angle) * 15 - Math.cos(car.angle) * 24;
@@ -1044,7 +1071,11 @@
         );
         camera.lookAt(target);
       }
-      renderer.render(scene, camera);
+      const ownModel = cockpitView ? models[snapshot.targetIndex]?.group : null;
+      const ownVisible = ownModel?.visible;
+      if (ownModel) ownModel.visible = false;
+      try { renderer.render(scene, camera); }
+      finally { if (ownModel) ownModel.visible = ownVisible; }
     }
 
     listen('pointerdown', (event) => {
@@ -1126,6 +1157,7 @@
     setQuality(options.quality);
     return {
       setQuality,
+      setCockpit(active) { cockpit = Boolean(active); },
       setFinishCamera(active) { finishCameraAt = active ? Date.now() : null; },
       setIntro(progress) {
         if (progress !== null && introProgress === null) introDistance = track.length * (.2 + Math.random() * .6);
@@ -1286,7 +1318,7 @@
             engineer.map.needsUpdate = true;
           }
         }
-        snapshot = { leader, target };
+        snapshot = { leader, target, targetIndex: population.indexOf(target) };
         models.forEach((model, index) => { model.group.visible = index < population.length; });
         population.forEach((car, index) => {
           const model = models[index] || (models[index] = createCarModel(index));

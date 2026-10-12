@@ -1,0 +1,17 @@
+﻿const fs=require('fs'),assert=require('node:assert/strict'),vm=require('node:vm');let now=0,driving=true,visible=false,img;
+const root={append(value){img=value;}};
+const window={};const document={createElement(){return {attrs:{},setAttribute(k,v){this.attrs[k]=v;},getAttribute(k){return k==='src'?this.src:this.attrs[k];}};}};
+vm.runInNewContext(fs.readFileSync('output/neurodrive-easter-egg.js','utf8'),{window,document,performance:{now:()=>now}});
+const egg=window.createNeuroEasterEgg(root,()=>driving);egg.update({setCockpit:v=>visible=v});
+const key=(code,extra={})=>egg.keydown({code,target:{tagName:'BODY'},...extra});
+assert.equal(img.src,undefined,'Asset is loaded only when the secret is used');
+key('KeyE');key('KeyT');assert(img.hidden);img.onload();assert(visible&&!img.hidden);
+key('KeyE');key('KeyT');assert(!visible&&img.hidden);
+key('KeyE');now=1300;key('KeyT');assert(!visible,'Sequence expires');
+key('KeyE',{target:{tagName:'INPUT'}});key('KeyT');assert(!visible);
+key('KeyE',{target:{isContentEditable:true}});key('KeyT');assert(!visible);
+key('KeyE',{ctrlKey:true});key('KeyT');assert(!visible);
+key('KeyE');key('KeyT');assert(visible);driving=false;egg.update({setCockpit:v=>visible=v});assert(!visible);
+driving=true;egg.update({setCockpit:v=>visible=v});assert(visible,'Resume restores active easter egg');
+egg.reset();assert(!visible);key('KeyE');key('KeyT');img.onerror();assert(!visible,'Missing image never leaves invisible cockpit');
+console.log('OK: ET toggles, lazy image, timeout, editable fields, modifiers, pause/resume, reset and image error.');

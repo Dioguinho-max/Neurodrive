@@ -7,5 +7,6 @@ for (const file of fs.readdirSync(source)) {
   if (/\.(html|js|css)$/.test(file)) fs.copyFileSync(path.join(source, file), path.join(target, file));
 }
 fs.cpSync(path.join(source, 'vendor'), path.join(target, 'vendor'), { recursive: true });
+fs.cpSync(path.join(source, 'assets'), path.join(target, 'assets'), { recursive: true });
 fs.copyFileSync(path.join(source, 'corrida.html'), path.join(target, 'index.html'));
 console.log('Frontend criado em dist, sem banco, backend ou testes.');
