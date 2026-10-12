@@ -2,6 +2,9 @@
 (() => {
   'use strict';
   const dictionary = {
+    'Boxes':'Pit stop', 'Nos boxes':'In the pits', 'Cancelar boxes':'Cancel pit stop',
+    'Boxes · Seco':'Pit · Dry', 'Boxes · Chuva':'Pit · Wet',
+    'Escolha o pneu e chame os boxes':'Choose tires and request a pit stop',
     'Jogue em tela cheia':'Play in fullscreen',
     'Mais espaço para a pista e os controles.':'More room for the track and controls.',
     'Entrar em tela cheia':'Enter fullscreen', 'Continuar no navegador':'Continue in browser',

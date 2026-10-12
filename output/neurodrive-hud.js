@@ -101,6 +101,7 @@
       const button = get('race-pit-request');
       button.disabled = phase !== 'racing' || Boolean(car.pitState || car.cooldown || car.done);
       button.textContent = car.pitState ? 'Equipe trabalhando' : car.pitRequested ? 'Cancelar parada (B)' : 'Chamar boxes (B)';
+      window.NeuroMobilePit?.update(car, phase);
     }
     const rpm = Math.max(0, Math.min(8000, Number(car.rpm) || 0));
     get('race-rpm-fill').setAttribute('stroke-dashoffset', String(100 - rpm / 80));

@@ -53,26 +53,25 @@
   .game-toolbar .game-brand { display: none; }
 }
 
-/* Keep pit actions in the middle, outside steering and pedal touch zones. */
+/* Mobile pit controls stay collapsed while driving. */
+#mobile-pit-toggle, #mobile-pit-options { display: none; }
 @media (pointer: coarse), (max-width: 900px) {
-  #neuro-race .race-pit-panel {
-    top: var(--mobile-top); left: 50%; right: auto; transform: translateX(-50%);
-    width: min(440px, calc(100% - 328px)); padding: 8px 10px;
-    display: grid; grid-template-columns: minmax(0, 1fr) minmax(90px, .85fr); gap: 5px 8px;
-    z-index: 5;
-  }
-  #neuro-race .race-pit-panel[hidden] { display: none; }
-  #race-tyres { grid-column: 1; font-size: 11px; align-self: center; }
-  #neuro-race .race-pit-panel progress { grid-column: 2; margin: 0; align-self: center; }
-  #neuro-race .race-pit-panel p { grid-column: 1 / -1; margin: 0; font-size: 10px; }
-  .race-pit-panel[data-condition="normal"][data-pit-active="false"] #race-pit-status { display: none; }
-  .race-pit-panel .pit-compound-label { grid-column: 1; font-size: 9px; gap: 2px; }
-  .race-pit-panel .pit-compound-buttons button { min-height: 44px; font-size: 11px; }
-  #neuro-race #race-pit-request { grid-column: 2; align-self: end; min-height: 44px; font-size: 10px; line-height: 1.2; }
+  #neuro-race .race-pit-panel { top: var(--mobile-top); left: max(12px, env(safe-area-inset-left)); right: auto; width: 140px; padding: 0; border: 0; background: none; box-shadow: none; z-index: 5; }
+  #neuro-race .race-pit-panel > :not(#mobile-pit-toggle):not(#mobile-pit-options) { display: none; }
+  #mobile-pit-toggle { display: flex; flex-direction: column; justify-content: center; gap: 3px; width: 140px; min-height: 48px; padding: 6px 12px; text-align: left; color: #edf8ff; border: 1px solid #abc8d166; border-radius: 12px; background: #102532e8; touch-action: manipulation; }
+  #mobile-pit-toggle strong { font-size: 12px; }
+  #mobile-pit-toggle span { font-size: 10px; color: #b8d9ce; }
+  #mobile-pit-toggle:disabled { opacity: .65; }
+  #mobile-pit-toggle[aria-expanded="true"] { border-color: #9af0c6; }
+  #mobile-pit-options:not([hidden]) { display: flex; gap: 8px; position: absolute; left: 148px; top: 0; width: 232px; padding: 8px; box-sizing: border-box; border: 1px solid #a0f1c966; border-radius: 12px; background: #0b1c29f5; box-shadow: 0 6px 20px #0005; }
+  #mobile-pit-options button { flex: 1; min-width: 0; min-height: 52px; padding: 8px; border: 1px solid #9af0c6; border-radius: 8px; background: #9af0c6; color: #10271d; font: inherit; font-size: 12px; font-weight: 700; touch-action: manipulation; }
+  #mobile-pit-options button[data-compound="wet"] { background: #98d5f5; border-color: #98d5f5; }
+  #mobile-pit-options button:focus-visible, #mobile-pit-toggle:focus-visible { outline: 2px solid white; outline-offset: 2px; }
+  .race-pit-panel[data-condition="burst"] #mobile-pit-toggle, .race-pit-panel[data-condition="critical"] #mobile-pit-toggle { border-color: #ff7979; }
   #race-banner { inset: 48% 22% auto; font-size: clamp(14px, 2.3vw, 22px); }
 }
-@media (max-width: 600px) and (orientation: portrait) {
-  #neuro-race .race-pit-panel { top: calc(env(safe-area-inset-top, 0px) + 160px); width: calc(100% - 32px); }
+@media(max-width:600px) and (orientation:portrait) {
+  #mobile-pit-options:not([hidden]) { left: 0; top: 100px; width: min(240px, calc(100vw - 28px)); }
 }
 .mobile-screen-gate { box-sizing: border-box; width: min(440px, calc(100% - 32px)); max-height: calc(100dvh - 32px); overflow: auto; border: 1px solid #87eac3; border-radius: 18px; background: #0c202c; color: #edf8ff; padding: 24px; }
 .mobile-screen-gate::backdrop { background: #030a12d9; }
