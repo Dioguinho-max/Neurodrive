@@ -81,3 +81,6 @@
 .mobile-screen-gate button { min-height: 48px; flex: 1; }
 .mobile-screen-gate button[hidden] { display: none; }
 html:fullscreen, html:fullscreen body { width: 100%; height: 100%; margin: 0; }
+
+/* Pit commands must not initiate browser gestures during multi-touch driving. */
+#mobile-pit-toggle, #mobile-pit-options button { touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
