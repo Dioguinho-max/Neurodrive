@@ -35,10 +35,10 @@ for (let tick = 0; tick < 2000 && player.gear < 6; tick++) {
 }
 assert.equal(changes, 5);
 
-const oscillators = [], gains = [];
+const oscillators = [], gains = [], buffers = [];
 let contexts = 0;
 function parameter() {
-  return { value: 0, setTargetAtTime(value) { this.value = value; },
+  return { value: 0, setTargetAtTime(value, time, smoothing) { this.value = value; this.smoothing = smoothing; },
     setValueAtTime(value) { this.value = value; this.lastAttack = value; }, linearRampToValueAtTime(value) { this.value = value; },
     exponentialRampToValueAtTime(value) { this.value = value; }, cancelScheduledValues() {} };
 }
@@ -52,7 +52,7 @@ class FakeAudioContext {
   createBiquadFilter() { return { ...node(), frequency: parameter(), Q: parameter() }; }
   get sampleRate() { return 44100; }
   createBuffer() { return { getChannelData: () => new Float32Array(44100) }; }
-  createBufferSource() { throw new Error('Ruídos extras de pneus e impactos foram removidos'); }
+  createBufferSource() { const source = { ...node(), start() { this.started = true; }, stop() { this.stopped = true; } }; buffers.push(source); return source; }
   createPeriodicWave(real, imaginary) { return { real, imaginary }; }
   createOscillator() { const result = { ...node(), frequency: parameter(), start() {}, stop() {}, setPeriodicWave(wave) { this.wave = wave; } }; oscillators.push(result); return result; }
 }
@@ -85,9 +85,24 @@ new Function('window', read('neurodrive-audio.js'))(host);
   Object.assign(car, { speed: 3, gripUsage: 1.6, impact: 0.8, activations: [[], [], [1, -1]] });
   audio.update(car, { phase: 'racing' }, true);
   assert.equal(gains.length, channels, 'Curva fechada e frenagem forte não criam efeitos extras');
+  assert.equal(buffers.length, 0, 'Dry driving has no rain source');
+  car.rainIntensity = 0.5;
+  audio.update(car, { phase: 'racing' }, true);
+  assert.equal(buffers.length, 1); assert(buffers[0].loop && buffers[0].started);
+  const rainGain = gains.at(-1);
+  assert.equal(rainGain.gain.value, 0.0075);
+  assert.equal(rainGain.gain.smoothing, 0.8, "Rain fades gradually");
+  car.rainIntensity = 1; audio.update(car, race, true);
+  assert.equal(rainGain.gain.value, 0.015);
+  assert(rainGain.gain.value < gains[1].gain.value, 'Rain stays below engine gain');
+  audio.update(car, race, false); assert.equal(rainGain.gain.value, 0);
+  car.rainIntensity = 0; audio.update(car, race, true);
+  assert.equal(rainGain.gain.value, 0); assert.equal(buffers.length, 1, 'Reuse rain source');
+  car.rainIntensity = 1;
   audio.setEnabled(false);
   audio.update(car, race, true);
   assert.equal(gains[0].gain.value, 0);
+  assert.equal(rainGain.gain.value, 0, "Mute silences rain too");
   audio.setEnabled(true);
   audio.setVolume(0.5);
   audio.update(car, race, true);
@@ -95,5 +110,6 @@ new Function('window', read('neurodrive-audio.js'))(host);
   audio.update(car, race, false);
   assert.equal(gains[0].gain.value, 0);
   audio.dispose();
+  assert(buffers[0].stopped);
   console.log('OK: giro parado, alívio do acelerador, cinco trocas no corte, áudio por gesto, bipes, volume e silêncio na pausa.');
 })().catch((error) => { console.error(error); process.exitCode = 1; });

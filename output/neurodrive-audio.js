@@ -3,6 +3,7 @@
   'use strict';
   window.createNeuroAudio = function createNeuroAudio() {
     let context, master, engineGain, filter, low, high;
+    let rainSource, rainGain;
     let enabled = true, volume = 0.3;
     let lastCountdown = null;
 
@@ -54,9 +55,38 @@
       const now = context.currentTime;
       engineGain.gain.cancelScheduledValues(now);
       engineGain.gain.setTargetAtTime(0, now, 0.015);
+      if (rainGain) {
+        rainGain.gain.cancelScheduledValues(now);
+        rainGain.gain.setTargetAtTime(0, now, 0.03);
+      }
       // Também interrompe um bip em andamento ao pausar ou perder foco.
       master.gain.cancelScheduledValues(now);
       master.gain.setTargetAtTime(0, now, 0.015);
+    }
+
+    function updateRain(car, now) {
+      const intensity = Math.max(0, Math.min(1, Number(car.rainIntensity) || 0));
+      if (!rainSource && intensity > 0) {
+        // A quiet, filtered rain bed. No tire noise, impacts or sharp droplets.
+        const buffer = context.createBuffer(1, context.sampleRate * 4, context.sampleRate);
+        const samples = buffer.getChannelData(0);
+        for (let i = 0; i < samples.length; i++) samples[i] = Math.random() * 2 - 1;
+        rainSource = context.createBufferSource();
+        rainSource.buffer = buffer;
+        rainSource.loop = true;
+        const highpass = context.createBiquadFilter();
+        highpass.type = 'highpass'; highpass.frequency.value = 900; highpass.Q.value = 0.5;
+        const lowpass = context.createBiquadFilter();
+        lowpass.type = 'lowpass'; lowpass.frequency.value = 4800; lowpass.Q.value = 0.5;
+        rainGain = context.createGain(); rainGain.gain.value = 0;
+        rainSource.connect(highpass); highpass.connect(lowpass);
+        lowpass.connect(rainGain); rainGain.connect(master);
+        rainSource.start();
+      }
+      if (rainGain) {
+        // Gentle fade and a low ceiling keep the engine in the foreground.
+        rainGain.gain.setTargetAtTime(intensity * 0.015, now, 0.8);
+      }
     }
 
     function beep(frequency, duration) {
@@ -83,6 +113,7 @@
       }
       const now = context.currentTime;
       master.gain.setTargetAtTime(volume, now, 0.02);
+      updateRain(car, now);
       const combustionFrequency = car.rpm / 60 * 2;
       low.frequency.setTargetAtTime(car.rpm / 60, now, 0.035);
       high.frequency.setTargetAtTime(combustionFrequency, now, 0.025);
@@ -103,7 +134,12 @@
       unlock, update, silence,
       setEnabled(value) { enabled = Boolean(value); if (!enabled) silence(); },
       setVolume(value) { volume = Math.max(0, Math.min(1, Number(value) || 0)); },
-      dispose() { if (context) { silence(); context.close(); context = null; } },
+      dispose() {
+        if (context) {
+          silence(); rainSource?.stop(); rainSource?.disconnect();
+          context.close(); context = null; rainSource = null; rainGain = null;
+        }
+      },
     };
   };
 })();

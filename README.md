@@ -20,6 +20,7 @@ O projeto está em **beta**, com física de estilo arcade e melhorias contínuas
 - **Vitrine ampliada:** gire o carro por arraste, toque, teclado ou botões acessíveis pelo controle. Compare a seleção com a pintura equipada no mesmo ângulo e compre/equipe diretamente na prévia, com confirmação visual após o servidor salvar.
 - **Menu com garagem 3D:** carro equipado em destaque, iluminação de garagem, resumo do piloto, moedas e medalhas. Abas organizam corrida, perfil, garagem, ajustes e recordes. A câmera se move suavemente no desktop; no celular e com movimento reduzido, a prévia fica estática. O menu libera a prévia ao entrar na corrida.
 - **Corrida solo:** cinco adversários de IA, dificuldades selecionáveis e provas de 1, 3, 5, 10, 20 ou 50 voltas.
+- **IA competitiva:** menos freadas corretivas, mais disputa nas curvas abertas e ultrapassagens. Os três níveis têm ritmo reforçado. O difícil usa um bônus arcade de força de aceleração de até 40%, reduzido conforme a pista molha, mantendo o teto de 205 km/h. Esse bônus só vale para bots; a física dos jogadores e as regras de validação de voltas permanecem iguais.
 - **Classificação:** saída dos boxes, volta de aquecimento e duas tentativas cronometradas. A melhor volta válida define o grid.
 - **Três circuitos:** Serra Verde, Autódromo Veloz e Vale Técnico, com relevos, arquibancadas, garagens e patrocinadores fictícios.
 - **Online:** salas por código para 2–6 jogadores, com IA preenchendo as vagas. Corridas comuns de 1, 3, 5 ou 10 voltas e Copa Neuro de 3 voltas, valendo moedas do jogo.

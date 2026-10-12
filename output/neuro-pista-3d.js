@@ -611,13 +611,18 @@
     const models = [];
     // Pools fixos: efeitos não criam objetos ou texturas a cada quadro.
     const fxTransform = new THREE.Object3D();
-    const skidPool = [], smokePool = [];
-    let skidIndex = 0, smokeIndex = 0;
+    const skidPool = [], smokePool = [], sprayPool = [];
+    let skidIndex = 0, smokeIndex = 0, sprayIndex = 0;
     const skids = options.racePresentation ? new THREE.InstancedMesh(new THREE.BoxGeometry(1, 0.025, 1),
       new THREE.MeshBasicMaterial({ color: '#181b1e', transparent: true, opacity: 0.5, depthWrite: false }), 256) : null;
     const smoke = options.racePresentation ? new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 0),
       new THREE.MeshBasicMaterial({ color: '#d2d4d4', transparent: true, opacity: 0.16, depthWrite: false }), 48) : null;
-    for (const pool of [skids, smoke]) {
+    const spray = options.racePresentation ? new THREE.InstancedMesh(new THREE.SphereGeometry(1, 6, 4),
+      new THREE.MeshBasicMaterial({ color: '#bdd5dd', transparent: true, opacity: 0.24, depthWrite: false }), 192) : null;
+    if (spray) spray.name = 'tire-water-spray';
+    if (smoke) smoke.name = 'tire-dry-smoke';
+    if (skids) skids.name = 'tire-dry-marks';
+    for (const pool of [skids, smoke, spray]) {
       if (!pool) continue;
       fxTransform.scale.setScalar(0); fxTransform.updateMatrix();
       for (let i = 0; i < pool.count; i++) pool.setMatrixAt(i, fxTransform.matrix);
@@ -626,13 +631,21 @@
     }
     function updateTireEffects() {
       const now = Date.now();
-      for (const [mesh, pool, lifetime] of [[skids, skidPool, 12000], [smoke, smokePool, 1300]]) {
+      for (const [mesh, pool, lifetime] of [[skids, skidPool, 12000], [smoke, smokePool, 1300], [spray, sprayPool, 450]]) {
         if (!mesh) continue;
         pool.forEach((effect, i) => {
-          const age = Math.min(1, (now - effect.at) / lifetime);
+          const age = Math.min(1, (now - effect.at) / (effect.lifetime || lifetime));
           fxTransform.position.set(effect.x, effect.y + (mesh === smoke ? age * 4 : 0), effect.z);
           fxTransform.rotation.set(effect.bank, -effect.angle, effect.pitch, 'YZX');
-          if (mesh === smoke) fxTransform.scale.setScalar((1 + age * 3) * (1 - age));
+          if (mesh === spray) {
+            const trail = age * (effect.burst ? 6 : 3.5);
+            const spread = age * (effect.spread || 0);
+            fxTransform.position.x -= Math.cos(effect.angle) * trail + Math.sin(effect.angle) * spread;
+            fxTransform.position.z += -Math.sin(effect.angle) * trail + Math.cos(effect.angle) * spread;
+            fxTransform.position.y += Math.sin(age * Math.PI) * (effect.lift || .85);
+            const size = effect.size * (1 - age);
+            fxTransform.scale.set(size * 2.4, size * .65, size);
+          } else if (mesh === smoke) fxTransform.scale.setScalar((1 + age * 3) * (1 - age));
           else fxTransform.scale.set(effect.length, 1, 0.95 * (1 - age));
           fxTransform.updateMatrix(); mesh.setMatrixAt(i, fxTransform.matrix);
         });
@@ -1101,6 +1114,7 @@
       models.forEach((model) => model.wheels.forEach(({ wheel }) => { wheel.geometry = ultra ? ultraWheelGeometry : wheelGeometry; }));
       grandstandDetails.visible = !light;
       if (smoke) smoke.visible = !light && options.speedEffects !== false;
+      if (spray) spray.visible = options.speedEffects !== false;
       renderer.setPixelRatio(ultra ? Math.min(Math.max(window.devicePixelRatio || 1, 1.5), 2.5) : Math.min(window.devicePixelRatio || 1, light ? 1 : 2));
       renderer.shadowMap.enabled = !light;
       sun.castShadow = !light;
@@ -1349,11 +1363,30 @@
           }
           if (clearance > 0) { model.group.position.y += clearance; model.group.updateMatrixWorld(true); }
           const distance = model.lastX === null ? 0 : Math.hypot(car.x - model.lastX, car.y - model.lastY);
+          // Water fans outward under braking/sliding; ordinary driving leaves a low trail.
+          const water = clamp(car.wetness || 0, 0, 1);
+          const brakingHard = (car.activations?.[2]?.[1] ?? 0) < -0.85 || car.brake > .8;
+          const waterBurst = water > .25 && car.speed * 54 > 65 && (brakingHard || car.sliding);
+          if (spray && options.speedEffects !== false && !model.coast && !car.offRoad && !car.cooldown
+            && !car.pitState && water > .12 && car.speed * 54 > 35 && distance > 0 && distance < 20
+            && suspensionTime - (model.lastSprayAt ?? -Infinity) >= (options.quality === 'performance' ? 200 : 120)) {
+            const jets = waterBurst && options.quality !== 'performance' ? 3 : 1;
+            for (const axle of waterBurst ? [-6, 5] : [-6]) for (const side of [-1, 1]) for (let jet = 0; jet < jets; jet++) {
+              const x = car.x + forwardX * axle - forwardY * side * 4;
+              const z = car.y + forwardY * axle + forwardX * side * 4;
+              sprayPool[sprayIndex++ % spray.count] = { x, z, y: track.heightAt(x, z) + .35,
+                at: suspensionTime, angle: car.angle, bank, pitch,
+                burst: waterBurst, lifetime: waterBurst ? 700 : 450,
+                spread: side * (waterBurst ? 3 + jet * 2 : .7) * water,
+                lift: waterBurst ? (2 + jet * 1.2) * water : .85,
+                size: (waterBurst ? .5 + jet * .1 : .24 + .34 * clamp(car.speed / 3.8, 0, 1)) * water };
+            }
+            model.lastSprayAt = suspensionTime;
+          }
           model.fxTravel = (model.fxTravel || 0) + distance;
           // O pedal responde imediatamente; a força física do freio sobe gradualmente.
-          const brakingHard = (car.activations?.[2]?.[1] ?? 0) < -0.85;
           const strongTireStress = car.speed * 54 >= 130 && brakingHard;
-          if (skids && !model.coast && !car.offRoad && !car.cooldown && strongTireStress
+          if (skids && water <= .12 && !model.coast && !car.offRoad && !car.cooldown && strongTireStress
             && distance > 0 && distance < 20 && model.fxTravel >= 4) {
             for (const side of [-1, 1]) {
               const x = car.x - forwardX * 5 - forwardY * side * 4;
@@ -1364,7 +1397,7 @@
               if (options.speedEffects !== false && options.quality !== 'performance') smokePool[smokeIndex++ % 48] = effect;
             }
             model.fxTravel = 0;
-          } else if (!strongTireStress || distance >= 20) model.fxTravel = 0;
+          } else if (water > .12 || !strongTireStress || distance >= 20) model.fxTravel = 0;
           // O giro acompanha o deslocamento, sem depender do FPS ou girar durante a pausa.
           if (distance < 30) {
             const direction = (car.x - (model.lastX ?? car.x)) * forwardX + (car.y - (model.lastY ?? car.y)) * forwardY;

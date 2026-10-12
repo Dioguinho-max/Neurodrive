@@ -51,7 +51,8 @@
     car.brake += clamp(Math.max(0, -pedal) - car.brake, -0.08, 0.045);
     const traction = weatherGripFactor(car);
     const force = car.brake > 0 ? -car.brake * 0.026 * traction
-      : car.shiftTicks || (car.manual && car.limiter) ? 0 : pedal * gearForce[car.gear - 1] * Math.sqrt(traction);
+      : car.shiftTicks || (car.manual && car.limiter) ? 0 : pedal * gearForce[car.gear - 1] * Math.sqrt(traction)
+        * (car.player ? 1 : 1 + ((car.aiPower || 1) - 1) * (1 - .8 * clamp(car.wetness || 0, 0, 1)));
     car.speed = clamp(car.speed + force - drag, 0, maximumSpeed);
     const targetRpm = clamp(900 + car.speed * 54 / gearLimits[car.gear - 1] * 5900, 900, REV_LIMIT);
     // Embreagem acopla gradualmente após a largada, sem trocar marchas parado.
@@ -178,7 +179,8 @@
     const laps = qualifying ? 3 : Number.isInteger(requestedLaps) && requestedLaps >= 1 && requestedLaps <= 50 ? requestedLaps : 3;
     const startDistance = 0;
     const checkpointLength = track.length / 12;
-    const aiSpeed = ({ easy: 170, normal: 190, hard: 205 }[difficulty] || 190) / 54;
+    const aiSpeed = ({ easy: 185, normal: 200, hard: 205 }[difficulty] || 200) / 54;
+    const aggression = ({ easy: .35, normal: .7, hard: 1 }[difficulty] ?? .7);
     let phase = 'countdown';
     let countdown = 180;
     let elapsed = 0;
@@ -210,6 +212,8 @@
       return {
         id: id + 1, name: human ? 'Você' : driver.name, player: human,
         driver: human ? null : driver,
+        // Explicit arcade difficulty bonus; human cars always retain the original drivetrain.
+        aiPower: human ? 1 : ({ easy: 1.05, normal: 1.12, hard: 1.4 }[difficulty] || 1.12),
         skin: human ? null : { color: driver.color, accent: '#172333' },
         ...point, speed: 0, maxSpeed: MAX_RACE_SPEED, steering: 0, gear: 1, rpm: 900, shiftTicks: 0, alive: true, done: false,
         pitExit: pitStart, pitWait: id * 120, pitNode: 1,
@@ -259,20 +263,21 @@
       const previewBend = Math.abs(wrap(pointAt(car.progress + 145).angle - pointAt(car.progress + 40).angle));
       if (!car.tacticTicks) {
         lane = 0;
-        const slower = nearby.filter(({ other, ahead, side }) => ahead > 18 && ahead < 130 && Math.abs(side) < 22 && car.speed > other.speed + 0.03)
+        const slower = nearby.filter(({ other, ahead, side }) => ahead > 4 && ahead < 130 && Math.abs(side) < 22
+          && (car.speed > other.speed + 0.03 || other.speed < .8))
           .sort((a, b) => a.ahead - b.ahead)[0];
         const laneWidth = Math.min(26, track.halfWidth - 18);
-        if (previewBend < 0.5 && slower) {
+        if (previewBend < .5 + aggression * .15 && slower) {
           const choices = [-laneWidth, laneWidth].sort((a, b) => Math.abs(a - currentLane) - Math.abs(b - currentLane));
           lane = choices.find(clearLane) ?? 0;
-          if (lane) car.tacticTicks = 180;
+          if (lane) car.tacticTicks = 140;
         } else if (previewBend < 0.2 && nearby.some(({ other, ahead, side }) => ahead < -30 && ahead > -85 && Math.abs(side) < 18 && other.speed > car.speed + 0.12)) {
           // Uma defesa antecipada; nunca fecha a porta com outro carro ao lado.
           const candidate = Math.min(14, laneWidth);
           if (clearLane(candidate)) { lane = candidate; car.tacticTicks = 100; }
         }
       }
-      if (previewBend > 0.65) { lane *= 0.9; car.tacticTicks = 0; }
+      if (previewBend > .65 + aggression * .1) { lane *= 0.9; car.tacticTicks = 0; }
       if (lane && !clearLane(lane)) { lane = currentLane; car.tacticTicks = 0; }
       // Preserva espaço lateral durante uma disputa, inclusive quando volta ao centro.
       for (const { ahead, side } of nearby) {
@@ -286,7 +291,7 @@
       const aheadPoint = pointAt(car.progress + 38 + car.speed * 12, car.racingLane);
       const angleError = wrap(Math.atan2(aheadPoint.y - car.y, aheadPoint.x - car.x) - car.angle);
       const pathSteering = clamp(angleError * 2.1, -1, 1);
-      const pathWeight = Math.abs(car.racingLane) > 1 ? 1 : 0.65;
+      const pathWeight = Math.abs(car.racingLane) > 1 ? 1 : .85;
       steering = steering * (1 - pathWeight) + pathSteering * pathWeight;
       const laterPoint = pointAt(car.progress + 115 + car.speed * 18);
       const bend = Math.abs(wrap(laterPoint.angle - aheadPoint.angle));
@@ -294,12 +299,15 @@
       // Limita a velocidade pela curvatura prevista, usando a mesma escala da física.
       const curvature = bend / Math.max(20, Math.hypot(laterPoint.x - aheadPoint.x, laterPoint.y - aheadPoint.y));
       // Mais próximo da aderência de 2.6 g, com margem para tráfego e correções.
-      const cornerGrip = ({ easy: 1.65, normal: 2.05, hard: 2.3 }[difficulty] || 2.05) * car.driver.corner
-        * tyreGripFactor(car);
+      const cornerGrip = ({ easy: 2.1, normal: 2.5, hard: 2.85 }[difficulty] || 2.5) * car.driver.corner
+        * tyreGripFactor(car) * (1 - .26 * clamp((previewBend - .45) / .75, 0, 1))
+        * (1 - .12 * clamp(Math.abs(car.racingLane) / 26, 0, 1));
       const safeSpeed = Math.sqrt(9.81 * cornerGrip * 0.25 / Math.max(curvature, 0.0001)) / 15;
       const targetCornerSpeed = Math.min(aiSpeed * driverPace, Math.max(0.7, safeSpeed));
       pedal = Math.max(pedal, clamp((targetCornerSpeed - car.speed) * 1.8, -1, 1));
-      if (car.speed > targetCornerSpeed + 0.08) pedal = -clamp((car.speed - targetCornerSpeed) * 1.8, 0.12, 1);
+      // Coast through small overspeed instead of repeatedly stabbing the brakes.
+      if (car.speed > targetCornerSpeed + .2) pedal = -clamp((car.speed - targetCornerSpeed - .1) * 1.8, 0.08, 1);
+      else if (car.speed > targetCornerSpeed) pedal = 0;
       // A rede lê a pista; esta assistência de tráfego mantém distância dos carros.
       for (const other of cars) {
         if (qualifying || other === car || other.done || other.cooldown) continue;
@@ -307,7 +315,7 @@
         const ahead = dx * Math.cos(car.angle) + dy * Math.sin(car.angle);
         const lateral = Math.abs(-dx * Math.sin(car.angle) + dy * Math.cos(car.angle));
         const closing = Math.max(0, car.speed - other.speed);
-        const gap = (21 + car.speed * 7 + closing * 10) * car.driver.gap;
+        const gap = (21 + car.speed * (7 - aggression * 2) + closing * 10) * car.driver.gap;
         if (ahead > 0 && ahead < gap && lateral < 20) {
           const targetSpeed = Math.max(0, other.speed - (gap - ahead) * 0.08);
           if (car.speed > targetSpeed) pedal = Math.min(pedal, -clamp((car.speed - targetSpeed) * 1.5, 0.15, 1));

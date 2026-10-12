@@ -181,6 +181,39 @@ for (const pivot of suspensionWheels) {
 finisher.pitState = null;
 console.log('OK: faixas dos compostos e suspensão visível durante a troca.');
 
+// Rain spray uses a bounded pool and only emits on moving wet asphalt.
+const rainView = setup(true), rainRenderer = rainView.raceRenderer();
+const rainCar = { ...rainView.track.start, speed: 2, wetness: 0, alive: true, inputs: [], activations: [[], [], [0, 0]] };
+rainRenderer.update([rainCar], rainCar, false);
+const waterMesh = rainView.render().scene.getObjectByName('tire-water-spray');
+const liveDrops = () => { let total = 0; const matrix = new THREE.Matrix4(); for (let i = 0; i < waterMesh.count; i++) { waterMesh.getMatrixAt(i, matrix); if (new THREE.Vector3().setFromMatrixScale(matrix).length() > .001) total++; } return total; };
+rainView.setTime(200); rainCar.x += 2; rainRenderer.update([rainCar], rainCar, false);
+assert.equal(liveDrops(), 0, 'Dry asphalt produces no water');
+rainCar.wetness = 1; rainView.setTime(400); rainCar.x += 2; rainRenderer.update([rainCar], rainCar, false);
+assert.equal(liveDrops(), 2, 'One discreet trail per rear tire');
+rainView.setTime(1000); rainCar.speed = 0; rainRenderer.update([rainCar], rainCar, false);
+assert.equal(liveDrops(), 0, 'Spray expires and stopped cars emit nothing');
+rainCar.speed = 2; rainCar.offRoad = true; rainView.setTime(1200); rainCar.x += 2; rainRenderer.update([rainCar], rainCar, false);
+assert.equal(liveDrops(), 0, 'Grass does not emit asphalt spray');
+assert.equal(waterMesh.count, 192);
+rainCar.offRoad = false; rainCar.speed = 3; rainCar.brake = 1;
+rainView.setTime(1400); rainCar.x += 5; rainRenderer.update([rainCar], rainCar, false);
+assert.equal(liveDrops(), 12, 'Wet heavy braking sprays from four tires');
+const drySmoke = rainView.render().scene.getObjectByName('tire-dry-smoke');
+const dryMarks = rainView.render().scene.getObjectByName('tire-dry-marks');
+for (const mesh of [drySmoke, dryMarks]) {
+  const matrix = new THREE.Matrix4(); mesh.getMatrixAt(0, matrix);
+  assert.equal(new THREE.Vector3().setFromMatrixScale(matrix).length(), 0, 'Wet braking has no dry smoke or skid marks');
+}
+rainView.setTime(2200); rainCar.speed = 0; rainRenderer.update([rainCar], rainCar, false);
+assert.equal(liveDrops(), 0, 'Heavy spray expires');
+rainCar.wetness = 0; rainCar.speed = 3;
+rainView.setTime(2400); rainCar.x += 5; rainRenderer.update([rainCar], rainCar, false);
+const dryMatrix = new THREE.Matrix4(); dryMarks.getMatrixAt(0, dryMatrix);
+assert(new THREE.Vector3().setFromMatrixScale(dryMatrix).length() > 0, 'Dry braking retains skid marks');
+assert.equal(liveDrops(), 0, 'Dry braking emits no water');
+console.log('OK: subtle rain spray, wetness, movement, expiration and bounded particle pool.');
+
 const app = setup(true);
 const ui = app.elements;
 assert.equal(ui['np-track'].hidden, true);
