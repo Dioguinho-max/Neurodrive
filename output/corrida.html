@@ -30,6 +30,7 @@
 <link rel="stylesheet" href="neurodrive-forecast.css">
 <script src="neurodrive-fullscreen.js" defer></script>
 <script src="neurodrive-mobile-pit.js" defer></script>
+<link rel="stylesheet" href="neurodrive-cockpit.css">
 </head>
   <body><div id="weather-rain" class="weather-rain" aria-hidden="true"></div>
     <main id="neuro-race">
@@ -39,6 +40,15 @@
       <button class="btn" id="race-show-results" hidden>Ver resultados</button>
       </header>
       <p id="race-session" role="status">Classificação: uma volta de aquecimento e duas tentativas cronometradas. Limite de 5 minutos.</p>
+      <section id="np-cockpit" class="cockpit-dashboard" aria-label="Painel da cabine" hidden>
+        <div class="cockpit-console">
+          <div class="cockpit-revs"><span>RPM</span><strong id="cockpit-rpm">900</strong><div class="cockpit-rev-track"><i id="cockpit-rev-fill"></i></div><small>0 &nbsp; 2 &nbsp; 4 &nbsp; 6 &nbsp; 8</small></div>
+          <div class="cockpit-speed"><strong id="cockpit-speed">0</strong><span>KM/H</span></div>
+          <div class="cockpit-gear"><strong id="cockpit-gear">1</strong><span id="cockpit-mode">AUTO</span></div>
+          <div class="cockpit-tyres"><span>Pneus</span><strong id="cockpit-tyres">Seco</strong><progress id="cockpit-tyre-life" max="100" value="100"></progress><small id="cockpit-condition">100%</small></div>
+        </div>
+        <div class="cockpit-wheel" id="cockpit-wheel" aria-hidden="true"><i></i><b>ND</b></div>
+      </section>
       <aside class="drive-hud" aria-label="Painel de pilotagem">
         <div class="drive-dial" id="race-instruments" data-redline="false">
           <svg viewBox="0 0 268 204" aria-hidden="true">
@@ -170,7 +180,7 @@
         <label class="form-label">Volume <input id="race-volume" type="range" min="0" max="100" value="30" aria-label="Volume do jogo"></label>
         <span class="text-small" id="race-audio-status" role="status"></span>
         <label class="form-label">Câmera
-          <select class="form-select" id="np-camera"><option value="chase">Terceira pessoa</option><option value="overview">Visão da pista</option><option value="follow">Orbital</option></select>
+          <select class="form-select" id="np-camera"><option value="cockpit">Primeira pessoa</option><option value="chase" selected>Terceira pessoa</option><option value="overview">Visão da pista</option><option value="follow">Orbital</option></select>
         </label>
           </section>
           <section class="garage-panel" id="garage-panel" hidden>

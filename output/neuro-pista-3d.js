@@ -931,8 +931,13 @@
 
       const mode = finishCameraAt !== null ? 'finish' : element('camera').value;
       const car = snapshot?.target;
-      const cockpitView = cockpit && car && !car.done && introProgress === null && !ceremony && finishCameraAt === null;
-      if (cockpitView) camera.setViewOffset(width, height, -width * .10, height * .17, width, height);
+      const cockpitView = (cockpit || mode === 'cockpit') && car && !car.done && introProgress === null && !ceremony && finishCameraAt === null;
+      const dashboard = element('cockpit');
+      if (dashboard) {
+        dashboard.hidden = !cockpitView;
+        dashboard.setAttribute?.('data-photo', String(cockpit));
+      }
+      if (cockpitView) camera.setViewOffset(width, height, cockpit ? -width * .10 : 0, height * (cockpit ? .17 : .08), width, height);
       else if (camera.view?.enabled) camera.clearViewOffset();
       pitRoofs.forEach((roof) => {
         roof.visible = true;

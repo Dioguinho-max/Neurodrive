@@ -104,6 +104,21 @@
       window.NeuroMobilePit?.update(car, phase);
     }
     const rpm = Math.max(0, Math.min(8000, Number(car.rpm) || 0));
+    const cockpitSpeed = get('cockpit-speed');
+    if (cockpitSpeed) {
+      cockpitSpeed.textContent = String(Math.max(0, Math.round(car.speed * 54)));
+      get('cockpit-rpm').textContent = String(Math.round(rpm / 100) * 100);
+      get('cockpit-rev-fill').style.width = `${rpm / 80}%`;
+      get('cockpit-rev-fill').style.backgroundColor = rpm >= 6300 ? '#ff6868' : '#97f3c3';
+      get('cockpit-gear').textContent = String(car.gear || 1);
+      get('cockpit-mode').textContent = car.manual ? 'MANUAL' : 'AUTO';
+      get('cockpit-tyres').textContent = car.tyreCompound === 'wet' ? 'Chuva' : 'Seco';
+      const life = Math.max(0, Math.min(100, Math.ceil((car.tyreLife ?? 1) * 100)));
+      get('cockpit-tyre-life').value = life;
+      get('cockpit-condition').textContent = car.tyreBurst ? 'PNEU ESTOURADO' : `${life}%`;
+      get('cockpit-condition').style.color = car.tyreBurst || life <= 10 ? '#ff6868' : life <= 30 ? '#ffd180' : '#97f3c3';
+      get('cockpit-wheel').style.transform = `rotate(${Math.max(-1, Math.min(1, car.steering || 0)) * 75}deg)`;
+    }
     get('race-rpm-fill').setAttribute('stroke-dashoffset', String(100 - rpm / 80));
     get('race-instruments').setAttribute('data-redline', String(rpm >= 6300));
     get('race-rpm').textContent = `${Math.round(rpm / 100) * 100} rpm`;

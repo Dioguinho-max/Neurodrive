@@ -1,0 +1,30 @@
+.cockpit-dashboard { position:absolute; z-index:2; bottom:0; left:0; width:100%; height:24%; min-height:150px; pointer-events:none; color:#effff7; background:linear-gradient(175deg,#35414a,#11191f 24%,#080d11 75%); border-top:8px solid #47535b; border-radius:48% 48% 0 0 / 30px 30px 0 0; box-shadow:0 -8px 20px #0005; font:12px system-ui,sans-serif; font-variant-numeric:tabular-nums; }
+.cockpit-dashboard[hidden] { display:none; }
+.cockpit-console { position:absolute; left:50%; top:12px; transform:translateX(-50%); width:min(560px,58vw); display:grid; grid-template-columns:1.4fr 1fr .6fr 1fr; gap:18px; align-items:center; padding:14px 22px; background:linear-gradient(#101c22,#030b10); border:3px solid #52616a; border-radius:28px 28px 12px 12px; box-shadow:inset 0 0 12px #000,0 6px 0 #070c10; }
+.cockpit-console span,.cockpit-console small { display:block; color:#92acb5; font-size:10px; letter-spacing:.08em; }
+.cockpit-console strong { display:block; color:#a0f4c9; }
+.cockpit-speed,.cockpit-gear { text-align:center; }
+.cockpit-speed strong { font-size:48px; line-height:1; letter-spacing:-2px; }
+.cockpit-gear strong { font-size:36px; }
+.cockpit-revs strong { font-size:24px; }
+.cockpit-rev-track { height:7px; margin:7px 0; background:#324149; border-radius:2px; overflow:hidden; }
+.cockpit-rev-track i { display:block; height:100%; background:#97f3c3; width:12%; transition:width 90ms linear; }
+.cockpit-tyres strong { margin:5px 0; font-size:16px; }
+.cockpit-tyres progress { display:block; width:100%; height:7px; accent-color:#97f3c3; margin:6px 0; }
+.cockpit-wheel { position:absolute; left:calc(50% - 105px); top:118px; width:210px; height:210px; box-sizing:border-box; border:17px solid #172127; border-radius:50%; box-shadow:inset 0 0 0 3px #53616a,0 0 0 2px #070c10; transition:transform 100ms linear; }
+.cockpit-wheel i { position:absolute; top:45%; width:100%; height:20px; background:linear-gradient(#69767c,#202d34); }
+.cockpit-wheel b { position:absolute; left:calc(50% - 30px); top:calc(50% - 25px); width:60px; padding:17px 0; text-align:center; background:#101b21; border-radius:14px; color:#97f3c3; }
+#neuro-race:has(.cockpit-dashboard:not([hidden])) .drive-dial { display:none; }
+.cockpit-dashboard[data-photo="true"] { background:none; border:0; box-shadow:none; min-height:120px; height:21%; }
+.cockpit-dashboard[data-photo="true"] .cockpit-wheel { display:none; }
+@media(max-height:520px),(max-width:700px) {
+ .cockpit-dashboard { min-height:105px; height:24%; border-top-width:4px; }
+ .cockpit-console { top:6px; width:min(390px,52vw); padding:8px 10px; gap:8px; border-width:2px; border-radius:18px 18px 8px 8px; }
+ .cockpit-speed strong { font-size:30px; }
+ .cockpit-gear strong { font-size:26px; }
+ .cockpit-revs strong { font-size:17px; }
+ .cockpit-tyres strong { font-size:12px; }
+ .cockpit-console span,.cockpit-console small { font-size:8px; letter-spacing:0; }
+ .cockpit-wheel { top:88px; }
+}
+@media(prefers-reduced-motion:reduce) { .cockpit-wheel,.cockpit-rev-track i { transition:none; } }
