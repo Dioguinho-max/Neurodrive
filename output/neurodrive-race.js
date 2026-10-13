@@ -2,6 +2,7 @@
 (() => {
   'use strict';
   const get = (id) => document.getElementById(id);
+  const fpsDisplay = window.createNeuroFPS?.(get('show-fps'), get('game-fps'));
   const updateHUD = window.createRaceHUD(get);
   const updateSignals = window.createRaceSignals(get);
   // Ferramentas de inspeção são opt-in e não aparecem para o jogador.
@@ -533,6 +534,7 @@
       }
     }
     refresh();
+    fpsDisplay?.tick(time, started && !paused);
     requestAnimationFrame(frame);
   }
 

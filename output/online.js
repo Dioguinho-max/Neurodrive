@@ -1,6 +1,7 @@
 (() => {
   'use strict';
   const get = (id) => document.getElementById(id);
+  const fpsDisplay = window.createNeuroFPS?.(get('show-fps'), get('game-fps'));
   const updateHUD = window.createRaceHUD(get);
   const updateSignals = window.createRaceSignals(get);
   const recordNotice = window.createNeuroRecordNotice?.(get);
@@ -266,6 +267,7 @@
       renderer.update(cars, player, false, spectator, latest.phase === 'finished'); audio?.update(player, latest, !player.done && !document.hidden);
     }
     requestAnimationFrame(draw);
+    fpsDisplay?.tick(now, Boolean(latest && renderer));
   }
   menu(); requestAnimationFrame(draw);
 })();

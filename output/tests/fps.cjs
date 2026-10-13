@@ -1,0 +1,18 @@
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+let saved='false',visibility;
+const document={hidden:false,addEventListener(type,fn){visibility=fn;}};
+const window={localStorage:{getItem:()=>saved,setItem:(key,value)=>saved=value}};
+vm.runInNewContext(fs.readFileSync('output/neurodrive-fps.js','utf8'),{window,document});
+const toggle={},indicator={dataset:{}};
+const meter=window.createNeuroFPS(toggle,indicator);
+assert(indicator.hidden);toggle.checked=true;toggle.onchange();assert.equal(saved,'true');
+meter.tick(0);for(let i=1;i<=30;i++)meter.tick(i*1000/60);
+assert.equal(indicator.textContent,'60 FPS · 16.7 ms');
+document.hidden=true;visibility();meter.tick(30000);assert(indicator.hidden);
+document.hidden=false;visibility();meter.tick(40000);for(let i=1;i<=60;i++)meter.tick(40000+i*1000/120);
+assert.equal(indicator.textContent,'120 FPS · 8.3 ms','No 60 FPS cap or background-tab penalty');
+meter.tick(42000,false);assert(indicator.hidden);
+toggle.checked=false;toggle.onchange();assert.equal(saved,'false');assert(indicator.hidden);
+saved='true';const second={};window.createNeuroFPS(second,{dataset:{}});assert(second.checked);
+window.localStorage.getItem=()=>{throw Error('blocked');};assert.doesNotThrow(()=>window.createNeuroFPS({},{}));
+console.log('OK: FPS averaging, high refresh rates, visibility/pause reset, saved preference and unavailable storage.');

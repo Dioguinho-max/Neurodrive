@@ -28,8 +28,6 @@
     scene.background = new THREE.Color('#b9d5e6');
     scene.fog = new THREE.Fog('#b9d5e6', 1700, 4200);
     const camera = new THREE.PerspectiveCamera(45, 1, 0.5, 5000);
-    scene.add(camera);
-    let cabin3D = null;
     scene.add(new THREE.HemisphereLight('#eef8ff', '#526845', 2.4));
 
     const sun = new THREE.DirectionalLight('#fff5dd', 3);
@@ -96,14 +94,6 @@
     const red = material('#d26758');
     const rubber = material('#19212c');
     const glass = material('#172d3d', { metalness: 0.55, roughness: 0.12, clearcoat: 1 });
-    // Car glazing is separate from the opaque glass used by track buildings.
-    const carGlass = material('#b2d7df', { metalness: 0, roughness: .16, clearcoat: .35,
-      transparent: true, opacity: .23, depthWrite: false, side: THREE.DoubleSide });
-    carGlass.forceSinglePass = true;
-    const interiorTrim = material('#394049', { roughness: .9 });
-    const mirrorFallback = material('#b9d1db', { metalness: .95, roughness: .06 });
-    const externalMirrorTargets = [];
-    let lastExternalMirror = -Infinity, externalMirrorCursor = 0;
     const bodyMaterials = [material('#53a8da'), material('#f0b65e'), material('#b09bde')];
     const leaderMaterial = material('#48e6a4', { emissive: '#123d2c', emissiveIntensity: 0.25 });
     const crashedMaterial = material('#657078');
@@ -342,6 +332,7 @@
         mesh.rotation.y = -point.angle;
         mesh.castShadow = true;
         mesh.receiveShadow = true;
+        mesh.userData.staticArchitecture = true;
         return mesh;
       }
       function clearSite(distance, lane, length, width) {
@@ -452,6 +443,23 @@
         buildingPart(distance, lane - 10, 35, [70, 2, 34], navy);
       }
 
+      // Draw repeated static architecture in batches; keep roofs independent
+      // because camera transitions still control their transparency.
+      for(const parent of [scene,grandstandDetails]) {
+        const batches=new Map();
+        for(const part of parent.children) {
+          if(!part.userData.staticArchitecture||pitRoofs.includes(part))continue;
+          const key=`${part.material.id}:${Math.floor(part.position.x/160)}:${Math.floor(part.position.z/160)}`;
+          if(!batches.has(key))batches.set(key,[]);batches.get(key).push(part);
+        }
+        for(const parts of batches.values()) {
+          if(parts.length<2)continue;
+          const batch=new THREE.InstancedMesh(block,parts[0].material,parts.length);
+          batch.name='static-architecture-batch';batch.castShadow=batch.receiveShadow=true;
+          parts.forEach((part,index)=>{part.updateMatrix();batch.setMatrixAt(index,part.matrix);parent.remove(part);});
+          batch.computeBoundingSphere();parent.add(batch);
+        }
+      }
       // Pórtico acima da linha; pilares ficam fora da área por onde os carros passam.
       const start = circuitPoint(0);
       const span = track.halfWidth + 44;
@@ -571,21 +579,28 @@
     });
     const springGeometry = new THREE.TubeGeometry(new THREE.CatmullRomCurve3(coilPoints), 96, .045, 4, false);
     const suspensionUp = new THREE.Vector3(0, 1, 0);
+    const suspensionBottom = new THREE.Vector3(), suspensionTop = new THREE.Vector3();
+    const suspensionDelta = new THREE.Vector3(), suspensionInner = new THREE.Vector3();
+    const suspensionOuter = new THREE.Vector3(), suspensionSpan = new THREE.Vector3();
+    const contactPoint = new THREE.Vector3(), carUp = new THREE.Vector3();
+    const tireSamples = Array.from({ length: 16 }, (_, i) => [
+      Math.cos(i * Math.PI / 8) * wheelRadius, Math.sin(i * Math.PI / 8) * wheelRadius,
+    ]);
     function placeSuspension(wheel) {
       const { strut, arms, pivot, x, z } = wheel;
-      const bottom = new THREE.Vector3(x, pivot.position.y + .15, z - Math.sign(z) * .15);
-      const top = new THREE.Vector3(x - .2, 3.4, z - Math.sign(z) * .4);
-      const delta = top.clone().sub(bottom);
+      const bottom = suspensionBottom.set(x, pivot.position.y + .15, z - Math.sign(z) * .15);
+      const top = suspensionTop.set(x - .2, 3.4, z - Math.sign(z) * .4);
+      const delta = suspensionDelta.copy(top).sub(bottom);
       strut.position.copy(bottom);
-      strut.quaternion.setFromUnitVectors(suspensionUp, delta.clone().normalize());
       strut.scale.y = Math.max(.25, delta.length());
+      strut.quaternion.setFromUnitVectors(suspensionUp, delta.normalize());
       arms.forEach((arm, i) => {
-        const inner = new THREE.Vector3(x + (i ? .75 : -.75), 1.15, Math.sign(z) * 2.6);
-        const outer = bottom.clone(); outer.y -= .25;
-        const span = outer.clone().sub(inner);
+        const inner = suspensionInner.set(x + (i ? .75 : -.75), 1.15, Math.sign(z) * 2.6);
+        const outer = suspensionOuter.copy(bottom); outer.y -= .25;
+        const span = suspensionSpan.copy(outer).sub(inner);
         arm.position.copy(inner).add(outer).multiplyScalar(.5);
-        arm.quaternion.setFromUnitVectors(suspensionUp, span.clone().normalize());
         arm.scale.set(.075, span.length(), .075);
+        arm.quaternion.setFromUnitVectors(suspensionUp, span.normalize());
       });
     }
     const wheelGeometry = new THREE.CylinderGeometry(wheelRadius, wheelRadius, 1.2, 16);
@@ -643,8 +658,14 @@
       const now = Date.now();
       for (const [mesh, pool, lifetime] of [[skids, skidPool, 12000], [smoke, smokePool, 1300], [spray, sprayPool, 450]]) {
         if (!mesh) continue;
+        const expired = mesh.userData.expiredEffects ||= new WeakSet();
+        let changed = false, active = false;
         pool.forEach((effect, i) => {
+          if (expired.has(effect)) return;
           const age = Math.min(1, (now - effect.at) / (effect.lifetime || lifetime));
+          if (age >= 1) expired.add(effect);
+          else active = true;
+          changed = true;
           fxTransform.position.set(effect.x, effect.y + (mesh === smoke ? age * 4 : 0), effect.z);
           fxTransform.rotation.set(effect.bank, -effect.angle, effect.pitch, 'YZX');
           if (mesh === spray) {
@@ -659,7 +680,8 @@
           else fxTransform.scale.set(effect.length, 1, 0.95 * (1 - age));
           fxTransform.updateMatrix(); mesh.setMatrixAt(i, fxTransform.matrix);
         });
-        mesh.instanceMatrix.needsUpdate = true;
+        mesh.visible = active;
+        if (changed) mesh.instanceMatrix.needsUpdate = true;
       }
     }
 
@@ -758,39 +780,11 @@
       const playerStripe = material('#163d33');
       const body = addMesh(bodyGeometry, bodyMaterials[index % 3], group, [0, 3, 0]);
       body.castShadow = true;
-      const glazing = addMesh(cabinGeometry, carGlass, group, [-1, 5.3, 0]);
-      glazing.userData.carGlass = true;
+      addMesh(cabinGeometry, glass, group, [-1, 5.3, 0]);
       const roof = addMesh(roofGeometry, body.material, group, [-1.45, 6.9, 0]);
       const stripes = [addMesh(stripeGeometry, playerStripe, group, [0, 4.65, 0]),
         addMesh(roofStripeGeometry, playerStripe, group, [-1.45, 7.2, 0])];
       stripes.forEach((stripe) => { stripe.visible = false; });
-      // Lightweight interior, instanced to keep seats and trim to two draws/car.
-      const fittings = [
-        [-.3,4.75,-1.5,1.9,.25,1.7],[-.3,4.75,1.5,1.9,.25,1.7],
-        [-1.15,5.35,-1.5,.3,1.25,1.7],[-1.15,5.35,1.5,.3,1.25,1.7],
-        [-1.18,6.15,-1.5,.32,.48,.85],[-1.18,6.15,1.5,.32,.48,.85],
-        [1.85,4.92,0,1.1,.48,5.6],[.1,4.83,0,2.7,.33,.65],
-        [-3.45,5.25,0,.38,1.25,5.5],[-2.9,4.75,0,1.4,.23,5.5],
-      ];
-      const seats = new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),interiorTrim,fittings.length);
-      const fittingMatrix = new THREE.Matrix4();
-      fittings.forEach(([x,y,z,w,h,d],i)=>{fittingMatrix.makeScale(w,h,d);fittingMatrix.setPosition(x,y,z);seats.setMatrixAt(i,fittingMatrix);});
-      seats.userData.carInterior = true;group.add(seats);
-      const frames = [];
-      for(const side of [-1,1]) {
-        frames.push([[2.75,4.1,side*3.25],[1.25,6.67,side*2.86]],
-          [[-4.75,4.1,side*3.25],[-4.15,6.67,side*2.86]],
-          [[-1.2,4.1,side*3.25],[-1.2,6.67,side*2.86]]);
-      }
-      const pillars = new THREE.InstancedMesh(new THREE.BoxGeometry(.16,1,.16),rubber,frames.length);
-      frames.forEach(([a,b],i)=>{
-        const from=new THREE.Vector3(...a),to=new THREE.Vector3(...b),delta=to.clone().sub(from);
-        fittingMatrix.compose(from.add(to).multiplyScalar(.5),new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0,1,0),delta.clone().normalize()),new THREE.Vector3(1,delta.length(),1));
-        pillars.setMatrixAt(i,fittingMatrix);
-      });group.add(pillars);
-      const interiorWheelPivot = new THREE.Group();interiorWheelPivot.position.set(.9,5.35,-1.5);interiorWheelPivot.rotation.y=Math.PI/2;group.add(interiorWheelPivot);
-      const interiorWheel = addMesh(new THREE.TorusGeometry(.48,.065,6,24),rubber,interiorWheelPivot);
-      addMesh(new THREE.BoxGeometry(.88,.09,.09),alloy,interiorWheel);
       addMesh(spoilerGeometry, rubber, group, [-7, 5, 0]);
       addMesh(bumperGeometry, rubber, group, [8.2, 1.7, 0]);
       addMesh(bumperGeometry, rubber, group, [-8.2, 1.7, 0]);
@@ -817,17 +811,11 @@
           if (side < 0) panel.rotation.y = Math.PI;
         }
       }
+      // Original decorative housings only: no reflection cameras or textures.
       const mirrorGeometry = new THREE.BoxGeometry(1.4, 0.65, 1.4);
-      const externalMirrors = [];
       for (const side of [-1, 1]) {
         const mirror = addMesh(mirrorGeometry, body.material, group, [2, 4.7, side * 4.4]);
         mirror.userData.paint = true;
-        const faceGeometry = new THREE.PlaneGeometry(1.12,.47);
-        const uv=faceGeometry.attributes.uv;
-        for(let i=0;i<uv.count;i++)uv.setX(i,1-uv.getX(i));
-        const face=addMesh(faceGeometry,mirrorFallback,group,[1.285,4.7,side*4.4]);
-        face.rotation.y=-Math.PI/2;face.userData.externalMirror=true;
-        externalMirrors.push({face,side,target:null,view:null});
       }
       const frontWheels = [], wheels = [];
       for (const x of [-5, 5]) {
@@ -891,7 +879,7 @@
         brakes.push(addMesh(lampGeometry, red, group, [-8.1, 3.4, z]));
       }
       scene.add(group);
-      return { group, body, roof, frontWheels, wheels, brakes, stripes, playerPaint, playerStripe, externalMirrors, interiorWheel, lastX: null, lastY: null, spin: 0 };
+      return { group, body, roof, frontWheels, wheels, brakes, stripes, playerPaint, playerStripe, lastX: null, lastY: null, spin: 0 };
     }
 
     // Mola criticamente amortecida: retorna sem oscilar e independe do FPS.
@@ -961,40 +949,6 @@
 
     let finishCameraAt = null;
     let ceremony = null;
-    function renderExternalMirrors() {
-      const now=Date.now(),interval=options.quality==='performance'?85:45;
-      if(now-lastExternalMirror<interval||!renderer.getRenderTarget)return;
-      camera.updateMatrixWorld();
-      const candidates=[];
-      for(const model of models) {
-        if(!model.group.visible||model.group.position.distanceToSquared(camera.position)>85*85)continue;
-        const rear=new THREE.Vector3(-1,0,0).transformDirection(model.group.matrixWorld);
-        if(rear.dot(camera.position.clone().sub(model.group.position))<=0)continue;
-        for(const mirror of model.externalMirrors) {
-          const projected=mirror.face.getWorldPosition(new THREE.Vector3()).project(camera);
-          if(Math.abs(projected.x)<1&&Math.abs(projected.y)<1&&projected.z>-1&&projected.z<1)candidates.push({model,mirror});
-        }
-      }
-      if(!candidates.length)return;
-      const {model,mirror}=candidates[externalMirrorCursor++%candidates.length];
-      lastExternalMirror=now;
-      if(!mirror.target) {
-        mirror.target=new THREE.WebGLRenderTarget(128,64,{depthBuffer:true,stencilBuffer:false});externalMirrorTargets.push(mirror.target);
-        mirror.target.texture.colorSpace=THREE.SRGBColorSpace;
-        mirror.face.material=new THREE.MeshBasicMaterial({map:mirror.target.texture,toneMapped:false});
-        mirror.view=new THREE.PerspectiveCamera(55,1.12/.47,.5,5000);
-      }
-      const position=model.group.localToWorld(new THREE.Vector3(1.2,4.7,mirror.side*4.5));
-      const look=model.group.localToWorld(new THREE.Vector3(-70,3.5,mirror.side*20));
-      mirror.view.position.copy(position);mirror.view.lookAt(look);
-      const target=renderer.getRenderTarget(),visible=model.group.visible,shadows=renderer.shadowMap.autoUpdate;
-      try {
-        model.group.visible=false;renderer.shadowMap.autoUpdate=false;
-        renderer.setRenderTarget(mirror.target);renderer.clear();renderer.render(scene,mirror.view);
-      } finally {
-        model.group.visible=visible;renderer.shadowMap.autoUpdate=shadows;renderer.setRenderTarget(target);
-      }
-    }
     let introProgress = null, introDistance = 0;
     function render() {
       const width = canvas.clientWidth;
@@ -1010,16 +964,8 @@
 
       const mode = finishCameraAt !== null ? 'finish' : element('camera').value;
       const car = snapshot?.target;
-      const cockpitView = (cockpit || mode === 'cockpit') && car && !car.done && car.pitState !== 'service' && introProgress === null && !ceremony && finishCameraAt === null;
-      if (cockpitView && !cockpit && !cabin3D && window.createNeuroCockpit3D) cabin3D = window.createNeuroCockpit3D(THREE, camera);
-      cabin3D?.update(car, Boolean(cockpitView && !cockpit));
-      const dashboard = options.racePresentation ? element('cockpit') : null;
-      if (dashboard) {
-        dashboard.hidden = !cockpitView;
-        dashboard.setAttribute?.('data-photo', String(cockpit));
-        dashboard.setAttribute?.('data-three', String(Boolean(cabin3D && !cockpit)));
-      }
-      if (cockpitView) camera.setViewOffset(width, height, cockpit ? -width * .10 : 0, height * (cockpit ? .17 : .08), width, height);
+      const cockpitView = cockpit && car && !car.done && car.pitState !== 'service' && introProgress === null && !ceremony && finishCameraAt === null;
+      if (cockpitView) camera.setViewOffset(width, height, -width * .10, height * .17, width, height);
       else if (camera.view?.enabled) camera.clearViewOffset();
       pitRoofs.forEach((roof) => {
         roof.visible = true;
@@ -1161,11 +1107,7 @@
       const ownModel = cockpitView ? models[snapshot.targetIndex]?.group : null;
       const ownVisible = ownModel?.visible;
       if (ownModel) ownModel.visible = false;
-      try {
-        cabin3D?.renderMirrors(renderer,scene,car,options.quality);
-        if(!cockpitView&&!ceremony&&introProgress===null)renderExternalMirrors();
-        renderer.render(scene, camera);
-      }
+      try { renderer.render(scene, camera); }
       finally { if (ownModel) ownModel.visible = ownVisible; }
     }
 
@@ -1364,11 +1306,9 @@
         };
       },
       dispose() {
-        cabin3D?.dispose(); cabin3D = null;
-        externalMirrorTargets.forEach(target=>target.dispose());
         listeners.forEach(([type, handler, settings]) => canvas.removeEventListener(type, handler, settings));
         const geometries = new Set([springGeometry, suspensionCylinder, wetBandGeometry]);
-        const materials = new Set([dryBandMaterial, wetBandMaterial, damperMaterial, springMaterial, carGlass, interiorTrim, mirrorFallback]);
+        const materials = new Set([dryBandMaterial, wetBandMaterial, damperMaterial, springMaterial]);
         scene.traverse((object) => {
           if (object.geometry) geometries.add(object.geometry);
           if (object.material) materials.add(object.material);
@@ -1452,7 +1392,6 @@
           }
           model.group.visible = true;
           const service = car.pitState === 'service';
-          model.interiorWheel.rotation.z=-clamp(car.steering||0,-1,1)*1.3;
           const serviceTime = service ? (480 - car.pitTimer) / 60 : 0;
           const lift = service ? Math.min(1, Math.max(0, serviceTime - 0.7), Math.max(0, 7.7 - serviceTime)) * 0.9 : 0;
           model.group.position.set(car.x, track.heightAt(car.x, car.y) + 0.15 + lift, car.y);
@@ -1484,7 +1423,7 @@
           // Limite de compressão: protege assoalho e para-choques nas cristas.
           let clearance = 0;
           for (const x of [-8.3, 0, 8.3]) for (const z of [-3.9, 0, 3.9]) {
-            const underside = model.group.localToWorld(new THREE.Vector3(x, 1.2, z));
+            const underside = contactPoint.set(x, 1.2, z).applyMatrix4(model.group.matrixWorld);
             clearance = Math.max(clearance, track.heightAt(underside.x, underside.z) + .25 - underside.y);
           }
           if (clearance > 0) { model.group.position.y += clearance; model.group.updateMatrixWorld(true); }
@@ -1530,12 +1469,12 @@
             model.spin = (model.spin - Math.sign(direction) * distance / wheelRadius) % (Math.PI * 2);
           }
           model.lastX = car.x; model.lastY = car.y;
-          const up = new THREE.Vector3(0, 1, 0).applyQuaternion(model.group.quaternion);
+          const up = carUp.set(0, 1, 0).applyQuaternion(model.group.quaternion);
           model.wheels.forEach((assembly, wheelIndex) => {
             const { pivot, wheel, x, z, strut, arms } = assembly;
             // Contra-inclinação e altura independentes mantêm o pneu apoiado.
             pivot.rotation.x = -model.suspensionRoll;
-            const contact = model.group.localToWorld(new THREE.Vector3(x, wheelRadius, z));
+            const contact = contactPoint.set(x, wheelRadius, z).applyMatrix4(model.group.matrixWorld);
             const height = track.heightAt(contact.x, contact.z) + 0.15 + wheelRadius + lift;
             pivot.position.y = wheelRadius + (height - contact.y) / up.y;
             const removal = service ? Math.min(1, Math.max(0, serviceTime - 2), Math.max(0, 6 - serviceTime)) : 0;
@@ -1553,9 +1492,8 @@
             for (let pass = 0; pass < 2; pass++) {
               wheel.updateWorldMatrix(true, false);
               let correction = -Infinity;
-              for (let sample = 0; sample < 16; sample++) for (const side of [-.6, .6]) {
-                const angle = sample * Math.PI / 8;
-                const point = new THREE.Vector3(Math.cos(angle) * wheelRadius, Math.sin(angle) * wheelRadius, side).applyMatrix4(wheel.matrixWorld);
+              for (const sample of tireSamples) for (const side of [-.6, .6]) {
+                const point = contactPoint.set(sample[0], sample[1], side).applyMatrix4(wheel.matrixWorld);
                 correction = Math.max(correction, track.heightAt(point.x, point.z) + .19 + lift - point.y);
               }
               pivot.position.y += correction / up.y;

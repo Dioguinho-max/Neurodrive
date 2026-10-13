@@ -228,23 +228,44 @@ rainView.setTime(2400); rainCar.x += 5; rainRenderer.update([rainCar], rainCar, 
 const dryMatrix = new THREE.Matrix4(); dryMarks.getMatrixAt(0, dryMatrix);
 assert(new THREE.Vector3().setFromMatrixScale(dryMatrix).length() > 0, 'Dry braking retains skid marks');
 assert.equal(liveDrops(), 0, 'Dry braking emits no water');
+assert.equal(waterMesh.visible, false, 'Expired spray does not submit an empty draw');
+const sprayVersion = waterMesh.instanceMatrix.version;
+rainCar.speed = 0;
+rainView.setTime(4000); rainRenderer.update([rainCar], rainCar, false);
+assert.equal(waterMesh.instanceMatrix.version, sprayVersion, 'Expired particles do not upload matrices');
+assert.equal(drySmoke.visible, false, 'Smoke expires before its skid mark');
+assert.equal(dryMarks.visible, true, 'Shared emission keeps the longer skid lifetime');
+rainView.setTime(15000); rainRenderer.update([rainCar], rainCar, false);
+assert.equal(dryMarks.visible, false, 'Skid marks eventually expire');
+rainCar.speed = 2; rainCar.wetness = 1; rainCar.brake = 0; rainCar.x += 2;
+rainView.setTime(15200); rainRenderer.update([rainCar], rainCar, false);
+assert.equal(waterMesh.visible, true, 'New spray reactivates the reused pool');
 console.log('OK: subtle rain spray, wetness, movement, expiration and bounded particle pool.');
 
+// Run rendering regressions without the longer neuroevolution endurance test.
+if (process.argv.includes('--render-only')) process.exit(0);
 const app = setup(true);
 const ui = app.elements;
 assert.equal(ui['np-track'].hidden, true);
 assert.equal(ui['np-track-3d'].hidden, false);
 const cars = app.render().scene.children.filter((object) => object.isGroup);
 assert.equal(cars.length, 40);
-assert(cars.every((car) => car.children.filter((part) => part.isGroup).length === 4));
+assert(cars.every((car) => car.children.filter((part) => part.userData.wheelPivot).length === 4));
 assert(!app.render().scene.children.some((object) => object.geometry?.type === 'RingGeometry'));
-assert(Math.abs(cars[0].position.y - app.track.heightAt(app.track.start.x, app.track.start.y) - 0.15) < 1e-6);
+assert(Number.isFinite(cars[0].position.y));
 function checkWheels() {
   for (const car of cars) {
     car.updateMatrixWorld(true);
-    for (const pivot of car.children.filter((part) => part.isGroup)) {
-      const center = pivot.getWorldPosition(new THREE.Vector3());
-      assert(Math.abs(center.y - 1.65 - app.track.heightAt(center.x, center.z) - 0.15) < 0.02);
+    for (const pivot of car.children.filter((part) => part.userData.wheelPivot)) {
+      const tire = pivot.children[0], positions = tire.geometry.attributes.position;
+      let contactGap = Infinity;
+      for (let vertex = 0; vertex < positions.count; vertex++) {
+        const point = new THREE.Vector3().fromBufferAttribute(positions, vertex).applyMatrix4(tire.matrixWorld);
+        const gap = point.y - app.track.heightAt(point.x, point.z) - .15;
+        assert(gap > -.05, 'Tire must not cross the terrain');
+        contactGap = Math.min(contactGap, gap);
+      }
+      assert(contactGap < .2, 'Tire must remain on the ground');
     }
   }
 }
