@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="neurodrive-race.css">
     <script src="vendor/three.min.js" defer></script><script src="neurodrive-podium.js" defer></script><link rel="stylesheet" href="neurodrive-podium.css">
     <script src="neuro-pista-track.js" defer></script>
-    <script src="neuro-pista-3d.js" defer></script>
+    <script src="neurodrive-cockpit-3d.js" defer></script><script src="neuro-pista-3d.js" defer></script>
     <script src="neurodrive-race-engine.js" defer></script>
     <script src="neurodrive-audio.js?v=engine-only-2" defer></script>
     <script src="neurodrive-profile.js" defer></script>
@@ -41,12 +41,24 @@
       </header>
       <p id="race-session" role="status">Classificação: uma volta de aquecimento e duas tentativas cronometradas. Limite de 5 minutos.</p>
       <section id="np-cockpit" class="cockpit-dashboard" aria-label="Painel da cabine" hidden>
+        <svg class="cockpit-shell" viewBox="0 0 1600 900" preserveAspectRatio="none" aria-hidden="true">
+<defs><linearGradient id="cabin-dash" x2="0" y2="1"><stop stop-color="#454642"/><stop offset=".2" stop-color="#202522"/><stop offset="1" stop-color="#080d10"/></linearGradient><linearGradient id="cabin-trim" x2="0" y2="1"><stop stop-color="#b5a27a"/><stop offset=".3" stop-color="#70634b"/><stop offset="1" stop-color="#292a25"/></linearGradient></defs>
+<path fill="#141916" d="M0 0H1600V35Q800 4 0 45Z"/>
+<path fill="url(#cabin-dash)" stroke="#4a4e48" stroke-width="5" d="M0 0H88L228 552L165 664L103 650L37 201Z M1516 0H1600L1502 641L1427 600Z"/>
+<path fill="url(#cabin-dash)" stroke="#5b5e53" stroke-width="3" d="M0 710L174 560Q770 497 1451 563L1600 678V900H0Z"/>
+<path fill="url(#cabin-trim)" d="M0 768L178 655L329 665L330 763L87 900H0Z M970 655L1445 646L1600 739V798L960 754Z"/>
+<path fill="#0b1011" stroke="#555a52" stroke-width="4" d="M920 564L1374 584L1396 638L932 625Z"/>
+<path stroke="#535b55" stroke-width="6" d="M954 576L959 615M984 577L989 616M1014 579L1019 617M1044 581L1049 618M1074 582L1079 620M1104 584L1109 621M1134 585L1139 622M1164 587L1169 623M1194 588L1199 624M1224 590L1229 625M1254 591L1259 626M1284 593L1289 627M1314 594L1319 628M1344 596L1349 630"/>
+<path fill="#161c1e" stroke="#484c46" stroke-width="3" d="M892 644L1110 654L1180 900H872Z"/>
+<rect x="931" y="667" width="162" height="52" rx="8" fill="#070d10" stroke="#606d6c"/><path stroke="#637777" stroke-width="3" d="M944 686H1039M944 699H1007"/><circle cx="1070" cy="693" r="12" fill="#303a3a" stroke="#899390"/>
+</svg>
         <div class="cockpit-console">
-          <div class="cockpit-revs"><span>RPM</span><strong id="cockpit-rpm">900</strong><div class="cockpit-rev-track"><i id="cockpit-rev-fill"></i></div><small>0 &nbsp; 2 &nbsp; 4 &nbsp; 6 &nbsp; 8</small></div>
-          <div class="cockpit-speed"><strong id="cockpit-speed">0</strong><span>KM/H</span></div>
+          <div class="cockpit-revs"><i class="cockpit-needle" id="cockpit-rpm-needle" aria-hidden="true"></i><span>RPM</span><strong id="cockpit-rpm">900</strong><div class="cockpit-rev-track"><i id="cockpit-rev-fill"></i></div><small>0 &nbsp; 2 &nbsp; 4 &nbsp; 6 &nbsp; 8</small></div>
+          <div class="cockpit-speed"><i class="cockpit-needle" id="cockpit-speed-needle" aria-hidden="true"></i><strong id="cockpit-speed">0</strong><span>KM/H</span></div>
           <div class="cockpit-gear"><strong id="cockpit-gear">1</strong><span id="cockpit-mode">AUTO</span></div>
           <div class="cockpit-tyres"><span>Pneus</span><strong id="cockpit-tyres">Seco</strong><progress id="cockpit-tyre-life" max="100" value="100"></progress><small id="cockpit-condition">100%</small></div>
         </div>
+        <div class="cockpit-shifter" aria-hidden="true"><div class="cockpit-shift-gate">1 &nbsp; 3 &nbsp; 5<br>2 &nbsp; 4 &nbsp; 6</div><div class="cockpit-stick" id="cockpit-stick"><b></b><i></i></div><div class="cockpit-shift-boot"></div></div>
         <div class="cockpit-wheel" id="cockpit-wheel" aria-hidden="true"><i></i><b>ND</b></div>
       </section>
       <aside class="drive-hud" aria-label="Painel de pilotagem">

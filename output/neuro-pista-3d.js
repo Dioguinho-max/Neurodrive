@@ -28,6 +28,8 @@
     scene.background = new THREE.Color('#b9d5e6');
     scene.fog = new THREE.Fog('#b9d5e6', 1700, 4200);
     const camera = new THREE.PerspectiveCamera(45, 1, 0.5, 5000);
+    scene.add(camera);
+    let cabin3D = null;
     scene.add(new THREE.HemisphereLight('#eef8ff', '#526845', 2.4));
 
     const sun = new THREE.DirectionalLight('#fff5dd', 3);
@@ -932,10 +934,13 @@
       const mode = finishCameraAt !== null ? 'finish' : element('camera').value;
       const car = snapshot?.target;
       const cockpitView = (cockpit || mode === 'cockpit') && car && !car.done && introProgress === null && !ceremony && finishCameraAt === null;
+      if (cockpitView && !cockpit && !cabin3D && window.createNeuroCockpit3D) cabin3D = window.createNeuroCockpit3D(THREE, camera);
+      cabin3D?.update(car, Boolean(cockpitView && !cockpit));
       const dashboard = element('cockpit');
       if (dashboard) {
         dashboard.hidden = !cockpitView;
         dashboard.setAttribute?.('data-photo', String(cockpit));
+        dashboard.setAttribute?.('data-three', String(Boolean(cabin3D && !cockpit)));
       }
       if (cockpitView) camera.setViewOffset(width, height, cockpit ? -width * .10 : 0, height * (cockpit ? .17 : .08), width, height);
       else if (camera.view?.enabled) camera.clearViewOffset();
@@ -1079,7 +1084,10 @@
       const ownModel = cockpitView ? models[snapshot.targetIndex]?.group : null;
       const ownVisible = ownModel?.visible;
       if (ownModel) ownModel.visible = false;
-      try { renderer.render(scene, camera); }
+      try {
+        cabin3D?.renderMirrors(renderer,scene,car,options.quality);
+        renderer.render(scene, camera);
+      }
       finally { if (ownModel) ownModel.visible = ownVisible; }
     }
 
@@ -1278,6 +1286,7 @@
         };
       },
       dispose() {
+        cabin3D?.dispose(); cabin3D = null;
         listeners.forEach(([type, handler, settings]) => canvas.removeEventListener(type, handler, settings));
         const geometries = new Set([springGeometry, suspensionCylinder, wetBandGeometry]);
         const materials = new Set([dryBandMaterial, wetBandMaterial, damperMaterial, springMaterial]);

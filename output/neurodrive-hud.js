@@ -107,6 +107,10 @@
     const cockpitSpeed = get('cockpit-speed');
     if (cockpitSpeed) {
       cockpitSpeed.textContent = String(Math.max(0, Math.round(car.speed * 54)));
+      const speedNeedle = get('cockpit-speed-needle');
+      const rpmNeedle = get('cockpit-rpm-needle');
+      if (speedNeedle) speedNeedle.style.transform = `rotate(${-125 + Math.min(1, Math.max(0, car.speed * 54 / 240)) * 250}deg)`;
+      if (rpmNeedle) rpmNeedle.style.transform = `rotate(${-125 + rpm / 8000 * 250}deg)`;
       get('cockpit-rpm').textContent = String(Math.round(rpm / 100) * 100);
       get('cockpit-rev-fill').style.width = `${rpm / 80}%`;
       get('cockpit-rev-fill').style.backgroundColor = rpm >= 6300 ? '#ff6868' : '#97f3c3';
@@ -118,6 +122,14 @@
       get('cockpit-condition').textContent = car.tyreBurst ? 'PNEU ESTOURADO' : `${life}%`;
       get('cockpit-condition').style.color = car.tyreBurst || life <= 10 ? '#ff6868' : life <= 30 ? '#ffd180' : '#97f3c3';
       get('cockpit-wheel').style.transform = `rotate(${Math.max(-1, Math.min(1, car.steering || 0)) * 75}deg)`;
+      const stick = get('cockpit-stick');
+      if (stick) {
+        const gear = Math.max(1, Math.min(6, Math.round(car.gear || 1)));
+        // H-pattern: three columns, odd gears forward. Automatic stays parked.
+        const column = car.manual ? Math.floor((gear - 1) / 2) - 1 : 0;
+        const row = car.manual ? (gear % 2 ? -1 : 1) : 0;
+        stick.style.transform = `translate(${column * 13}px, ${row * 9}px) rotate(${column * 12}deg)`;
+      }
     }
     get('race-rpm-fill').setAttribute('stroke-dashoffset', String(100 - rpm / 80));
     get('race-instruments').setAttribute('data-redline', String(rpm >= 6300));

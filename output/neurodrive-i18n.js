@@ -4,6 +4,7 @@
   const dictionary = {
     'Boxes':'Pit stop', 'Nos boxes':'In the pits', 'Cancelar boxes':'Cancel pit stop',
     'Boxes · Seco':'Pit · Dry', 'Boxes · Chuva':'Pit · Wet',
+    'Primeira pessoa':'First person', 'Painel da cabine':'Cockpit instruments', 'Pneus':'Tires',
     'Escolha o pneu e chame os boxes':'Choose tires and request a pit stop',
     'Jogue em tela cheia':'Play in fullscreen',
     'Mais espaço para a pista e os controles.':'More room for the track and controls.',
