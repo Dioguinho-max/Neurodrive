@@ -331,7 +331,7 @@
       const route = pitRoutes[car.id - 1];
       const next = route[car.pitNode];
       const heading = Math.atan2(next.y - car.y, next.x - car.x);
-      const blocked = cars.some((other) => other !== car && !other.done
+      const blocked = cars.some((other) => other !== car && !other.done && other.pitState !== 'service'
         && Math.hypot(other.x - car.x, other.y - car.y) < 22
         && Math.abs(-(other.x - car.x) * Math.sin(heading) + (other.y - car.y) * Math.cos(heading)) < 13
         && (other.x - car.x) * Math.cos(heading) + (other.y - car.y) * Math.sin(heading) > 4);
@@ -379,7 +379,8 @@
       const smooth = (t) => { t = clamp(t, 0, 1); return t * t * (3 - 2 * t); };
       for (let s = nearest.progress + 2; s < garage.distance; s += 2) {
         const entry = smooth((s - nearest.progress) / (track.pit.entryEnd - nearest.progress));
-        const parking = smooth((s - (garage.distance - 45)) / 45);
+        // Stay in the through lane until past the previous team's service bay.
+        const parking = smooth((s - (garage.distance - 18)) / 18);
         const offset = lane + (track.pit.lane(s) - lane) * entry + 20 * parking;
         points.push({ ...pointAt(s, offset), s });
       }
@@ -412,7 +413,7 @@
       const target = car.pitState === 'entry' ? Math.min(track.pit.limit, Math.sqrt(distanceToStop * 0.08)) : track.pit.limit;
       car.speed = clamp(car.speed + clamp(target - car.speed, -0.08, 0.018), 0, track.pit.limit);
       const heading = Math.atan2(next.y - car.y, next.x - car.x);
-      const blocked = cars.some((other) => other !== car && !other.done
+      const blocked = cars.some((other) => other !== car && !other.done && other.pitState !== 'service'
         // Ordem ao longo dos boxes evita espera circular entre quem entra e quem sai.
         && (!other.pitState || other.pitTrackProgress > car.pitTrackProgress + 0.5)
         && Math.hypot(other.x - car.x, other.y - car.y) < 22

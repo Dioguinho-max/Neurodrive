@@ -56,6 +56,25 @@ for (const config of host.NeuroTracks) {
   }
 }
 // Regressão: fila de seis carros no Veloz causava espera circular na saída.
+for (const config of host.NeuroTracks) {
+  const track=host.createNeuroTrack(config.id);
+  const race=host.createNeuroRace(track,'normal',{laps:5});
+  for(let i=0;i<180;i++)race.step({});
+  const [parked,arriving]=race.cars;
+  race.cars.slice(2).forEach(car=>{car.done=true;});
+  const bay=track.pit.garage(0);
+  Object.assign(parked,track.pointAt(bay.distance,bay.lane),{pitState:'service',pitTimer:10000,pitTrackProgress:bay.distance,speed:0});
+  Object.assign(arriving,track.pointAt(21),{speed:1,tyreLife:1});
+  assert(race.requestPit(arriving.id));
+  let gap=Infinity;
+  for(let tick=0;tick<1500&&arriving.pitState!=='service';tick++) {
+    race.step({});
+    gap=Math.min(gap,Math.hypot(arriving.x-parked.x,arriving.y-parked.y));
+  }
+  assert.equal(arriving.pitState,'service',`${config.id}: next bay stays accessible while first bay is occupied`);
+  assert.equal(parked.pitState,'service');
+  assert(gap>17,`${config.id}: passing car must not drive through servicing car (gap ${gap})`);
+}
 const traffic = host.createNeuroRace(host.createNeuroTrack('veloz'), 'normal', { laps: 5 });
 traffic.cars[0].player = false;
 traffic.cars[0].driver = traffic.cars[1].driver;

@@ -26,7 +26,7 @@
   window.bindNeuroQuality(get('race-quality'), (quality) => renderer?.setQuality(quality));
   let started = false;
   let paused = false;
-  const easterEgg = window.createNeuroEasterEgg?.(get('neuro-race'), () => started && !paused && !intro?.active && race.phase === 'racing' && !race.cars[0].done);
+  const easterEgg = window.createNeuroEasterEgg?.(get('neuro-race'), () => started && !paused && !intro?.active && race.phase === 'racing' && !race.cars[0].done && race.cars[0].pitState !== 'service');
   let accumulator = 0;
   let previousTime = null;
   let lastTimingUpdate = -1;
