@@ -240,7 +240,14 @@ assert.equal(dryMarks.visible, false, 'Skid marks eventually expire');
 rainCar.speed = 2; rainCar.wetness = 1; rainCar.brake = 0; rainCar.x += 2;
 rainView.setTime(15200); rainRenderer.update([rainCar], rainCar, false);
 assert.equal(waterMesh.visible, true, 'New spray reactivates the reused pool');
-console.log('OK: subtle rain spray, wetness, movement, expiration and bounded particle pool.');
+rainRenderer.setQuality('performance');
+rainCar.wetness = 0; rainCar.driftMode = true; rainCar.sliding = true;
+rainCar.speed = 1.5; rainCar.brake = 0;
+rainView.setTime(16000); rainCar.x += 5; rainRenderer.update([rainCar], rainCar, false);
+assert.equal(dryMarks.visible, true, 'Drift leaves tire marks without braking');
+assert.equal(drySmoke.visible, true, 'Performance mode retains lightweight drift smoke');
+assert.equal(drySmoke.count, 48, 'Smoke stays in the fixed-size pool');
+console.log('OK: subtle rain spray, drift smoke, wetness, movement, expiration and bounded particle pool.');
 
 // Run rendering regressions without the longer neuroevolution endurance test.
 if (process.argv.includes('--render-only')) process.exit(0);

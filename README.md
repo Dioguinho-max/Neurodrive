@@ -69,6 +69,16 @@ O box do jogador também conta com dois chefes de equipe em estações de comput
 
 ## Controles
 
+### Desafio Drift
+
+No menu **Jogar → Modo → Drift**, faça o máximo de pontos em dois minutos, sozinho na pista escolhida. Use os controles habituais: acelere, sustente a curva e use contravolante para controlar a derrapagem. O acerto de drift é exclusivo deste modo.
+
+- Pontua acima de 30 km/h, com ângulo de derrapagem entre 10° e 65°, dentro do asfalto.
+- Encadear derrapagens aumenta o multiplicador até ×5. Endireitar por 1,2 segundo guarda o combo.
+- Bater, sair da pista, rodar ou reposicionar perde os pontos ainda não guardados.
+- O fim do tempo guarda o combo válido e mostra o total e o melhor combo.
+- Pista seca, sem desgaste nem pit stops. Pontuação separada de moedas e recordes de volta. Esta primeira versão é solo.
+
 ### Conquistas e apresentação
 
 O perfil exibe medalhas de **Primeira vitória**, **Primeiro pódio** e **Recordista**, com histórico e datas. Vitórias e pódios anteriores são recuperados dos resultados salvos. Recordista passa a contar com esta atualização: exige uma marca estritamente melhor que a liderança da temporada (ou a primeira marca do circuito). Empatar não concede essa medalha. A medalha permanece mesmo depois de perder a liderança.

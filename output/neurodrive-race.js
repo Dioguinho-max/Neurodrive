@@ -163,6 +163,16 @@
     get('race-menu').close();
     clearFinale();
     clearInput();
+    if (race.drift) {
+      get('race-results-stage').textContent = `${track.name} · Desafio Drift`;
+      get('race-results-title').textContent = `${race.driftScore.total.toLocaleString()} pontos`;
+      get('race-results-note').textContent = `Melhor combo: ${race.driftScore.best.toLocaleString()} pontos. Treine o contravolante e conecte mais curvas na próxima tentativa!`;
+      get('race-results-improvement').textContent = '';
+      for (const id of ['race-results-table', 'race-podium', 'race-results-continue', 'championship-next', 'championship-results', 'race-results-return']) get(id).hidden = true;
+      get('race-results-close').textContent = 'Voltar ao menu';
+      if (!get('race-results').open) get('race-results').showModal();
+      return;
+    }
     const ranking = race.standings();
     get('race-results-stage').textContent = `${track.name} · ${race.qualifying ? 'Classificação encerrada' : `🏁 Bandeirada · ${race.cars[0].place}º lugar`}`;
     get('race-results-title').textContent = race.qualifying ? 'Grid de largada definido' : 'Os três primeiros';
@@ -288,6 +298,11 @@
     race.recoverPlayer();
   };
   get('race-menu-resume').onclick = resumeFromMenu;
+  get('menu-mode').onchange = () => {
+    const drift = get('menu-mode').value === 'drift';
+    get('drift-help').hidden = !drift;
+    for (const id of ['menu-laps', 'menu-weather', 'menu-difficulty']) get(id).disabled = drift;
+  };
   get('race-menu').oncancel = (event) => { event.preventDefault(); resumeFromMenu(); };
   get('race-menu-play').onclick = () => {
     if (!renderer) return;
@@ -302,7 +317,7 @@
 
   function refresh() {
     const player = race.cars[0];
-    if (started && career.record(track.id, player.bestLap)) recordNoticeUntil = Date.now() + 10000;
+    if (started && !race.drift && career.record(track.id, player.bestLap)) recordNoticeUntil = Date.now() + 10000;
     const recordNotice = Date.now() < recordNoticeUntil ? `Novo recorde pessoal! ${timeLabel(career.records[track.id])}` : '';
     if (get('race-personal-best').textContent !== recordNotice) get('race-personal-best').textContent = recordNotice;
     player.skin = window.NeuroGarage?.getSkin() || null;
@@ -315,6 +330,25 @@
     updateHUD(player, ranking.indexOf(player) + 1, ranking.length, race.laps, race.elapsed, race.phase);
     get('race-laps').disabled = started && !race.qualifying && race.phase !== 'finished';
     audio?.update(player, race, started && !paused);
+    get('neuro-race').classList?.toggle('drift-mode', Boolean(race.drift));
+    get('drift-hud').hidden = !started || !race.drift;
+    if (race.drift) {
+      const score = race.driftScore, left = Math.max(0, Math.ceil(120 - race.elapsed));
+      get('drift-clock').textContent = `DRIFT · ${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`;
+      get('drift-points').textContent = `${score.total.toLocaleString()} pontos`;
+      get('drift-combo').textContent = score.combo > 0
+        ? `+${Math.floor(score.combo).toLocaleString()} · ×${score.multiplier} · ${Math.round(score.angle)}°`
+        : player.wallContact || player.offRoad ? 'Combo perdido · volte ao asfalto' : 'Acelere e conecte as curvas!';
+      get('race-session').textContent = `${track.name} · Desafio Drift · 2 minutos`;
+      get('race-banner').textContent = paused ? 'Pausado' : race.phase === 'countdown' ? String(race.countdown) : '';
+      get('race-next').disabled = true; get('race-end-qualifying').disabled = true;
+      get('race-recover').disabled = !started || race.phase === 'finished';
+      get('race-show-results').hidden = race.phase !== 'finished';
+      if (race.phase === 'finished' && !resultsPresented) {
+        resultsPresented = true; clearInput(); showResults();
+      }
+      return;
+    }
     get('race-speed-lines').style.opacity = String(Math.max(0, player.speed / player.maxSpeed - 0.55) * 0.5);
     const qualifying = race.qualifying;
     get('race-ranking-title').textContent = qualifying ? 'Melhores voltas · ordem do grid' : 'Classificação da corrida';
@@ -355,6 +389,8 @@
   }
 
   function startSession(qualifying) {
+    const drift = get('menu-mode').value === 'drift';
+    if (drift) { qualifying = false; championship = null; qualifyingGrid = null; }
     easterEgg?.reset();
     intro?.finish();
     sessionBestBefore = career.records[track.id] ?? null;
@@ -372,12 +408,13 @@
       qualifyingGrid = null;
     }
     race = window.createNeuroRace(track, sessionDifficulty, {
+      mode: drift ? 'drift' : 'race',
       session: qualifying ? 'qualifying' : 'race', grid: qualifyingGrid, laps: Number(get('race-laps').value),
       transmission: get('race-transmission').value, pitStart: qualifying, weather: get('menu-weather').value,
     });
     get('race-reward').textContent = qualifying ? 'A classificação define o grid. As moedas são concedidas na corrida.' : '';
     get('race-reward-retry').hidden = true;
-    window.NeuroGarage?.beginRace(qualifying ? null : { track: track.id, laps: race.laps });
+    window.NeuroGarage?.beginRace(qualifying || drift ? null : { track: track.id, laps: race.laps });
     get('race-pit-compound').value = race.cars[0].tyreCompound;
     started = true;
     paused = false;

@@ -80,7 +80,7 @@
     if (car.player) car.activations = [car.inputs, [], [steering, pedal]];
     // Menos curso em alta velocidade, entrada gradual e retorno mais rápido.
     const requestedSteering = car.player ? steering * (0.78 - 0.34 * Math.abs(car.speed) / MAX_RACE_SPEED) : steering;
-    const steeringRate = car.player ? (steering === 0 ? 0.055 : 0.025) : 0.06;
+    const steeringRate = car.player ? (steering === 0 ? 0.055 : car.driftMode ? 0.04 : 0.025) : 0.06;
     car.steering += clamp(requestedSteering - car.steering, -steeringRate, steeringRate);
     updatePowertrain(car, pedal, maximumSpeed, allowReverse);
     car.offRoad = !track.contains(car.x, car.y);
@@ -100,7 +100,17 @@
     car.gripUsage = lateralDemand / lateralGrip;
     car.sliding = car.gripUsage > 1.15 && car.speed > 0.4;
     const maximumYaw = lateralGrip / Math.max(1, Math.abs(car.speed) * 900);
-    const yaw = clamp(requestedYaw, -maximumYaw, maximumYaw);
+    let yaw = clamp(requestedYaw, -maximumYaw, maximumYaw);
+    if (car.driftMode) {
+      // Finite lateral grip: a fast car needs a wider arc, not extra rotation.
+      const highSpeed = clamp((Math.abs(car.speed) * 54 - 115) / 65, 0, 1);
+      const driftYawLimit = (car.offRoad ? .65 : 1.9 - .55 * highSpeed) * 9.81
+        / Math.max(1, Math.abs(car.speed) * 900);
+      const targetYaw = clamp(requestedYaw * (1.28 - .16 * highSpeed), -driftYawLimit, driftYawLimit);
+      car.driftYaw = (car.driftYaw || 0) + (targetYaw - (car.driftYaw || 0)) * .18;
+      if (Math.abs(car.speed) < .2) car.driftYaw = 0;
+      yaw = car.driftYaw;
+    }
     car.angle = wrap(car.angle + yaw);
     if (car.tyreBurst) {
       // Desvio previsível pela distância, compartilhado pelo servidor e pela previsão local.
@@ -124,8 +134,28 @@
         car.burstWheel = car.steering >= 0 ? 2 : 3;
       }
     }
-    const x = car.x + Math.cos(car.angle) * car.speed;
-    const y = car.y + Math.sin(car.angle) * car.speed;
+    let movementAngle = car.angle;
+    if (car.driftMode) {
+      if (Math.abs(car.speed) < .35 || car.cooldown) {
+        car.driftHeading = car.angle;
+        car.driftYaw = 0;
+      }
+      const slip = wrap(car.angle - (car.driftHeading ?? car.angle));
+      const kmh = Math.abs(car.speed) * 54;
+      const countersteer = car.steering * slip < -.015;
+      // Rear grip breaks progressively in the useful speed range. Lifting or
+      // countersteering recovers grip instead of snapping the travel direction.
+      const recovery = countersteer ? .045 : pedal < .1 ? .05
+        : .03 + .05 * clamp((kmh - 115) / 65, 0, 1)
+          + .05 * (1 - clamp((kmh - 20) / 40, 0, 1));
+      car.driftHeading = wrap((car.driftHeading ?? car.angle) + slip * recovery);
+      const scrub = Math.sin(slip) ** 2 * (.009 + .009 * clamp((kmh - 115) / 65, 0, 1)) * Math.abs(car.speed);
+      car.speed = Math.sign(car.speed) * Math.max(0, Math.abs(car.speed) - scrub);
+      movementAngle = car.driftHeading;
+      car.sliding = Math.abs(wrap(car.angle - movementAngle)) > .16 && car.speed > .55;
+    }
+    const x = car.x + Math.cos(movementAngle) * car.speed;
+    const y = car.y + Math.sin(movementAngle) * car.speed;
     const edge = track.nearest(x, y);
     const lateral = (x - edge.x) * -edge.ty + (y - edge.y) * edge.tx;
     const normalHeading = Math.cos(car.angle) * -edge.ty + Math.sin(car.angle) * edge.tx;
@@ -183,8 +213,10 @@
   };
 
   window.createNeuroRace = function createNeuroRace(track, difficulty = 'normal', options = {}) {
-    const qualifying = options.session === 'qualifying';
-    const weatherMode = ['dry', 'rain', 'changing'].includes(options.weather) ? options.weather : 'dry';
+    const drift = options.mode === 'drift' && !options.online;
+    const driftScore = { total: 0, combo: 0, multiplier: 1, chain: 0, idle: 0, best: 0, angle: 0, active: false };
+    const qualifying = !drift && options.session === 'qualifying';
+    const weatherMode = !drift && ['dry', 'rain', 'changing'].includes(options.weather) ? options.weather : 'dry';
     let wetness = weatherMode === 'rain' ? 1 : 0;
     let rainIntensity = weatherMode === 'rain' ? 1 : 0;
     const pitStart = qualifying && options.pitStart === true;
@@ -217,7 +249,7 @@
       };
     }
 
-    const cars = Array.from({ length: 6 }, (_, id) => {
+    const cars = Array.from({ length: drift ? 1 : 6 }, (_, id) => {
       // Grid escalonado: nenhum adversário larga lado a lado com o jogador.
       const slot = grid.indexOf(id + 1);
       const distance = qualifying ? 0 : startDistance - slot * 30;
@@ -227,7 +259,7 @@
       const human = options.online ? options.humans.includes(id + 1) : id === 0;
       const driver = drivers[(id + drivers.length - 1) % drivers.length];
       return {
-        id: id + 1, name: human ? 'Você' : driver.name, player: human,
+        driftMode: drift, driftHeading: point.angle, id: id + 1, name: human ? 'Você' : driver.name, player: human,
         driver: human ? null : driver,
         // Explicit arcade difficulty bonus; human cars always retain the original drivetrain.
         aiPower: human ? 1 : ({ easy: 1.05, normal: 1.12, hard: 1.4 }[difficulty] || 1.12),
@@ -238,7 +270,7 @@
         gripUsage: 0, sliding: false, offRoad: false, bodyRoll: 0,
         progress: distance - startDistance, checkpoint: 0,
         finishTime: null, place: null, cooldown: 0, stalled: 0, wallContact: false, wallCooldown: 0,
-        tyreCompound: weatherMode === 'rain' ? 'wet' : 'dry', pitCompound: weatherMode === 'rain' ? 'wet' : 'dry', wetness, rainIntensity, weatherMode, tyreWearRate: qualifying ? .06 : laps < 5 ? .08 : .28, tyreWearEnabled: weatherMode !== 'dry' || !qualifying && laps >= 5, tyreLife: 1, tyreBurst: false, burstWheel: -1, tyreDistance: 0, pitRequested: false, pitState: null, pitTimer: 0, pitStops: 0,
+        tyreCompound: weatherMode === 'rain' ? 'wet' : 'dry', pitCompound: weatherMode === 'rain' ? 'wet' : 'dry', wetness, rainIntensity, weatherMode, tyreWearRate: qualifying ? .06 : laps < 5 ? .08 : .28, tyreWearEnabled: !drift && (weatherMode !== 'dry' || !qualifying && laps >= 5), tyreLife: 1, tyreBurst: false, burstWheel: -1, tyreDistance: 0, pitRequested: false, pitState: null, pitTimer: 0, pitStops: 0,
         bestLap: null, lastLap: null, lastLapKind: '', checkpointTimes: [],
         lapStart: 0, completedLaps: 0, invalidLap: false,
         recordLapInvalid: false, recordLapStarted: false, recordLap: null,
@@ -381,6 +413,7 @@
     }
 
     function requestPit(id, compound) {
+      if (drift) return false;
       const car = cars.find((candidate) => candidate.id === id);
       if (!car || !car.tyreWearEnabled || car.done || car.pitState || car.cooldown || phase !== 'racing') return false;
       if (compound !== undefined && !['dry', 'wet'].includes(compound)) return false;
@@ -466,6 +499,7 @@
     }
 
     function recover(car) {
+      if (drift) { driftScore.combo = 0; driftScore.chain = 0; driftScore.multiplier = 1; car.driftYaw = 0; }
       if (car.done || car.pitExit || car.pitState || phase !== 'racing') return;
       car.invalidLap = true;
       car.recordLapInvalid = true;
@@ -554,6 +588,26 @@
         advanceCar(track, car, steering, pedal, car.player ? MAX_RACE_SPEED : aiSpeed, !command.noReverse);
       }
 
+      if (drift) {
+        const car = cars[0], score = driftScore;
+        score.angle = Math.abs(wrap(car.angle - car.driftHeading)) * 180 / Math.PI;
+        const invalid = car.wallContact || car.impact > .1 || car.offRoad || car.cooldown || score.angle > 75;
+        score.active = !invalid && car.speed * 54 >= 30 && score.angle >= 10 && score.angle <= 65;
+        if (invalid) { score.combo = 0; score.chain = 0; score.idle = 0; score.multiplier = 1; }
+        else if (score.active) {
+          score.idle = 0; score.chain += 1 / 60;
+          score.multiplier = Math.min(5, 1 + Math.floor(score.chain / 3));
+          score.combo += car.speed * (score.angle / 30) * score.multiplier * .75;
+        } else score.idle += 1 / 60;
+        if ((!score.active && score.idle >= 1.2) || elapsed >= 120) {
+          const points = Math.floor(score.combo);
+          score.total += points; score.best = Math.max(score.best, points);
+          score.combo = 0; score.chain = 0; score.multiplier = 1;
+        }
+        if (elapsed >= 120) { phase = 'finished'; car.done = true; car.speed = 0; car.rpm = 900; }
+        return;
+      }
+
       // Colisões circulares aproximadas, sem permitir empurrar carros para fora.
       for (let i = 0; i < cars.length; i++) {
         for (let j = i + 1; j < cars.length; j++) {
@@ -625,7 +679,7 @@
     }
 
     return {
-      cars, laps, pointAt, step, standings, qualifying, requestPit,
+      cars, laps, pointAt, step, standings, qualifying, requestPit, drift, driftScore,
       setTransmission: (mode) => { cars[0].manual = mode === 'manual'; previousShifts.clear(); },
       recoverCar: (id) => { const car = cars.find((item) => item.id === id); if (car) recover(car); },
       gridOrder: () => standings().map((car) => car.id),

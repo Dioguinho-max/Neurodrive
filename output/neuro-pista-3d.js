@@ -1504,17 +1504,22 @@
           }
           model.fxTravel = (model.fxTravel || 0) + distance;
           // O pedal responde imediatamente; a força física do freio sobe gradualmente.
-          const strongTireStress = car.speed * 54 >= 130 && brakingHard;
+          const strongTireStress = car.driftMode ? car.sliding && car.speed * 54 >= 30 : car.speed * 54 >= 130 && brakingHard;
           if (skids && water <= .12 && !model.coast && !car.offRoad && !car.cooldown && strongTireStress
             && distance > 0 && distance < 20 && model.fxTravel >= 4) {
+            const trailAngle = car.driftMode ? Math.atan2(car.y - model.lastY, car.x - model.lastX) : car.angle;
+            const emitSmoke = options.speedEffects !== false
+              && (options.quality !== 'performance' || car.driftMode)
+              && suspensionTime - (model.lastSmokeAt ?? -Infinity) >= (options.quality === 'performance' ? 160 : 80);
             for (const side of [-1, 1]) {
               const x = car.x - forwardX * 5 - forwardY * side * 4;
               const z = car.y - forwardY * 5 + forwardX * side * 4;
-              const effect = { x, z, y: track.heightAt(x, z) + 0.25, at: Date.now(), angle: car.angle,
+              const effect = { x, z, y: track.heightAt(x, z) + 0.25, at: Date.now(), angle: trailAngle,
                 bank, pitch, length: Math.min(8, model.fxTravel + 1) };
               skidPool[skidIndex++ % 256] = effect;
-              if (options.speedEffects !== false && options.quality !== 'performance') smokePool[smokeIndex++ % 48] = effect;
+              if (emitSmoke) smokePool[smokeIndex++ % 48] = effect;
             }
+            if (emitSmoke) model.lastSmokeAt = suspensionTime;
             model.fxTravel = 0;
           } else if (water > .12 || !strongTireStress || distance >= 20) model.fxTravel = 0;
           // O giro acompanha o deslocamento, sem depender do FPS ou girar durante a pausa.

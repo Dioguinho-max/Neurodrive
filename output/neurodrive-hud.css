@@ -42,3 +42,9 @@
 .game-fps[hidden] { display:none; }
 .game-fps[data-level="medium"] { color:#ffd180; }
 .game-fps[data-level="low"] { color:#ff8e8e; }
+#drift-hud { position:absolute; top:90px; left:50%; transform:translateX(-50%); display:grid; gap:5px; padding:12px 22px; text-align:center; color:#edf7ff; background:#10232be8; border-top:3px solid #97efc2; border-radius:12px; pointer-events:none; z-index:4; max-width:42%; }
+#drift-hud[hidden] { display:none; }
+#drift-points { font-size:clamp(20px,3vw,36px); color:#97efc2; }
+#drift-combo { font-size:12px; }
+.drift-mode .race-tower, .drift-mode .drive-session, .drift-mode #race-pit-panel { display:none !important; }
+@media (max-height:600px) { #drift-hud { top:12px; padding:8px 12px; max-width:40%; } #drift-clock { font-size:11px; } }
