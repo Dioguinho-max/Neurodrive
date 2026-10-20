@@ -35,7 +35,7 @@
   const easterEgg = window.createNeuroEasterEgg?.(get('neuro-race'), () => Boolean(latest && latest.phase === 'racing' && !latest.cars.find(car => car.id === latest.self)?.done && latest.cars.find(car => car.id === latest.self)?.pitState !== 'service' && !intro?.active && !get('online-lobby').open));
   const say = (message) => { get('online-message').textContent = message; };
   const send = (data) => { if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify(data)); };
-  function clear() { keys.clear(); pointers.clear(); document.querySelectorAll('[data-drive]').forEach((button) => button.setAttribute('aria-pressed', 'false')); prediction?.input({ brake: true }, performance.now()); send({ type: 'input', brake: true }); }
+  function clear() { keys.clear(); pointers.clear(); document.querySelectorAll('[data-drive]').forEach((button) => button.setAttribute('aria-pressed', 'false')); prediction?.input({ brake: true, noReverse: true }, performance.now()); send({ type: 'input', brake: true, noReverse: true }); }
   function menu() {
     intro?.finish();
     clear();

@@ -85,7 +85,7 @@ function attachOnline(server, { origin, store, tickMs = 1000 / 60 }) {
     let ticks = 0;
     room.timer = setInterval(() => {
       const inputs = {};
-      for (const peer of room.peers) inputs[peer.carId] = Date.now() - peer.lastInput < 500 ? peer.input : { brake: true };
+      for (const peer of room.peers) inputs[peer.carId] = Date.now() - peer.lastInput < 500 ? peer.input : { brake: true, noReverse: true };
       if (room.stage === 'waiting') {
         if (--room.waitTicks <= 0) {
           const qualifiers = room.race.cars;
@@ -186,7 +186,7 @@ function attachOnline(server, { origin, store, tickMs = 1000 / 60 }) {
           peer.ready = msg.ready === true; peer.manual = msg.manual === true; lobby(peer.room);
         } else if (msg.type === 'start' && peer.room?.owner === peer.id) start(peer.room);
         else if (msg.type === 'input' && peer.room?.race) {
-          peer.input = Object.fromEntries(['accelerate', 'brake', 'left', 'right', 'shiftUp', 'shiftDown'].map((key) => [key, msg[key] === true]));
+          peer.input = Object.fromEntries(['accelerate', 'brake', 'left', 'right', 'shiftUp', 'shiftDown', 'noReverse'].map((key) => [key, msg[key] === true]));
           for (const key of ['steering', 'throttle', 'braking']) {
             peer.input[key] = Number.isFinite(msg[key]) ? Math.max(key === 'steering' ? -1 : 0, Math.min(1, msg[key])) : 0;
           }

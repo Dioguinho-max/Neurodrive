@@ -30,6 +30,7 @@ O projeto está em **beta**, com física de estilo arcade e melhorias contínuas
 - **Pilotagem:** seis marchas, câmbio automático ou manual, freio progressivo, aderência e som de motor sintetizado.
 - **Apresentação:** câmera em terceira pessoa, tabela de posições, conta-giros, encerramento da sessão, pódio e notificações de recorde pessoal.
 - **Qualidade gráfica salva:** desempenho, mais detalhes ou super alto.
+- **Desempenho para máquinas mais simples:** cenário 3D limitado a 1280×720 internamente, árvores simplificadas, menos detalhes internos das rodas e suspensão detalhada apenas no atendimento do jogador nos boxes. Preserva interface na resolução da tela, skins e física; vale para solo e online.
 
 ## Etapas online e cerimônia de chegada
 
@@ -106,6 +107,8 @@ Fotos publicadas usam Supabase Storage. Poles e voltas do perfil são registrada
 | Pausar / continuar no solo | P |
 
 Há controles de toque na tela. No online, abrir o menu **não pausa a corrida**. A recuperação do carro tem penalidade de espera; o pit stop é conduzido automaticamente.
+
+**Marcha ré:** no automático, pare e continue segurando o freio por meio segundo para recuar; acelere para frear a ré e voltar a andar para a frente. No manual, com o carro parado, reduza da primeira para **R** e use o acelerador para recuar. Freie até parar antes de subir para a primeira. A ré é limitada a 25 km/h e funciona também nos pedais de toque, controle e modo online.
 
 ### Controle de Xbox ou PlayStation
 

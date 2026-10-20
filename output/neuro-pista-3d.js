@@ -271,6 +271,8 @@
     const trunks = new THREE.InstancedMesh(new THREE.CylinderGeometry(1.4, 2, 12, 5), material('#6d5945'), treeSites.length);
     const foliageGeometry = new THREE.SphereGeometry(11, 12, 8);
     foliageGeometry.scale(1, 1.35, 0.9);
+    const lightFoliageGeometry = new THREE.SphereGeometry(11, 8, 6);
+    lightFoliageGeometry.scale(1, 1.35, 0.9);
     const crowns = new THREE.InstancedMesh(foliageGeometry, material('#3f6536', { roughness: 1 }), treeSites.length);
     const treeTransform = new THREE.Object3D();
     treeSites.forEach((point, i) => {
@@ -506,17 +508,54 @@
     }
 
     // Barreiras externas e placas de curva ajudam a ler a pista em terceira pessoa.
-    const barrierGeometry = new THREE.BoxGeometry(20, 5, 2);
+    // Continuous profiled steel rails: shared geometry instead of isolated white blocks.
+    const railVertices = [], railIndices = [], postPositions = [];
+    const barrierOpening = (i, side) => options.racePresentation && side === 1
+      && ((track.segments[i].start >= track.pit.mergeStart - 20
+        && track.segments[i].start <= track.pit.exit + 20)
+        || (track.segments[i].start >= track.pit.entry - 15
+        && track.segments[i].start <= track.pit.entryEnd + 20));
+    for (const side of [-1, 1]) {
+      for (let i = 0; i < track.points.length; i++) {
+        const next = (i + 1) % track.points.length;
+        if (barrierOpening(i, side) || barrierOpening(next, side)) continue;
+        const ends = [track.offset(i, side * (track.halfWidth + 40)),
+          track.offset(next, side * (track.halfWidth + 40))];
+        for (const height of [1.8, 3.4]) {
+          const base = railVertices.length / 3;
+          for (const point of ends) {
+            const ground = track.heightAt(point.x, point.y);
+            for (const [rise, depth] of [[-.65, 0], [-.3, .25], [0, .08], [.3, .25], [.65, 0]]) {
+              railVertices.push(point.x - Math.sin(point.angle) * depth * side,
+                ground + height + rise, point.y + Math.cos(point.angle) * depth * side);
+            }
+          }
+          for (let row = 0; row < 4; row++) {
+            railIndices.push(base + row, base + row + 5, base + row + 1,
+              base + row + 1, base + row + 5, base + row + 6);
+          }
+        }
+        if (i % 2 === 0) postPositions.push(ends[0]);
+      }
+    }
+    const railGeometry = new THREE.BufferGeometry();
+    railGeometry.setAttribute('position', new THREE.Float32BufferAttribute(railVertices, 3));
+    railGeometry.setIndex(railIndices); railGeometry.computeVertexNormals();
+    const rails = addMesh(railGeometry, material('#8b969e', {
+      roughness: .66, metalness: .45, side: THREE.DoubleSide,
+    }), scene);
+    rails.name = 'circuit-guardrails'; rails.receiveShadow = true;
+    const posts = new THREE.InstancedMesh(new THREE.BoxGeometry(.8, 4.4, .8),
+      material('#59636b', { roughness: .8, metalness: .25 }), postPositions.length);
+    const postTransform = new THREE.Object3D();
+    postPositions.forEach((point, i) => {
+      postTransform.position.set(point.x, track.heightAt(point.x, point.y) + 1.9, point.y);
+      postTransform.rotation.y = -point.angle; postTransform.updateMatrix();
+      posts.setMatrixAt(i, postTransform.matrix);
+    });
+    posts.name = 'circuit-guardrail-posts'; posts.computeBoundingSphere(); scene.add(posts);
     const boardGeometry = new THREE.BoxGeometry(2, 16, 14);
     for (let i = 0; i < track.points.length; i += 3) {
-      for (const side of [-1, 1]) {
-        if (options.racePresentation && side === 1 && ((track.segments[i].start >= track.pit.mergeStart - 20
-          && track.segments[i].start <= track.pit.exit + 20) || (track.segments[i].start >= track.pit.entry - 15
-          && track.segments[i].start <= track.pit.entryEnd + 20))) continue;
-        const point = track.offset(i, side * (track.halfWidth + 40));
-        const barrier = addMesh(barrierGeometry, white, scene, [point.x, track.heightAt(point.x, point.y) + 2.5, point.y]);
-        barrier.rotation.y = -point.angle;
-      }
       if (i % 30 === 0) {
         if (options.racePresentation && track.segments[i].start >= track.pit.garage(0).distance - 30
           && track.segments[i].start <= track.pit.exit + 30) continue;
@@ -775,7 +814,7 @@
     function createCarModel(index) {
       const group = new THREE.Group();
       const playerPaint = material('#48e6a4', { metalness: 0.35, roughness: 0.4,
-        clearcoat: options.quality === 'ultra' ? 1 : 0.6, clearcoatRoughness: 0.15,
+        clearcoat: options.quality === 'performance' ? 0 : options.quality === 'ultra' ? 1 : 0.6, clearcoatRoughness: 0.15,
         envMapIntensity: options.quality === 'ultra' ? 1.4 : 1 });
       const playerStripe = material('#163d33');
       const body = addMesh(bodyGeometry, bodyMaterials[index % 3], group, [0, 3, 0]);
@@ -841,16 +880,18 @@
           const pivot = new THREE.Group();
           pivot.position.set(x, wheelRadius, z); pivot.userData.wheelPivot = true; group.add(pivot);
           const wheel = addMesh(options.quality === 'ultra' ? ultraWheelGeometry : wheelGeometry, tireRubber, pivot);
-          addMesh(hubGeometry, rubber, wheel);
+          addMesh(hubGeometry, rubber, wheel).userData.performanceDetail = true;
           for (let spoke = 0; spoke < 3; spoke++) addMesh(spokeGeometry, alloy, wheel).rotation.z = spoke * Math.PI / 3;
           for (const face of [-1, 1]) {
-            addMesh(rimGeometry, alloy, wheel, [0, 0, face * 0.64]);
-            addMesh(sidewallGeometry, tireRubber, wheel, [0, 0, face * 0.56]);
+            addMesh(rimGeometry, alloy, wheel, [0, 0, face * 0.64]).userData.performanceDetail = face !== side;
+            addMesh(sidewallGeometry, tireRubber, wheel, [0, 0, face * 0.56]).userData.performanceDetail = true;
             const band = addMesh(wetBandGeometry, dryBandMaterial, wheel, [0, 0, face * .65]);
             band.userData.tyreBand = true;
+            band.userData.performanceDetail = face !== side;
           }
           // Freio e cubo acompanham a roda, não a inclinação da carroceria.
           for (const part of [disc, caliper, hub]) {
+            part.userData.performanceDetail = true;
             part.position.sub(pivot.position);
             pivot.add(part);
           }
@@ -955,6 +996,9 @@
       const height = canvas.clientHeight;
       if (!width || !height) return;
       if (width !== viewportWidth || height !== viewportHeight) {
+        // Keep HUD at native resolution; cap only the expensive 3D framebuffer.
+        if (options.quality === 'performance') renderer.setPixelRatio(Math.min(
+          window.devicePixelRatio || 1, 1, 1280 / width, 720 / height));
         renderer.setSize(width, height, false);
         camera.aspect = width / height;
         camera.updateProjectionMatrix();
@@ -1087,7 +1131,7 @@
         const lookX = car.x + Math.cos(car.angle) * 32;
         const lookY = car.y + Math.sin(car.angle) * 32;
         camera.lookAt(lookX, track.heightAt(lookX, lookY) + 4, lookY);
-        camera.position.y += Math.sin(Date.now() * 0.065) * impactMotion * 0.35;
+        camera.position.y += Math.sin(Date.now() * 0.025) * impactMotion * 0.12;
       } else {
         const follow = mode === 'follow' && car;
         const bounds = track.bounds;
@@ -1165,13 +1209,14 @@
         sun.shadow.mapSize.set(shadowSize, shadowSize);
       }
       trunks.castShadow = crowns.castShadow = ultra;
+      crowns.geometry = light ? lightFoliageGeometry : foliageGeometry;
       if (!ultra) {
         sun.position.set(-400, 900, 350); sun.target.position.set(0, 0, 0);
         Object.assign(sun.shadow.camera, { left: -900, right: 900, top: 800, bottom: -800 });
         sun.shadow.camera.updateProjectionMatrix();
       }
       for (const surface of [...bodyMaterials, leaderMaterial, ...models.map((model) => model.playerPaint)]) {
-        surface.clearcoat = ultra ? 1 : 0.6;
+        surface.clearcoat = light ? 0 : ultra ? 1 : 0.6;
         surface.clearcoatRoughness = 0.15;
         surface.envMapIntensity = ultra ? 1.4 : 1;
       }
@@ -1180,6 +1225,7 @@
       if (smoke) smoke.visible = !light && options.speedEffects !== false;
       if (spray) spray.visible = options.speedEffects !== false;
       renderer.setPixelRatio(ultra ? Math.min(Math.max(window.devicePixelRatio || 1, 1.5), 2.5) : Math.min(window.devicePixelRatio || 1, light ? 1 : 2));
+      viewportWidth = 0; viewportHeight = 0;
       renderer.shadowMap.enabled = !light;
       sun.castShadow = !light;
       scene.traverse((object) => {
@@ -1307,7 +1353,7 @@
       },
       dispose() {
         listeners.forEach(([type, handler, settings]) => canvas.removeEventListener(type, handler, settings));
-        const geometries = new Set([springGeometry, suspensionCylinder, wetBandGeometry]);
+        const geometries = new Set([springGeometry, suspensionCylinder, wetBandGeometry, foliageGeometry, lightFoliageGeometry]);
         const materials = new Set([dryBandMaterial, wetBandMaterial, damperMaterial, springMaterial]);
         scene.traverse((object) => {
           if (object.geometry) geometries.add(object.geometry);
@@ -1332,7 +1378,8 @@
         const engineerTime = Date.now();
         for (const engineer of pitEngineers) {
           // Não anima nem redesenha monitores fora do alcance da câmera.
-          engineer.station.visible = engineer.station.position.distanceToSquared(camera.position) < 320 * 320;
+          const engineerRange = options.quality === 'performance' ? 85 : 320;
+          engineer.station.visible = engineer.station.position.distanceToSquared(camera.position) < engineerRange * engineerRange;
           if (!engineer.station.visible) continue;
           const teamCar = population.find(car => car.id === engineer.bay + 1);
           const t = engineerTime / 1000 + engineer.index;
@@ -1355,6 +1402,13 @@
         models.forEach((model, index) => { model.group.visible = index < population.length; });
         population.forEach((car, index) => {
           const model = models[index] || (models[index] = createCarModel(index));
+          const lightweight = options.quality === 'performance';
+          if (model.lightweight !== lightweight) {
+            model.lightweight = lightweight;
+            model.group.traverse(part => {
+              if (part.userData.performanceDetail) part.visible = !lightweight;
+            });
+          }
           const original = car;
           updateNameplate(model, car, car === target);
           // Animação somente visual: tempos, voltas, colisões e recompensas já estão fechados.
@@ -1498,7 +1552,9 @@
               }
               pivot.position.y += correction / up.y;
             }
-            const detailVisible = camera.position.distanceTo(model.group.position) < (options.quality === 'performance' ? 100 : 220);
+            const detailVisible = options.quality === 'performance'
+              ? service && original === target
+              : camera.position.distanceToSquared(model.group.position) < 220 * 220;
             strut.visible = detailVisible; arms.forEach(arm => { arm.visible = detailVisible; });
             if (detailVisible) placeSuspension(assembly);
           });
@@ -1510,7 +1566,7 @@
             const metallic = car.skin.finish === 'metallic';
             model.playerPaint.roughness = matte ? 0.82 : metallic ? 0.27 : 0.4;
             model.playerPaint.metalness = matte ? 0.08 : metallic ? 0.75 : 0.35;
-            model.playerPaint.clearcoat = matte ? 0.08 : options.quality === 'ultra' ? 1 : 0.6;
+            model.playerPaint.clearcoat = options.quality === 'performance' ? 0 : matte ? 0.08 : options.quality === 'ultra' ? 1 : 0.6;
           }
           model.stripes.forEach((stripe) => { stripe.visible = Boolean(customized); });
           const surface = customized ? model.playerPaint : original === leader ? leaderMaterial

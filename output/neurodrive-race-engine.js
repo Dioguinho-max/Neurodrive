@@ -31,7 +31,22 @@
     { name: 'Nico Alves', style: 'Cauteloso', pace: 0.94, corner: 0.94, gap: 1.15, color: '#d95948' },
     { name: 'Dani Reis', style: 'Equilibrado', pace: 1, corner: 1, gap: 1.04, color: '#5aba89' },
   ];
-  function updatePowertrain(car, pedal, maximumSpeed) {
+  function updatePowertrain(car, pedal, maximumSpeed, allowReverse) {
+    if (car.player && !car.manual && car.gear !== 0) {
+      car.reverseHold = allowReverse && pedal < -.5 && car.speed < .02 ? (car.reverseHold || 0) + 1 : 0;
+      if (car.reverseHold >= 30) { car.gear = 0; car.brake = 0; }
+    }
+    if (car.gear === 0) {
+      const drive = allowReverse ? (car.manual ? Math.max(0, pedal) : Math.max(0, -pedal)) : 0;
+      const stop = !allowReverse || (car.manual ? pedal < 0 : pedal > 0);
+      car.brake += clamp((stop ? 1 : 0) - car.brake, -.08, .045);
+      car.throttle = stop ? 0 : drive; car.limiter = false; car.cutTicks = 0;
+      car.shiftTicks = Math.max(0, (car.shiftTicks || 0) - 1);
+      car.speed = clamp(car.speed + (stop ? car.brake * .026 : .0015 - (car.shiftTicks ? 0 : drive) * .009 * weatherGripFactor(car)), -25 / 54, 0);
+      car.rpm = 900 + Math.abs(car.speed) * 54 / 25 * 3800;
+      if (!car.manual && stop && car.speed >= 0) { car.gear = 1; car.reverseHold = 0; }
+      return;
+    }
     const kmh = car.speed * 54;
     const coupledRpm = 900 + kmh / gearLimits[car.gear - 1] * 5900;
     car.throttle = Math.max(0, pedal);
@@ -60,14 +75,14 @@
     else car.rpm = targetRpm;
   }
 
-  function advanceCar(track, car, steering, pedal, maximumSpeed) {
+  function advanceCar(track, car, steering, pedal, maximumSpeed, allowReverse = true) {
     car.impact = (car.impact || 0) * 0.86;
     if (car.player) car.activations = [car.inputs, [], [steering, pedal]];
     // Menos curso em alta velocidade, entrada gradual e retorno mais rápido.
-    const requestedSteering = car.player ? steering * (0.78 - 0.34 * car.speed / MAX_RACE_SPEED) : steering;
+    const requestedSteering = car.player ? steering * (0.78 - 0.34 * Math.abs(car.speed) / MAX_RACE_SPEED) : steering;
     const steeringRate = car.player ? (steering === 0 ? 0.055 : 0.025) : 0.06;
     car.steering += clamp(requestedSteering - car.steering, -steeringRate, steeringRate);
-    updatePowertrain(car, pedal, maximumSpeed);
+    updatePowertrain(car, pedal, maximumSpeed, allowReverse);
     car.offRoad = !track.contains(car.x, car.y);
     // Em alta, pequenos comandos fazem ajustes suaves; o giro cresce
     // progressivamente ao segurar o volante para uma curva mais fechada.
@@ -76,7 +91,7 @@
     const requestedYaw = car.steering * (1 - highSpeedBlend * (1 - steeringCurve)) * 0.065 * car.speed / 3.2 * (car.tyreBurst ? .38 : 1);
     // v (m/s) × velocidade angular (rad/s) = aceleração lateral.
     // 1 unidade/quadro = 15 m/s. Pneus têm aderência finita, não giro ilimitado.
-    const lateralDemand = Math.abs(requestedYaw) * car.speed * 900;
+    const lateralDemand = Math.abs(requestedYaw * car.speed) * 900;
     // Margem arcade no asfalto: curvas suaves e médias são mais tolerantes.
     const tyreGrip = tyreGripFactor(car);
     const grip = (car.offRoad ? 1.55 : 2.6) * 9.81 * tyreGrip;
@@ -84,24 +99,24 @@
     const lateralGrip = grip * Math.sqrt(1 - brakeLoad * brakeLoad);
     car.gripUsage = lateralDemand / lateralGrip;
     car.sliding = car.gripUsage > 1.15 && car.speed > 0.4;
-    const maximumYaw = lateralGrip / Math.max(1, car.speed * 900);
+    const maximumYaw = lateralGrip / Math.max(1, Math.abs(car.speed) * 900);
     const yaw = clamp(requestedYaw, -maximumYaw, maximumYaw);
     car.angle = wrap(car.angle + yaw);
     if (car.tyreBurst) {
       // Desvio previsível pela distância, compartilhado pelo servidor e pela previsão local.
       const side = car.burstWheel % 2 ? 1 : -1;
       car.angle = wrap(car.angle + side * (1 + .65 * Math.sin((car.tyreDistance || 0) * .23)) * .009 * car.speed / 3.2);
-      car.speed = Math.max(0, car.speed - car.speed * .018);
+      car.speed *= .982;
       car.sliding = car.speed > .65;
     }
     car.bodyRoll += (clamp(yaw * car.speed * 900 / 9.81, -1.2, 1.2) * 0.075 - car.bodyRoll) * 0.1;
     // Arrasto dos pneus e do gramado; não há correção automática para o traçado.
     // Na grama usa só a resistência do terreno, sem somar outra frenagem por derrapagem.
     if (car.sliding && !car.offRoad) car.speed = Math.max(0, car.speed - Math.min(0.008, (car.gripUsage - 1.15) * 0.001));
-    if (car.offRoad) car.speed = Math.max(0, car.speed - 0.0009 - car.speed * 0.00034);
+    if (car.offRoad) car.speed = Math.sign(car.speed) * Math.max(0, Math.abs(car.speed) - .0009 - Math.abs(car.speed) * .00034);
     if (car.tyreWearEnabled) {
-      car.tyreDistance = (car.tyreDistance || 0) + car.speed;
-      car.tyreLife = Math.max(0, (car.tyreLife ?? 1) - car.speed / track.length * (car.tyreWearRate ?? .28)
+      car.tyreDistance = (car.tyreDistance || 0) + Math.abs(car.speed);
+      car.tyreLife = Math.max(0, (car.tyreLife ?? 1) - Math.abs(car.speed) / track.length * (car.tyreWearRate ?? .28)
         * (1 + Math.min(1, Math.max(0, car.gripUsage - 1)) * .55 + car.brake * .18 + Number(car.offRoad) * .2)
         * (car.tyreCompound === 'wet' ? 1 + .4 * (1 - (car.wetness || 0)) : 1));
       if (car.tyreLife <= 0 && !car.tyreBurst) {
@@ -126,21 +141,23 @@
     } else {
       // Desliza pela tangente da borda em vez de rejeitar todo o movimento.
       if (Number.isFinite(edge.distance)) {
-        const offset = clamp(lateral, -wallLimit, wallLimit);
+        const offset = clamp(lateral, -wallLimit + .6, wallLimit - .6);
         car.x = edge.x - edge.ty * offset;
         car.y = edge.y + edge.tx * offset;
         let tangent = Math.atan2(edge.ty, edge.tx);
         if (Math.cos(car.angle - tangent) < 0) tangent = wrap(tangent + Math.PI);
         // Giro limitado por passo evita o tranco de alinhar 45% de uma vez.
         const correction = wrap(tangent - car.angle);
-        car.angle = wrap(car.angle + clamp(correction * 0.12, -0.055, 0.055));
+        if (normalHeading * car.speed * Math.sign(lateral) > .03) {
+          car.angle = wrap(car.angle + clamp(correction * .04, -.018, .018) * Math.min(1, Math.abs(car.speed)));
+        }
         car.steering *= 0.85;
       }
       // Um toque tira um pouco de velocidade; contato contínuo não a zera.
-      if (car.wallContact || car.wallCooldown > 0) car.speed = Math.max(0, car.speed - 0.003);
+      if (car.wallContact || car.wallCooldown > 0) car.speed *= .998;
       else {
         const impact = Number.isFinite(normalHeading) ? Math.abs(normalHeading) : 1;
-        car.impact = Math.min(1, car.speed * impact / 3);
+        car.impact = Math.min(1, Math.abs(car.speed) * impact / 3);
         car.speed *= 0.94 - 0.54 * impact * impact;
         car.wallCooldown = 45;
       }
@@ -154,15 +171,15 @@
     if (car.done || car.pitState) return;
     const shift = command.shiftUp ? 1 : command.shiftDown ? -1 : 0;
     if (car.manual && shift && shift !== (car.lastShift || 0) && !car.shiftTicks && !car.cooldown) {
-      const gear = clamp(car.gear + shift, 1, 6);
-      if (gear !== car.gear && (shift > 0 || car.speed * 54 <= gearLimits[gear - 1])) {
+      const gear = clamp(car.gear + shift, 0, 6);
+      if (gear !== car.gear && (gear === 0 || car.gear === 0 ? Math.abs(car.speed) < .02 : shift > 0 || car.speed * 54 <= gearLimits[gear - 1])) {
         car.gear = gear; car.shiftTicks = 14; car.cutTicks = 0;
       }
     }
     car.lastShift = shift;
     if (car.wallCooldown > 0) car.wallCooldown--;
     if (car.cooldown > 0) { car.cooldown--; return; }
-    advanceCar(track, car, ...playerCommand(command), MAX_RACE_SPEED);
+    advanceCar(track, car, ...playerCommand(command), MAX_RACE_SPEED, !command.noReverse);
   };
 
   window.createNeuroRace = function createNeuroRace(track, difficulty = 'normal', options = {}) {
@@ -453,7 +470,7 @@
       car.invalidLap = true;
       car.recordLapInvalid = true;
       const point = pointAt(startDistance + car.progress, car.id % 2 ? -10 : 10);
-      Object.assign(car, point, { speed: 0, steering: 0, gear: 1, rpm: 900, shiftTicks: 0,
+      Object.assign(car, point, { speed: 0, steering: 0, gear: 1, rpm: 900, shiftTicks: 0, reverseHold: 0,
         throttle: 0, brake: 0, limiter: false, cutTicks: 0, launchTicks: 0, cooldown: 120, stalled: 0,
         gripUsage: 0, sliding: false, offRoad: false, bodyRoll: 0, impact: 0,
         tacticTicks: 0, targetLane: 0, racingLane: 0 });
@@ -485,9 +502,9 @@
       const shift = command.shiftUp ? 1 : command.shiftDown ? -1 : 0;
       const previousShift = previousShifts.get(player.id) || 0;
       if (player.manual && !player.pitExit && phase === 'racing' && shift && shift !== previousShift && !player.shiftTicks && !player.cooldown) {
-        const gear = clamp(player.gear + shift, 1, 6);
+        const gear = clamp(player.gear + shift, 0, 6);
         // Bloqueia reduções que ultrapassariam o corte do motor.
-        if (gear !== player.gear && (shift > 0 || player.speed * 54 <= gearLimits[gear - 1])) {
+        if (gear !== player.gear && (gear === 0 || player.gear === 0 ? Math.abs(player.speed) < .02 : shift > 0 || player.speed * 54 <= gearLimits[gear - 1])) {
           player.gear = gear;
           player.shiftTicks = 14;
           player.cutTicks = 0;
@@ -534,7 +551,7 @@
         const [steering, pedal] = car.player
           ? playerCommand(command)
           : aiDecision(car);
-        advanceCar(track, car, steering, pedal, car.player ? MAX_RACE_SPEED : aiSpeed);
+        advanceCar(track, car, steering, pedal, car.player ? MAX_RACE_SPEED : aiSpeed, !command.noReverse);
       }
 
       // Colisões circulares aproximadas, sem permitir empurrar carros para fora.
@@ -558,8 +575,8 @@
             if (track.contains(x, y, -30)) { car.x = x; car.y = y; }
           }
           // Impulso proporcional à aproximação, sem perder 20% a cada quadro.
-          a.speed = clamp(a.speed - closingSpeed * 0.5 * aNormal, 0, a.player ? MAX_RACE_SPEED : aiSpeed);
-          b.speed = clamp(b.speed + closingSpeed * 0.5 * bNormal, 0, b.player ? MAX_RACE_SPEED : aiSpeed);
+          a.speed = clamp(a.speed - closingSpeed * 0.5 * aNormal, a.gear === 0 ? -25 / 54 : 0, a.gear === 0 ? 0 : a.player ? MAX_RACE_SPEED : aiSpeed);
+          b.speed = clamp(b.speed + closingSpeed * 0.5 * bNormal, b.gear === 0 ? -25 / 54 : 0, b.gear === 0 ? 0 : b.player ? MAX_RACE_SPEED : aiSpeed);
         }
       }
 
