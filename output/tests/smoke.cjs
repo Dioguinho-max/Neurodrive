@@ -325,6 +325,7 @@ assert(fallback.elements['np-3d-status'].textContent.includes('2D'));
 fallback.elements['np-step'].onclick();
 assert(fallback.elements['np-announce'].textContent.includes('Passo 1'));
 console.log('OK: 40 modelos, movimento, pausa, inspeção, câmeras, sensores e fallback 2D.');
+if (process.argv.includes('--ui-only')) process.exit(0);
 
 // O traçado é maior que o oval original e os sensores usam a mesma geometria.
 assert(app.track.length > 3000);

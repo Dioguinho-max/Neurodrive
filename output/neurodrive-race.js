@@ -33,6 +33,8 @@
   let lastTimingUpdate = -1;
   let lastTimingPhase = '';
   let resultsPresented = false;
+  let driftVisualMultiplier = 1;
+  let driftVisualTotal = 0;
   let resultsReturnRemaining = null;
   let resultsReturnScheduled = false;
   function returnToMenu() {
@@ -331,13 +333,33 @@
     get('race-laps').disabled = started && !race.qualifying && race.phase !== 'finished';
     audio?.update(player, race, started && !paused);
     get('neuro-race').classList?.toggle('drift-mode', Boolean(race.drift));
-    get('drift-hud').hidden = !started || !race.drift;
+    get('drift-hud').hidden = !started || !race.drift || paused || Boolean(intro?.active) || race.phase !== 'racing';
     if (race.drift) {
       const score = race.driftScore, left = Math.max(0, Math.ceil(120 - race.elapsed));
       get('drift-clock').textContent = `DRIFT · ${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`;
-      get('drift-points').textContent = `${score.total.toLocaleString()} pontos`;
+      get('drift-points').textContent = `${score.total.toLocaleString()} guardados`;
+      if (score.total > driftVisualTotal && !get('drift-hud').hidden
+        && !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+        get('drift-points').animate?.([
+          { transform: 'scale(1)', color: '#f5d88c' },
+          { transform: 'scale(1.12)', color: '#ffffff' },
+          { transform: 'scale(1)', color: '#f5d88c' },
+        ], { duration: 650 });
+      }
+      driftVisualTotal = score.total;
+      get('drift-chain-score').textContent = `+${Math.floor(score.combo).toLocaleString()}`;
+      get('drift-multiplier').textContent = `×${score.multiplier}`;
+      const progress = score.multiplier >= 8 ? 1 : (score.chain % 3) / 3;
+      get('drift-progress-fill').style.transform = `scaleX(${progress})`;
+      get('drift-progress').setAttribute('aria-valuenow', String(Math.round(progress * 100)));
+      get('drift-next').textContent = score.multiplier >= 8 ? 'MULTIPLICADOR MÁXIMO' : `PRÓXIMO ×${score.multiplier + 1}`;
+      get('drift-hud').setAttribute('data-active', String(score.active && !paused && !intro?.active));
+      if (score.multiplier > driftVisualMultiplier && !window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+        get('drift-multiplier').animate?.([{ transform: 'scale(1)' }, { transform: 'scale(1.25)' }, { transform: 'scale(1)' }], { duration: 420 });
+      }
+      driftVisualMultiplier = score.multiplier;
       get('drift-combo').textContent = score.combo > 0
-        ? `+${Math.floor(score.combo).toLocaleString()} · ×${score.multiplier} · ${Math.round(score.angle)}°`
+        ? score.active ? 'DRIFT · mantenha o controle!' : 'Endireite para guardar o combo'
         : player.wallContact || player.offRoad ? 'Combo perdido · volte ao asfalto' : 'Acelere e conecte as curvas!';
       get('race-session').textContent = `${track.name} · Desafio Drift · 2 minutos`;
       get('race-banner').textContent = paused ? 'Pausado' : race.phase === 'countdown' ? String(race.countdown) : '';
@@ -389,6 +411,8 @@
   }
 
   function startSession(qualifying) {
+    driftVisualMultiplier = 1;
+    driftVisualTotal = 0;
     const drift = get('menu-mode').value === 'drift';
     if (drift) { qualifying = false; championship = null; qualifyingGrid = null; }
     easterEgg?.reset();

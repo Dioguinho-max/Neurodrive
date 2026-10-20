@@ -125,9 +125,45 @@
     return 30 + reliefScale * (18 * Math.sin(x / 300) + 12 * Math.cos(y / 220)
       + 8 * Math.sin((x + y) / 400));
   }
+  // Trace the actual distance boundary. Simple offset curves fold over themselves
+  // in tight hairpins, producing decorative rails inside the driveable area.
+  let cachedBarriers;
+  function barrierSegments() {
+    if (cachedBarriers) return cachedBarriers;
+    const radius = halfWidth + 40, step = 12, padding = radius + step;
+    const x0 = bounds.minX - padding, y0 = bounds.minY - padding;
+    const nx = Math.ceil((bounds.maxX + padding - x0) / step);
+    const ny = Math.ceil((bounds.maxY + padding - y0) / step);
+    const rows = Array.from({ length: ny + 1 }, (_, j) => Array.from({ length: nx + 1 }, (_, i) => {
+      const x = x0 + i * step, y = y0 + j * step;
+      return { x, y, d: Math.min(radius + step, nearest(x, y).distance) - radius };
+    }));
+    const result = [];
+    function triangle(vertices) {
+      const ends = [];
+      for (let i = 0; i < 3; i++) {
+        const a = vertices[i], b = vertices[(i + 1) % 3];
+        if ((a.d < 0) === (b.d < 0)) continue;
+        const t = a.d / (a.d - b.d);
+        ends.push({ x: a.x + (b.x - a.x) * t, y: a.y + (b.y - a.y) * t });
+      }
+      if (ends.length !== 2 || Math.hypot(ends[1].x - ends[0].x, ends[1].y - ends[0].y) < 1e-8) return;
+      const middle = nearest((ends[0].x + ends[1].x) / 2, (ends[0].y + ends[1].y) / 2);
+      const side = Math.sign(((ends[0].x + ends[1].x) / 2 - middle.x) * -middle.ty
+        + ((ends[0].y + ends[1].y) / 2 - middle.y) * middle.tx);
+      const angle = Math.atan2(ends[1].y - ends[0].y, ends[1].x - ends[0].x);
+      ends.forEach(point => { point.angle = angle; });
+      result.push({ ends, side, progress: middle.progress });
+    }
+    for (let j = 0; j < ny; j++) for (let i = 0; i < nx; i++) {
+      const a = rows[j][i], b = rows[j][i + 1], c = rows[j + 1][i + 1], d = rows[j + 1][i];
+      triangle([a, b, c]); triangle([a, c, d]);
+    }
+    return cachedBarriers = result;
+  }
   return {
     id: config.id, name: config.name,
-    points, segments, length, halfWidth, bounds, nearest, offset, heightAt, pointAt, pit,
+    points, segments, length, halfWidth, bounds, nearest, offset, heightAt, pointAt, pit, barrierSegments,
     start: offset(0, 0),
     contains: (x, y, margin = 0) => nearest(x, y).distance < halfWidth - margin,
   };

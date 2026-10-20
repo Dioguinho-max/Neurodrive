@@ -209,6 +209,8 @@ assert.equal(nodes['drift-help'].hidden, false);
 assert.equal(nodes['menu-weather'].disabled, true);
 nodes['race-menu-play'].onclick();
 assert.equal(lastCars.length, 1);
+assert.equal(nodes['drift-hud'].hidden, true, 'Drift HUD stays hidden before driving');
+for (let i = 0; i < 32; i++) frame(championshipTime += 100);
 assert.equal(nodes['drift-hud'].hidden, false);
 for (let i = 0; i < 1250; i++) frame(championshipTime += 100);
 assert.equal(nodes['race-results'].open, true);

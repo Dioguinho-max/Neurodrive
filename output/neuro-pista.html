@@ -10,13 +10,19 @@
     <script src="neuro-pista-3d.js" defer></script>
     <script src="neuro-pista.js" defer></script>
     <link rel="stylesheet" href="neurodrive-menu.css?v=menus-2">
+    <link rel="stylesheet" href="neurodrive-lab.css">
 </head>
   <body>
     <main id="neuro-pista">
-      <header class="lab-header"><div><h1>NeuroDrive · Laboratório de IA</h1><p>Explore os sensores, a rede neural e a evolução dos pilotos.</p></div><a class="btn btn-primary" href="corrida.html">Voltar ao menu principal</a></header>
+      <header class="lab-header"><div><span class="lab-eyebrow">NEURODRIVE / EXPERIMENTE E DESCUBRA</span><h1>Como uma IA aprende a dirigir?</h1><p>Uma pista, várias tentativas. Acompanhe as decisões de uma rede neural em tempo real.</p></div><a class="btn" href="corrida.html">← Voltar ao jogo</a></header>
+      <ol class="lab-guide" aria-label="Como explorar o laboratório">
+        <li><b>01 · Observe</b><span>As linhas do carro medem a distância às bordas. Quanto maior o valor, mais espaço livre.</span></li>
+        <li><b>02 · Investigue</b><span>Pause ou clique em um neurônio. Veja como entradas e pesos se transformam em direção e aceleração.</span></li>
+        <li><b>03 · Evolua</b><span>A cada geração, as melhores redes geram novas versões com pequenas mutações. Não há um roteiro de pilotagem pronto.</span></li>
+      </ol>
 
       <!-- Controles do treinamento -->
-      <div class="viz-controls">
+      <div class="viz-controls lab-toolbar">
         <button class="btn btn-primary" id="np-play" type="button">Iniciar treinamento</button>
         <button class="btn" id="np-step" type="button">Avançar um passo</button>
         <label class="form-label">Quantidade de carros
@@ -24,7 +30,7 @@
         </label>
         <button class="btn" id="np-apply-count" type="button">Aplicar e reiniciar</button>
         <label class="form-label">
-          Velocidade
+          Ritmo da simulação
           <select class="form-select" id="np-rate">
             <option value="1">1×</option>
             <option value="4">4×</option>
@@ -42,8 +48,9 @@
       <!-- Pista e rede neural do carro líder -->
       <div class="np-visuals">
         <section>
-          <h2 id="np-track-title">Circuito de treinamento</h2>
+          <span class="lab-eyebrow">01 / CAMPO DE TESTES</span><h2 id="np-track-title">Circuito de treinamento</h2>
           <div class="viz-controls np-camera-controls" id="np-camera-controls" hidden>
+            <label class="form-label">Qualidade<select class="form-select" id="np-quality"><option value="performance">Desempenho</option><option value="high">Mais detalhes</option></select></label>
             <label class="form-label">
               Câmera
               <select class="form-select" id="np-camera">
@@ -66,9 +73,9 @@
           <div class="text-small" id="np-track-label"></div>
         </section>
         <section>
-          <h2 id="np-network-title">Rede do líder · 6 → 6 → 2</h2>
+          <span class="lab-eyebrow">02 / POR DENTRO DA DECISÃO</span><h2 id="np-network-title">Rede do líder · 6 → 6 → 2</h2>
           <p class="text-small text-muted">Sensores → processamento → decisões<br>48 conexões · 8 vieses · ativação tanh</p>
-          <canvas id="np-network" role="img" aria-label="Rede neural do líder: sensores e velocidade, seis neurônios ocultos, direção e pedal"></canvas>
+          <canvas id="np-network" tabindex="0" role="img" aria-label="Rede neural do líder. Clique em um neurônio ou use as setas do teclado para selecionar e pausar. Entradas: sensores e velocidade. Saídas: direção e pedal."></canvas>
           <p class="text-small">Clique em H1–H6, Direção ou Pedal para pausar e inspecionar. As linhas destacadas chegam ao neurônio selecionado.</p>
           <div class="text-small" id="np-actions"></div>
           <div class="np-output-meters">
@@ -91,7 +98,8 @@
       </div>
 
       <!-- Cálculos visíveis quando o treinamento está pausado -->
-      <div>
+      <section class="lab-inspector" aria-label="Cálculo do neurônio selecionado">
+        <span class="lab-eyebrow">03 / ENTENDA O CÁLCULO</span><h2>Uma decisão, passo a passo</h2>
         <div class="viz-controls">
           <label class="form-label">
             Inspecionar neurônio
@@ -112,7 +120,7 @@
           <tbody id="np-terms"></tbody>
         </table>
         </div>
-      </div>
+      </section>
       <div class="sr-only" id="np-announce" aria-live="polite"></div>
     </main>
   </body>

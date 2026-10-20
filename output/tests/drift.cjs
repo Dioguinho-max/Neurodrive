@@ -21,6 +21,8 @@ for (const config of api.NeuroTracks) {
   }
   for (let i = 0; i < 240; i++) slide();
   assert(race.driftScore.combo > 100 && race.driftScore.multiplier >= 2);
+  for (let i = 0; i < 1260; i++) slide();
+  assert.equal(race.driftScore.multiplier, 8, 'Long chains reach the new cap without exceeding it');
   assert.notEqual(car.angle, car.driftHeading, 'Travel direction differs from body heading');
   for (let i = 0; i < 80; i++) {
     Object.assign(car, point, { driftHeading: point.angle, speed: 0, steering: 0 });

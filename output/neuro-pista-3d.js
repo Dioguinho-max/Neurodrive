@@ -106,6 +106,22 @@
       return mesh;
     }
 
+    // Two readable faces in one draw: reverse the back UVs, not the lettering.
+    function signGeometry(width, height) {
+      const plane = new THREE.PlaneGeometry(width, height).toNonIndexed();
+      const geometry = new THREE.BufferGeometry();
+      for (const name of ['position', 'normal', 'uv']) {
+        const source = plane.attributes[name], values = Array.from(source.array);
+        const back = values.slice();
+        if (name === 'normal') for (let i = 0; i < back.length; i++) back[i] *= -1;
+        if (name === 'uv') for (let i = 0; i < back.length; i += 2) back[i] = 1 - back[i];
+        geometry.setAttribute(name, new THREE.Float32BufferAttribute(values.concat(back), source.itemSize));
+      }
+      geometry.setIndex([0, 1, 2, 3, 4, 5, 6, 8, 7, 9, 11, 10]);
+      plane.dispose();
+      return geometry;
+    }
+
     // Faixas da pista geradas a partir da mesma linha central da fisica.
     function ribbon(inner, outer, surface, from = 0, count = track.points.length) {
       const vertices = [], uv = [];
@@ -285,8 +301,10 @@
     });
     scene.add(trunks, crowns);
 
-    const sponsorNames = ['APEX / MOTORS', 'NOVA / ENERGY', 'PULSO / RACING', 'VERTEX / TIRES'];
-    const sponsorColors = ['#143b5c', '#304b32', '#802c46', '#293456'];
+    const sponsorNames = ['APEX', 'NOVA', 'PULSO', 'VERTEX'];
+    const sponsorTags = ['M O T O R S', 'E N E R G Y', 'R A C I N G', 'T I R E S'];
+    const sponsorColors = ['#10273b', '#132c26', '#39182a', '#191e36'];
+    const sponsorAccents = ['#6ed8ff', '#c7f567', '#ff678e', '#f3b65f'];
     const signPostGeometry = new THREE.BoxGeometry(1, 10, 1);
     sponsorNames.forEach((name, index) => {
       const label = document.createElement('canvas');
@@ -294,18 +312,46 @@
       const ctx = label.getContext?.('2d');
       if (!ctx) return;
       ctx.fillStyle = sponsorColors[index]; ctx.fillRect(0, 0, 512, 128);
-      ctx.fillStyle = '#f4c85b'; ctx.fillRect(0, 112, 512, 16);
-      ctx.fillStyle = '#ffffff'; ctx.font = 'bold 38px sans-serif';
-      ctx.textAlign = 'center'; ctx.fillText(name, 256, 76);
+      // Vector emblems drawn once into four shared textures, not per frame.
+      const accent = sponsorAccents[index];
+      const polygon = (points, color) => {
+        ctx.fillStyle = color; ctx.beginPath();
+        points.forEach(([x, y], i) => i ? ctx.lineTo(x, y) : ctx.moveTo(x, y));
+        ctx.closePath(); ctx.fill();
+      };
+      ctx.strokeStyle = accent; ctx.lineWidth = 5; ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+      if (index === 0) {
+        // Split mountain peak / forward arrow.
+        polygon([[26,99],[67,23],[108,99],[88,99],[67,57],[46,99]], accent);
+        polygon([[61,78],[82,78],[89,92],[53,92]], '#ffffff');
+      } else if (index === 1) {
+        ctx.beginPath(); ctx.arc(67,64,40,.35,Math.PI*1.85); ctx.stroke();
+        polygon([[73,21],[42,70],[65,70],[58,108],[95,55],[71,55]], accent);
+      } else if (index === 2) {
+        ctx.beginPath(); ctx.arc(67,64,40,0,Math.PI*2); ctx.stroke();
+        ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 6; ctx.beginPath();
+        [[21,67],[43,67],[54,48],[66,86],[80,36],[91,67],[114,67]].forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y)); ctx.stroke();
+      } else {
+        ctx.beginPath(); ctx.arc(67,64,40,0,Math.PI*2); ctx.stroke();
+        polygon([[35,43],[53,43],[67,73],[81,43],[99,43],[67,99]], accent);
+        ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 3;
+        for (const x of [49,63,77]) { ctx.beginPath();ctx.moveTo(x,29);ctx.lineTo(x+6,37);ctx.stroke(); }
+      }
+      ctx.fillStyle = '#f5f8fc'; ctx.font = `italic 900 ${index === 3 ? 52 : 60}px sans-serif`;
+      ctx.textAlign = 'left'; ctx.fillText(name, 137, 72);
+      ctx.fillStyle = accent; ctx.font = 'bold 16px sans-serif'; ctx.fillText(sponsorTags[index], 141, 101);
+      polygon([[468,0],[492,0],[456,128],[432,128]], accent);
+      polygon([[500,0],[512,0],[476,128],[464,128]], '#ffffff');
       const texture = new THREE.CanvasTexture(label);
       texture.colorSpace = THREE.SRGBColorSpace; textures.push(texture);
-      const face = new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide });
+      const face = new THREE.MeshBasicMaterial({ map: texture });
+      const sponsorGeometry = signGeometry(48, 12);
       for (let i = index * 15 + 8; i < track.points.length; i += 60) {
         if (options.racePresentation && track.segments[i].start >= track.pit.garage(0).distance - 50
           && track.segments[i].start <= track.pit.exit + 30) continue;
         const point = track.offset(i, track.halfWidth + 48);
         if (track.nearest(point.x, point.y).distance < track.halfWidth + 25) continue;
-        const panel = addMesh(new THREE.PlaneGeometry(48, 12), face, scene,
+        const panel = addMesh(sponsorGeometry, face, scene,
           [point.x, track.heightAt(point.x, point.y) + 10, point.y]);
         panel.rotation.y = -point.angle;
         for (const side of [-1, 1]) {
@@ -364,7 +410,7 @@
           context.fillText(`BOX ${String(bay + 1).padStart(2, '0')}`, 128, 42);
           const texture = new THREE.CanvasTexture(sign); texture.colorSpace = THREE.SRGBColorSpace; textures.push(texture);
           const point = circuitPoint(distance, lane - 15.1);
-          const plate = addMesh(new THREE.PlaneGeometry(18, 4), new THREE.MeshBasicMaterial({ map: texture, side: THREE.DoubleSide }), scene,
+          const plate = addMesh(signGeometry(18, 4), new THREE.MeshBasicMaterial({ map: texture }), scene,
             [point.x, track.heightAt(point.x, point.y) + 14, point.y]);
           plate.rotation.y = -point.angle;
         }
@@ -510,17 +556,11 @@
     // Barreiras externas e placas de curva ajudam a ler a pista em terceira pessoa.
     // Continuous profiled steel rails: shared geometry instead of isolated white blocks.
     const railVertices = [], railIndices = [], postPositions = [];
-    const barrierOpening = (i, side) => options.racePresentation && side === 1
-      && ((track.segments[i].start >= track.pit.mergeStart - 20
-        && track.segments[i].start <= track.pit.exit + 20)
-        || (track.segments[i].start >= track.pit.entry - 15
-        && track.segments[i].start <= track.pit.entryEnd + 20));
-    for (const side of [-1, 1]) {
-      for (let i = 0; i < track.points.length; i++) {
-        const next = (i + 1) % track.points.length;
-        if (barrierOpening(i, side) || barrierOpening(next, side)) continue;
-        const ends = [track.offset(i, side * (track.halfWidth + 40)),
-          track.offset(next, side * (track.halfWidth + 40))];
+    const barrierOpening = (progress, side) => options.racePresentation && side === 1
+      && ((progress >= track.pit.mergeStart - 20 && progress <= track.pit.exit + 20)
+        || (progress >= track.pit.entry - 15 && progress <= track.pit.entryEnd + 20));
+    track.barrierSegments().forEach(({ ends, side, progress }, i) => {
+        if (barrierOpening(progress, side)) return;
         for (const height of [1.8, 3.4]) {
           const base = railVertices.length / 3;
           for (const point of ends) {
@@ -535,9 +575,8 @@
               base + row + 1, base + row + 5, base + row + 6);
           }
         }
-        if (i % 2 === 0) postPositions.push(ends[0]);
-      }
-    }
+        if (i % 3 === 0) postPositions.push(ends[0]);
+    });
     const railGeometry = new THREE.BufferGeometry();
     railGeometry.setAttribute('position', new THREE.Float32BufferAttribute(railVertices, 3));
     railGeometry.setIndex(railIndices); railGeometry.computeVertexNormals();
@@ -554,16 +593,6 @@
       posts.setMatrixAt(i, postTransform.matrix);
     });
     posts.name = 'circuit-guardrail-posts'; posts.computeBoundingSphere(); scene.add(posts);
-    const boardGeometry = new THREE.BoxGeometry(2, 16, 14);
-    for (let i = 0; i < track.points.length; i += 3) {
-      if (i % 30 === 0) {
-        if (options.racePresentation && track.segments[i].start >= track.pit.garage(0).distance - 30
-          && track.segments[i].start <= track.pit.exit + 30) continue;
-        const point = track.offset(i, track.halfWidth + 26);
-        const board = addMesh(boardGeometry, red, scene, [point.x, track.heightAt(point.x, point.y) + 8, point.y]);
-        board.rotation.y = -point.angle;
-      }
-    }
 
     // Modelos low-poly: comprimento e largura seguem o desenho original (16 × 9).
     function roundedBox(width, height, depth, radius) {

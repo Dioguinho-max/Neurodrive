@@ -1,0 +1,33 @@
+/* Scoped to the learning page: racing HUD and menus keep their own layout. */
+body:has(#neuro-pista) { color-scheme:dark; background:#080f18; }
+#neuro-pista { --background:#080f18; --foreground:#eaf4fc; --muted-foreground:#a6bbca; --muted:#182b39; --border:#2b4052; --viz-series-1:#73e5ba; --viz-series-2:#d29bf2; max-width:1840px; padding:32px clamp(16px,3vw,48px); }
+#neuro-pista .lab-header { border:0; margin-bottom:20px; padding-bottom:0; }
+#neuro-pista .lab-header h1 { font-size:clamp(26px,3vw,44px); margin-top:8px; line-height:1.15; }
+.lab-eyebrow { color:#83dcbf; font-size:10px; letter-spacing:.15em; font-weight:700; }
+.lab-guide { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:16px; padding:0; margin:0 0 22px; list-style:none; }
+.lab-guide li { border-left:2px solid #73e5ba77; padding:8px 16px; display:grid; gap:5px; }
+.lab-guide b { font-size:14px; color:#dff7ec; }
+.lab-guide span { color:#9fb6c8; font-size:13px; }
+#neuro-pista .lab-toolbar { background:#12202e; border:1px solid #293e4f; border-radius:16px; padding:16px; gap:12px; }
+#neuro-pista .form-select { background:#0b1722; color:#eff7fd; border:1px solid #365065; border-radius:8px; min-height:40px; padding:8px 10px; }
+#neuro-pista #np-count { width:100px; }
+#neuro-pista #np-stats { padding:16px 4px; margin:0; color:#abefcf; font-weight:650; letter-spacing:.015em; }
+#neuro-pista .np-visuals { grid-template-columns:minmax(0,1.65fr) minmax(390px,1fr); gap:20px; align-items:start; }
+#neuro-pista .np-visuals > section, .lab-inspector { border:1px solid #263b4c; border-radius:18px; padding:20px; background:linear-gradient(150deg,#122332,#0d1722); }
+#neuro-pista h2 { font-size:20px; font-weight:750; margin:6px 0 14px; }
+#neuro-pista #np-track-3d, #neuro-pista #np-track { height:clamp(460px,65vh,760px); border-radius:12px; background:#0a1320; }
+#neuro-pista #np-network { height:480px; background:radial-gradient(ellipse at center,#1a33424d,transparent 75%); border-radius:12px; }
+#neuro-pista .np-camera-controls { gap:8px; }
+#neuro-pista .np-camera-controls .form-label { flex:1 1 135px; }
+#neuro-pista #np-track-label, #neuro-pista #np-actions { color:#b0f2d1; padding:10px 12px; background:#76e4b90b; border:1px solid #76e4b922; border-radius:8px; }
+#neuro-pista .np-output-meters { grid-template-columns:1fr 1fr; }
+#neuro-pista details { border-top:1px solid #2b4052; padding-top:12px; margin-top:14px; color:#b9cad7; }
+#neuro-pista summary { color:#eaf4fc; padding:6px 0; }
+#neuro-pista .np-legend { gap:20px; padding:8px 4px; }
+#neuro-pista #np-inspect { overflow-x:auto; }
+#neuro-pista .table th { color:#9fbbce; font-size:12px; }
+#neuro-pista .table td { padding:10px 8px; }
+#neuro-pista .table tbody tr:hover { background:#ffffff06; }
+#neuro-pista .lab-inspector h2 { margin-bottom:18px; }
+@media(max-width:1100px) { #neuro-pista .np-visuals { grid-template-columns:1fr; } #neuro-pista #np-network { height:460px; } }
+@media(max-width:600px) { .lab-guide { grid-template-columns:1fr; gap:8px; } #neuro-pista .np-visuals > section,.lab-inspector { padding:14px; } #neuro-pista #np-track-3d,#neuro-pista #np-track { height:390px; } #neuro-pista .np-output-meters { grid-template-columns:1fr; } #neuro-pista #np-network { height:440px; } }

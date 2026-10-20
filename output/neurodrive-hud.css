@@ -42,9 +42,22 @@
 .game-fps[hidden] { display:none; }
 .game-fps[data-level="medium"] { color:#ffd180; }
 .game-fps[data-level="low"] { color:#ff8e8e; }
-#drift-hud { position:absolute; top:90px; left:50%; transform:translateX(-50%); display:grid; gap:5px; padding:12px 22px; text-align:center; color:#edf7ff; background:#10232be8; border-top:3px solid #97efc2; border-radius:12px; pointer-events:none; z-index:4; max-width:42%; }
+#drift-hud { position:absolute; top:84px; left:50%; transform:translateX(-50%); display:grid; gap:7px; padding:12px 18px; width:320px; box-sizing:border-box; text-align:center; color:#edf7ff; background:linear-gradient(115deg,#0c17247a,#18374260); border:1px solid #91eac34d; border-radius:6px 20px 6px 20px; pointer-events:none; z-index:4; max-width:42%; font-variant-numeric:tabular-nums; }
 #drift-hud[hidden] { display:none; }
-#drift-points { font-size:clamp(20px,3vw,36px); color:#97efc2; }
+.drift-heading { display:flex; justify-content:space-between; gap:12px; font-size:11px; color:#b4c9d1; }
+.drift-chain { display:flex; justify-content:center; align-items:center; gap:18px; }
+#drift-chain-score { font-size:clamp(26px,3vw,42px); line-height:1.1; font-style:italic; letter-spacing:-1px; }
+#drift-multiplier { color:#0d252a; background:#99f0c8; border-radius:6px; padding:5px 10px; font-size:26px; transform:skew(-6deg); }
+#drift-progress { height:5px; background:#ffffff1c; border-radius:4px; overflow:hidden; }
+#drift-progress-fill { display:block; height:100%; background:linear-gradient(90deg,#64dfbd,#f7d27d); transform:scaleX(0); transform-origin:left; transition:transform 90ms linear; }
+#drift-next { font-size:9px; letter-spacing:.15em; color:#f7d27d; }
+#drift-hud[data-active="true"] #drift-progress-fill { animation:drift-glow 1.2s ease-in-out infinite; }
+@keyframes drift-glow { 50% { opacity:.55; } }
+@media (prefers-reduced-motion:reduce) { #drift-hud * { animation:none !important; transition:none !important; } }
 #drift-combo { font-size:12px; }
 .drift-mode .race-tower, .drift-mode .drive-session, .drift-mode #race-pit-panel { display:none !important; }
-@media (max-height:600px) { #drift-hud { top:12px; padding:8px 12px; max-width:40%; } #drift-clock { font-size:11px; } }
+@media (max-height:600px) { #drift-hud { top:12px; padding:6px 12px; gap:3px; width:270px; max-width:38%; } #drift-chain-score { font-size:26px; } #drift-combo { font-size:10px; } #drift-multiplier { font-size:20px; padding:2px 8px; } .drift-heading { font-size:9px; } }
+
+#drift-points { color:#f5d88c; font-size:13px; font-weight:750; text-shadow:0 1px 3px #000b; transform-origin:right center; }
+#drift-hud { text-shadow:0 1px 3px #0008; }
+@media (max-height:600px) { #drift-points { font-size:11px; } }

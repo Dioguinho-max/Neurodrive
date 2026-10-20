@@ -249,8 +249,8 @@
   function prepareCanvas(id) {
     const canvas = element(id);
     const width = canvas.clientWidth;
-    const height = id === 'network' ? 380 : 280;
-    const pixelRatio = window.devicePixelRatio || 1;
+    const height = canvas.clientHeight || (id === 'network' ? 480 : 460);
+    const pixelRatio = Math.min(window.devicePixelRatio || 1, 2);
 
     if (canvas.width !== Math.round(width * pixelRatio) || canvas.height !== height * pixelRatio) {
       canvas.width = Math.round(width * pixelRatio);
@@ -332,16 +332,16 @@
   let networkNodes = [];
 
   function drawNetwork() {
-    const { context, width } = prepareCanvas('network');
+    const { context, width, height } = prepareCanvas('network');
     const activations = leader.activations;
     const positionsX = [52, width / 2, width - 48];
     const selected = Number(element('neuron').value);
     networkNodes = [];
     const positionsY = activations.map((layer) => layer.map(
-      (_, index) => layer.length === 2 ? 125 + index * 130 : 52 + index * 59,
+      (_, index) => layer.length === 2 ? height * (.33 + index * .34) : 58 + index * (height - 96) / 5,
     ));
 
-    context.font = '12px sans-serif';
+    context.font = '600 12px system-ui, sans-serif';
     context.textAlign = 'center';
     context.fillStyle = colors.muted;
     ['Entradas', 'Oculta', 'Saídas'].forEach((label, index) => {
@@ -354,7 +354,7 @@
         for (let source = 0; source < activations[layer].length; source++) {
           const value = leader.brain[layer][target][source] * activations[layer][source];
           const focused = selected === (layer === 0 ? target : target + 6);
-          context.globalAlpha = focused ? clamp(Math.abs(value) * 0.6, 0.3, 0.95) : 0.08;
+          context.globalAlpha = focused ? clamp(Math.abs(value) * 0.6, 0.4, 0.95) : 0.16;
           context.strokeStyle = value >= 0 ? colors.positive : colors.negative;
           context.lineWidth = focused ? 1 + Math.min(3, Math.abs(value) * 2) : 0.7;
           context.beginPath();
@@ -371,7 +371,7 @@
         const x = positionsX[layer];
         const y = positionsY[layer][index];
         context.beginPath();
-        context.arc(x, y, 14, 0, FULL_TURN);
+        context.arc(x, y, 16, 0, FULL_TURN);
         context.fillStyle = colors.road;
         context.fill();
         context.globalAlpha = Math.max(0.15, Math.abs(value));
@@ -383,7 +383,7 @@
         context.textAlign = 'center';
         const label = layer === 0 ? ['E2', 'E1', 'Frente', 'D1', 'D2', 'Vel.'][index]
           : layer === 1 ? `H${index + 1}` : index === 0 ? 'Direção' : 'Pedal';
-        context.fillText(label, x, y - 20);
+        context.fillText(label, x, y - 23);
         // Valores fora do preenchimento mantêm contraste em ambos os temas.
         context.fillText(value.toFixed(2), x, y + 26);
         if (layer > 0) {
@@ -391,7 +391,7 @@
           networkNodes.push({ x, y, neuron, label });
           if (selected === neuron) {
             context.beginPath();
-            context.arc(x, y, 18, 0, FULL_TURN);
+            context.arc(x, y, 20, 0, FULL_TURN);
             context.strokeStyle = colors.foreground;
             context.lineWidth = 2;
             context.stroke();
@@ -541,10 +541,18 @@
     element('network').onclick = (event) => {
       const bounds = element('network').getBoundingClientRect();
       const x = (event.clientX - bounds.left) * element('network').clientWidth / bounds.width;
-      const y = (event.clientY - bounds.top) * 380 / bounds.height;
+      const y = (event.clientY - bounds.top) * element('network').clientHeight / bounds.height;
       const node = networkNodes.find((item) => Math.hypot(item.x - x, item.y - y) <= 23);
       if (!node) return;
       element('neuron').value = String(node.neuron);
+      selectNeuron();
+    };
+
+    element('network').onkeydown = (event) => {
+      if (!['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Enter', ' '].includes(event.key)) return;
+      event.preventDefault();
+      const delta = ['ArrowLeft', 'ArrowUp'].includes(event.key) ? -1 : ['ArrowRight', 'ArrowDown'].includes(event.key) ? 1 : 0;
+      element('neuron').value = String((Number(element('neuron').value) + delta + 8) % 8);
       selectNeuron();
     };
 
@@ -589,7 +597,8 @@
 
   // O desenho 3D lê os carros; a física e a neuroevolução continuam independentes.
   try {
-    track3D = window.createNeuroTrack3D(element);
+    track3D = window.createNeuroTrack3D(element, { quality: element('quality').value === 'high' ? 'high' : 'performance' });
+    element('quality').onchange = () => { track3D.setQuality(element('quality').value); draw(); };
     element('track').hidden = true;
     element('track-3d').hidden = false;
     element('camera-controls').hidden = false;

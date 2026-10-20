@@ -596,7 +596,7 @@
         if (invalid) { score.combo = 0; score.chain = 0; score.idle = 0; score.multiplier = 1; }
         else if (score.active) {
           score.idle = 0; score.chain += 1 / 60;
-          score.multiplier = Math.min(5, 1 + Math.floor(score.chain / 3));
+          score.multiplier = Math.min(8, 1 + Math.floor(score.chain / 3));
           score.combo += car.speed * (score.angle / 30) * score.multiplier * .75;
         } else score.idle += 1 / 60;
         if ((!score.active && score.idle >= 1.2) || elapsed >= 120) {
