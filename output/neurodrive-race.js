@@ -91,6 +91,20 @@
     else showResults();
   };
   const career = window.createNeuroCareer();
+  const driftCareer = window.createNeuroDriftCareer();
+  let driftResult = null;
+
+  function updateDriftGoals() {
+    get('drift-menu-goals').hidden = get('menu-mode').value !== 'drift';
+    const id = get('menu-track').value;
+    const targets = driftCareer.goals[id] || driftCareer.goals.serra;
+    get('drift-menu-targets').textContent = targets.map((value, i) =>
+      `${['Bronze', 'Prata', 'Ouro'][i]} · ${value.toLocaleString()} pontos`).join('   /   ');
+    const best = driftCareer.records[id];
+    get('drift-menu-record').textContent = best
+      ? `Seu recorde: ${best.score.toLocaleString()} pontos · ${driftCareer.status(id, best.score).medal}`
+      : 'Seu primeiro recorde começa aqui. Complete o desafio!';
+  }
   let sessionBestBefore = career.records[track.id] ?? null;
   let championship = null;
   let recordNoticeUntil = 0;
@@ -166,10 +180,22 @@
     get('race-menu').close();
     clearFinale();
     clearInput();
+    get('drift-result-medal').hidden = !race.drift;
+    get('race-results').setAttribute('data-drift', String(Boolean(race.drift)));
+    get('race-results-improvement').hidden = Boolean(race.drift);
     if (race.drift) {
+      driftResult ??= driftCareer.record(track.id, race.driftScore.total, race.driftScore.best);
+      const award = driftCareer.status(track.id, race.driftScore.total);
+      get('drift-result-medal').setAttribute('data-level', String(award.level));
+      const format = value => value.toLocaleString('pt-BR');
+      const total = race.driftScore.total;
+      const recordTitle = driftResult.improved ? driftResult.previous ? 'Novo recorde pessoal' : 'Primeiro recorde' : 'Seu recorde local';
+      get('drift-result-medal').innerHTML = `<div class="drift-award-heading"><span class="drift-award-icon" aria-hidden="true">${['◇', '🥉', '🥈', '🥇'][award.level]}</span><div><small>DESAFIO CONCLUÍDO</small><h3>${award.level ? `${award.medal} conquistado!` : 'Cada curva conta'}</h3><p>${award.next ? `Faltam ${format(award.target - total)} pontos para ${award.next}.` : 'Você conquistou todas as metas desta pista.'}</p></div></div>
+        <div class="drift-result-targets">${driftCareer.goals[track.id].map((target, i) => `<div data-earned="${total >= target}"><span>${total >= target ? '✓ ' : ''}${['Bronze', 'Prata', 'Ouro'][i]}</span><strong>${format(target)}</strong></div>`).join('')}</div>
+        <div class="drift-result-stats"><div><small>MELHOR COMBO</small><strong>${format(race.driftScore.best)} <small>pts</small></strong></div><div><small>${recordTitle}</small><strong>${format(driftCareer.records[track.id]?.score || 0)} <small>pts</small></strong><span>${driftResult.improved ? `${driftResult.previous ? `+${format(total - driftResult.previous)} pontos · ` : ''}${driftResult.persisted ? 'Salvo neste navegador' : 'Não foi possível salvar no navegador'}` : 'Supere sua marca na próxima tentativa'}</span></div></div>`;
       get('race-results-stage').textContent = `${track.name} · Desafio Drift`;
-      get('race-results-title').textContent = `${race.driftScore.total.toLocaleString()} pontos`;
-      get('race-results-note').textContent = `Melhor combo: ${race.driftScore.best.toLocaleString()} pontos. Treine o contravolante e conecte mais curvas na próxima tentativa!`;
+      get('race-results-title').textContent = `${format(total)} pontos`;
+      get('race-results-note').textContent = 'Dois minutos. Cada combo fez a diferença.';
       get('race-results-improvement').textContent = '';
       for (const id of ['race-results-table', 'race-podium', 'race-results-continue', 'championship-next', 'championship-results', 'race-results-return']) get(id).hidden = true;
       get('race-results-close').textContent = 'Voltar ao menu';
@@ -258,6 +284,7 @@
     audio?.silence();
     get('race-results').close();
     for (const name of ['track', 'difficulty', 'laps']) get(`menu-${name}`).value = get(`race-${name}`).value;
+    updateDriftGoals();
     get('race-menu-resume').hidden = !started;
     window.NeuroGarage?.showPage(started ? 'pause' : 'race');
     get('race-menu-resume').textContent = race.phase === 'finished' ? 'Voltar aos resultados' : 'Continuar sessão';
@@ -304,8 +331,10 @@
   get('menu-mode').onchange = () => {
     const drift = get('menu-mode').value === 'drift';
     get('drift-help').hidden = !drift;
+    updateDriftGoals();
     for (const id of ['menu-laps', 'menu-weather', 'menu-difficulty']) get(id).disabled = drift;
   };
+  get('menu-track').onchange = updateDriftGoals;
   get('race-menu').oncancel = (event) => { event.preventDefault(); resumeFromMenu(); };
   get('race-menu-play').onclick = () => {
     if (!renderer) return;
@@ -348,6 +377,17 @@
         ], { duration: 650 });
       }
       driftVisualTotal = score.total;
+      const goal = driftCareer.status(track.id, score.total);
+      get('drift-goal-label').textContent = goal.next
+        ? `${goal.level ? goal.medal + ' · ' : ''}${goal.next}: ${Math.max(0, goal.target - score.total).toLocaleString()} restantes`
+        : 'Ouro conquistado!';
+      driftCareer.goals[track.id].forEach((target, i, targets) => {
+        const previous = i ? targets[i - 1] : 0;
+        get(`drift-target-${i}`).textContent = target.toLocaleString('pt-BR');
+        get(`drift-step-${i}`).setAttribute('data-earned', String(score.total >= target));
+        get(`drift-meter-${i}`).value = Math.max(0, Math.min(100, (score.total - previous) / (target - previous) * 100));
+      });
+      get('drift-personal-record').textContent = `Recorde local: ${(driftCareer.records[track.id]?.score || 0).toLocaleString()} pontos`;
       get('drift-chain-score').textContent = `+${Math.floor(score.combo).toLocaleString()}`;
       get('drift-multiplier').textContent = `×${score.multiplier}`;
       const progress = score.multiplier >= 8 ? 1 : (score.chain % 3) / 3;
@@ -412,6 +452,8 @@
   }
 
   function startSession(qualifying) {
+    driftResult = null;
+    get('drift-result-medal').hidden = true;
     driftVisualMultiplier = 1;
     driftVisualTotal = 0;
     const drift = get('menu-mode').value === 'drift';

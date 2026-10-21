@@ -42,7 +42,15 @@
 .game-fps[hidden] { display:none; }
 .game-fps[data-level="medium"] { color:#ffd180; }
 .game-fps[data-level="low"] { color:#ff8e8e; }
-#drift-hud { position:absolute; top:84px; left:50%; transform:translateX(-50%); display:grid; gap:7px; padding:12px 18px; width:320px; box-sizing:border-box; text-align:center; color:#edf7ff; background:linear-gradient(115deg,#0c17247a,#18374260); border:1px solid #91eac34d; border-radius:6px 20px 6px 20px; pointer-events:none; z-index:4; max-width:42%; font-variant-numeric:tabular-nums; }
+#drift-hud { position:absolute; top:76px; left:50%; transform:translateX(-50%); display:grid; grid-template-columns:1fr auto; grid-template-areas:"heading heading" "chain chain" "combo next" "medals medals"; gap:4px 8px; padding:8px 12px; width:280px; box-sizing:border-box; text-align:center; color:#edf7ff; background:linear-gradient(115deg,#0c17247a,#18374260); border:1px solid #91eac34d; border-radius:6px 14px 6px 14px; pointer-events:none; z-index:4; max-width:calc(100% - 24px); font-variant-numeric:tabular-nums; }
+#drift-hud .drift-heading { grid-area:heading; }
+#drift-hud .drift-chain { grid-area:chain; gap:12px; }
+#drift-hud #drift-progress { grid-area:combo; align-self:center; }
+#drift-hud #drift-next { grid-area:next; font-size:8px; letter-spacing:.05em; }
+#drift-hud .drift-medal-goal { grid-area:medals; padding-top:5px; gap:3px; }
+#drift-hud #drift-combo, #drift-hud #drift-personal-record { display:none; }
+#drift-hud #drift-chain-score { font-size:30px; }
+#drift-hud #drift-multiplier { font-size:20px; padding:2px 8px; }
 #drift-hud[hidden] { display:none; }
 .drift-heading { display:flex; justify-content:space-between; gap:12px; font-size:11px; color:#b4c9d1; }
 .drift-chain { display:flex; justify-content:center; align-items:center; gap:18px; }
@@ -56,7 +64,21 @@
 @media (prefers-reduced-motion:reduce) { #drift-hud * { animation:none !important; transition:none !important; } }
 #drift-combo { font-size:12px; }
 .drift-mode .race-tower, .drift-mode .drive-session, .drift-mode #race-pit-panel { display:none !important; }
-@media (max-height:600px) { #drift-hud { top:12px; padding:6px 12px; gap:3px; width:270px; max-width:38%; } #drift-chain-score { font-size:26px; } #drift-combo { font-size:10px; } #drift-multiplier { font-size:20px; padding:2px 8px; } .drift-heading { font-size:9px; } }
+@media (max-height:600px), (pointer:coarse) {
+  #drift-hud { top:max(8px,env(safe-area-inset-top)); padding:5px 8px; gap:3px 6px; width:240px; max-width:40%; }
+  #drift-hud #drift-chain-score { font-size:24px; }
+  #drift-hud #drift-multiplier { font-size:17px; padding:1px 6px; }
+  #drift-hud .drift-heading { font-size:9px; gap:5px; white-space:nowrap; }
+  #drift-hud #drift-points { font-size:10px; }
+  #drift-hud #drift-goal-label { display:none; }
+  #drift-hud .drift-medal-goal { padding-top:3px; }
+  #drift-hud .drift-medal-steps { gap:5px; }
+  #drift-hud .drift-medal-step span { font-size:8px; }
+  #drift-hud .drift-medal-step progress { height:3px; margin-top:2px; }
+}
+@media (max-width:600px) and (orientation:portrait) {
+  #drift-hud { top:106px; width:240px; max-width:calc(100% - 32px); }
+}
 
 #drift-points { color:#f5d88c; font-size:13px; font-weight:750; text-shadow:0 1px 3px #000b; transform-origin:right center; }
 #drift-hud { text-shadow:0 1px 3px #0008; }
@@ -64,3 +86,56 @@
 .touch-handbrake { display:none !important; }
 .drift-mode .touch-handbrake { display:flex !important; align-items:center; justify-content:center; gap:8px; min-height:44px; width:100%; border:1px solid #f5d88c; color:#f5d88c; touch-action:none; }
 .drift-mode .touch-handbrake[aria-pressed="true"] { color:#14232c; background:#f5d88c; }
+.drift-medal-goal { display:grid; gap:5px; padding-top:7px; border-top:1px solid #ffffff20; font-size:10px; color:#dce8ee; }
+.drift-medal-steps { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; }
+.drift-medal-step { --medal:#e2aa80; opacity:.65; }
+.drift-medal-step:nth-child(2) { --medal:#d4e3ed; }
+.drift-medal-step:nth-child(3) { --medal:#f5d88c; }
+.drift-medal-step span { display:flex; justify-content:space-between; gap:3px; font-size:9px; color:var(--medal); }
+.drift-medal-step b { font-weight:500; }
+.drift-medal-step progress { display:block; width:100%; height:4px; margin-top:4px; border:0; border-radius:4px; overflow:hidden; background:#ffffff20; appearance:none; }
+.drift-medal-step progress::-webkit-progress-bar { background:#ffffff20; }
+.drift-medal-step progress::-webkit-progress-value { background:var(--medal); }
+.drift-medal-step progress::-moz-progress-bar { background:var(--medal); }
+.drift-medal-step[data-earned="true"] { opacity:1; }
+#drift-goal-label { color:#e7dab5; font-size:10px; }
+#drift-personal-record { font-size:10px; color:#c6d8df; }
+#drift-menu-goals { padding:14px 18px; border:1px solid #f5d88c55; border-radius:12px; background:#f5d88c09; }
+#drift-menu-goals strong { color:#f5d88c; }
+#drift-menu-goals p { margin:8px 0; }
+#drift-menu-goals small { color:#a8bec8; }
+#drift-result-medal { margin:16px 0; padding:20px; border:1px solid #859aa7; border-radius:12px; background:linear-gradient(120deg,#233441,#14202c); font-size:20px; font-weight:700; }
+#drift-result-medal[data-level="1"] { color:#efb286; border-color:#b78059; }
+#drift-result-medal[data-level="2"] { color:#e0edf5; border-color:#b7cedb; }
+#drift-result-medal[data-level="3"] { color:#f5d88c; border-color:#e8bf59; }
+#drift-result-medal[hidden], #drift-menu-goals[hidden] { display:none; }
+#race-results[data-drift="true"] { max-width:720px; }
+#race-results[data-drift="true"] #race-results-title { font-size:clamp(30px,5vw,52px); letter-spacing:-.04em; margin:12px 0; color:#f1faf7; }
+#race-results[data-drift="true"] #race-results-note { color:#a9bdc8; font-weight:400; }
+#race-results[data-drift="true"] #drift-result-medal { border:0; padding:0; background:none; }
+.drift-award-heading { display:flex; align-items:center; gap:18px; padding:18px; background:linear-gradient(110deg,#ffffff0b,transparent); border-radius:16px; }
+.drift-award-icon { display:grid; place-items:center; flex-shrink:0; width:70px; height:70px; font-size:45px; background:#ffffff08; border:1px solid currentColor; border-radius:50%; }
+.drift-award-heading small, .drift-result-stats small { font-size:10px; letter-spacing:.12em; font-weight:500; }
+.drift-award-heading h3 { font-size:24px; margin:5px 0; }
+.drift-award-heading p { font-size:13px; font-weight:400; color:#b4c9d1; margin:0; }
+.drift-result-targets { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; margin:16px 0; }
+.drift-result-targets>div { display:grid; gap:5px; padding:10px 14px; border-bottom:3px solid #ffffff20; border-radius:8px; background:#ffffff04; color:#82949f; font-size:12px; font-weight:400; }
+.drift-result-targets strong { font-size:18px; }
+.drift-result-targets [data-earned="true"] { color:#e2aa80; border-color:currentColor; background:#ffffff08; }
+.drift-result-targets [data-earned="true"]:nth-child(2) { color:#d4e3ed; }
+.drift-result-targets [data-earned="true"]:nth-child(3) { color:#f5d88c; }
+.drift-result-stats { display:grid; grid-template-columns:1fr 1fr; gap:16px; padding:14px 0; border-top:1px solid #ffffff18; color:#b4c9d1; }
+.drift-result-stats>div { display:grid; align-content:start; gap:7px; }
+.drift-result-stats strong { font-size:24px; color:#f1faf7; }
+.drift-result-stats span { font-size:12px; color:#99f0c8; font-weight:400; }
+@media (max-height:600px) {
+  .drift-medal-goal { padding-top:4px; gap:3px; }
+  #drift-personal-record { display:none; }
+  .drift-medal-step span { font-size:8px; }
+  #race-results[data-drift="true"] { padding:18px 24px; }
+  #race-results[data-drift="true"] #race-results-title { font-size:30px; margin:4px 0; }
+  .drift-award-heading { padding:10px; }
+  .drift-award-icon { width:46px; height:46px; font-size:30px; }
+  .drift-award-heading h3 { font-size:20px; }
+  .drift-result-targets { margin:10px 0; }
+}

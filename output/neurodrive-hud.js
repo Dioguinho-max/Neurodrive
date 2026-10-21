@@ -1,6 +1,41 @@
 /* Mesmo painel de pilotagem nos modos local e online. */
 (() => {
   'use strict';
+  window.createNeuroDriftCareer = () => {
+    const key = 'neurodrive-drift-records-v1';
+    const goals = { serra: [600, 1800, 4000], veloz: [500, 1500, 3500], tecnico: [800, 2200, 5000] };
+    const names = ['Bronze', 'Prata', 'Ouro'], records = {};
+    try {
+      const data = JSON.parse(window.localStorage?.getItem(key) || '{}');
+      for (const id of Object.keys(goals)) {
+        const item = data?.[id];
+        if (Number.isSafeInteger(item?.score) && item.score > 0
+          && Number.isSafeInteger(item.bestCombo) && item.bestCombo >= 0 && item.bestCombo <= item.score) {
+          records[id] = { score: item.score, bestCombo: item.bestCombo,
+            date: typeof item.date === 'string' && Number.isFinite(Date.parse(item.date)) ? item.date : null };
+        }
+      }
+    } catch {}
+    return {
+      goals, records,
+      status(id, score) {
+        const thresholds = goals[id] || goals.serra;
+        const total = Number.isFinite(score) ? Math.max(0, score) : 0;
+        const level = thresholds.filter(value => total >= value).length;
+        return { level, medal: level ? names[level - 1] : 'Sem medalha',
+          next: level < 3 ? names[level] : null, target: thresholds[Math.min(level, 2)] };
+      },
+      record(id, score, bestCombo) {
+        const previous = records[id]?.score || 0;
+        if (!Object.hasOwn(goals, id) || !Number.isSafeInteger(score) || score <= previous
+          || !Number.isSafeInteger(bestCombo) || bestCombo < 0 || bestCombo > score) return { improved: false, previous };
+        records[id] = { score, bestCombo, date: new Date().toISOString() };
+        let persisted = false;
+        try { if (window.localStorage) { window.localStorage.setItem(key, JSON.stringify(records)); persisted = true; } } catch {}
+        return { improved: true, previous, persisted };
+      },
+    };
+  };
   window.createNeuroCareer = () => {
     const key = 'neurodrive-personal-laps-v1';
     let records = {};

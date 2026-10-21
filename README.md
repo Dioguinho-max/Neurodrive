@@ -81,6 +81,14 @@ No menu **Jogar → Modo → Drift**, faça o máximo de pontos em dois minutos,
 - O fim do tempo guarda o combo válido e mostra o total e o melhor combo.
 - Pista seca, sem desgaste nem pit stops. Pontuação separada de moedas e recordes de volta. Esta primeira versão é solo.
 
+O Drift tem metas por circuito e um recorde pessoal salvo neste navegador ao completar os dois minutos. O HUD acompanha apenas pontos guardados; o resultado mostra a medalha e avisa quando você supera sua marca. Reiniciar ou abandonar não grava um resultado. Limpar os dados do navegador apaga esses recordes, que não são sincronizados com a conta nem concedem moedas ou medalhas do perfil.
+
+| Circuito | Bronze | Prata | Ouro |
+| --- | ---: | ---: | ---: |
+| Serra Verde | 600 | 1.800 | 4.000 |
+| Autódromo Veloz | 500 | 1.500 | 3.500 |
+| Vale Técnico | 800 | 2.200 | 5.000 |
+
 ### Conquistas e apresentação
 
 O perfil exibe medalhas de **Primeira vitória**, **Primeiro pódio** e **Recordista**, com histórico e datas. Vitórias e pódios anteriores são recuperados dos resultados salvos. Recordista passa a contar com esta atualização: exige uma marca estritamente melhor que a liderança da temporada (ou a primeira marca do circuito). Empatar não concede essa medalha. A medalha permanece mesmo depois de perder a liderança.
