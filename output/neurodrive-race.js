@@ -102,6 +102,7 @@
     KeyS: 'brake', ArrowDown: 'brake',
     KeyA: 'left', ArrowLeft: 'left', KeyD: 'right', ArrowRight: 'right',
     KeyE: 'shiftUp', KeyQ: 'shiftDown',
+    Space: 'handbrake',
   };
 
   function timeLabel(time) {
@@ -359,7 +360,7 @@
       }
       driftVisualMultiplier = score.multiplier;
       get('drift-combo').textContent = score.combo > 0
-        ? score.active ? 'DRIFT · mantenha o controle!' : 'Endireite para guardar o combo'
+        ? player.handbrake > .2 ? 'Solte o freio de mão e controle no acelerador' : score.active ? 'DRIFT · mantenha o controle!' : 'Endireite para guardar o combo'
         : player.wallContact || player.offRoad ? 'Combo perdido · volte ao asfalto' : 'Acelere e conecte as curvas!';
       get('race-session').textContent = `${track.name} · Desafio Drift · 2 minutos`;
       get('race-banner').textContent = paused ? 'Pausado' : race.phase === 'countdown' ? String(race.countdown) : '';

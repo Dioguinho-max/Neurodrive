@@ -61,3 +61,6 @@
 #drift-points { color:#f5d88c; font-size:13px; font-weight:750; text-shadow:0 1px 3px #000b; transform-origin:right center; }
 #drift-hud { text-shadow:0 1px 3px #0008; }
 @media (max-height:600px) { #drift-points { font-size:11px; } }
+.touch-handbrake { display:none !important; }
+.drift-mode .touch-handbrake { display:flex !important; align-items:center; justify-content:center; gap:8px; min-height:44px; width:100%; border:1px solid #f5d88c; color:#f5d88c; touch-action:none; }
+.drift-mode .touch-handbrake[aria-pressed="true"] { color:#14232c; background:#f5d88c; }

@@ -21,6 +21,8 @@ pads = [pad]; frame(0); frame(16);
 pad.axes[0] = .1; assert.equal(api.readNeuroGamepad(pad).steering,0,'Dead zone');
 pad.axes[0] = .59; button(7,.6); button(6,.2); frame(32);
 assert.equal(controller.input().steering,.5); assert.equal(controller.input().throttle,.6); assert.equal(controller.input().braking,.2);
+button(0,1); frame(36); assert.equal(controller.input().handbrake,true,'A / cross activates handbrake while driving');
+button(0,0); frame(40); assert.equal(controller.input().handbrake,false,'Release handbrake');
 button(9,1); frame(48); frame(64); assert.equal(menuCount,1,'Start only once per press');
 button(9,0); button(7,0); button(6,0); pad.axes[0]=0;
 const first = element(), select = Object.assign(element(),{tagName:'SELECT', selectedIndex:0, options:[{},{}]});

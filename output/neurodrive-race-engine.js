@@ -75,14 +75,19 @@
     else car.rpm = targetRpm;
   }
 
-  function advanceCar(track, car, steering, pedal, maximumSpeed, allowReverse = true) {
+  function advanceCar(track, car, steering, pedal, maximumSpeed, allowReverse = true, handbrake = false) {
     car.impact = (car.impact || 0) * 0.86;
+    if (car.driftMode) {
+      const demand = handbrake ? 1 : 0;
+      car.handbrake = (car.handbrake || 0) + clamp(demand - (car.handbrake || 0), -.12, .2);
+    }
     if (car.player) car.activations = [car.inputs, [], [steering, pedal]];
     // Menos curso em alta velocidade, entrada gradual e retorno mais rápido.
     const requestedSteering = car.player ? steering * (0.78 - 0.34 * Math.abs(car.speed) / MAX_RACE_SPEED) : steering;
     const steeringRate = car.player ? (steering === 0 ? 0.055 : car.driftMode ? 0.04 : 0.025) : 0.06;
     car.steering += clamp(requestedSteering - car.steering, -steeringRate, steeringRate);
     updatePowertrain(car, pedal, maximumSpeed, allowReverse);
+    if (car.driftMode && car.handbrake > 0) car.speed = Math.sign(car.speed) * Math.max(0, Math.abs(car.speed) - .024 * car.handbrake);
     car.offRoad = !track.contains(car.x, car.y);
     // Em alta, pequenos comandos fazem ajustes suaves; o giro cresce
     // progressivamente ao segurar o volante para uma curva mais fechada.
@@ -145,10 +150,12 @@
       const countersteer = car.steering * slip < -.015;
       // Rear grip breaks progressively in the useful speed range. Lifting or
       // countersteering recovers grip instead of snapping the travel direction.
-      const recovery = countersteer ? .045 : pedal < .1 ? .05
-        : .03 + .05 * clamp((kmh - 115) / 65, 0, 1)
+      const recovery = countersteer ? .04 : pedal < .1 ? .05
+        : .026 + .012 * (1 - clamp(pedal, 0, 1)) + .054 * clamp((kmh - 115) / 65, 0, 1)
           + .05 * (1 - clamp((kmh - 20) / 40, 0, 1));
-      car.driftHeading = wrap((car.driftHeading ?? car.angle) + slip * recovery);
+      const desiredGrip = recovery * (1 - .6 * (car.handbrake || 0));
+      car.driftRearGrip = (car.driftRearGrip ?? recovery) + (desiredGrip - (car.driftRearGrip ?? recovery)) * .16;
+      car.driftHeading = wrap((car.driftHeading ?? car.angle) + slip * car.driftRearGrip);
       const scrub = Math.sin(slip) ** 2 * (.009 + .009 * clamp((kmh - 115) / 65, 0, 1)) * Math.abs(car.speed);
       car.speed = Math.sign(car.speed) * Math.max(0, Math.abs(car.speed) - scrub);
       movementAngle = car.driftHeading;
@@ -209,7 +216,7 @@
     car.lastShift = shift;
     if (car.wallCooldown > 0) car.wallCooldown--;
     if (car.cooldown > 0) { car.cooldown--; return; }
-    advanceCar(track, car, ...playerCommand(command), MAX_RACE_SPEED, !command.noReverse);
+    advanceCar(track, car, ...playerCommand(command), MAX_RACE_SPEED, !command.noReverse, command.handbrake);
   };
 
   window.createNeuroRace = function createNeuroRace(track, difficulty = 'normal', options = {}) {
@@ -499,7 +506,7 @@
     }
 
     function recover(car) {
-      if (drift) { driftScore.combo = 0; driftScore.chain = 0; driftScore.multiplier = 1; car.driftYaw = 0; }
+      if (drift) { driftScore.combo = 0; driftScore.chain = 0; driftScore.multiplier = 1; car.driftYaw = 0; car.handbrake = 0; car.driftRearGrip = .05; }
       if (car.done || car.pitExit || car.pitState || phase !== 'racing') return;
       car.invalidLap = true;
       car.recordLapInvalid = true;
@@ -585,7 +592,7 @@
         const [steering, pedal] = car.player
           ? playerCommand(command)
           : aiDecision(car);
-        advanceCar(track, car, steering, pedal, car.player ? MAX_RACE_SPEED : aiSpeed, !command.noReverse);
+        advanceCar(track, car, steering, pedal, car.player ? MAX_RACE_SPEED : aiSpeed, !command.noReverse, command.handbrake);
       }
 
       if (drift) {

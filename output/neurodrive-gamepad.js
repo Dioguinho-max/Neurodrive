@@ -10,7 +10,7 @@
     const throttle = value(7) > .05 ? value(7) : 0;
     const braking = value(6) > .05 ? value(6) : 0;
     return { steering: Math.round(steering * 100) / 100, throttle: Math.round(throttle * 100) / 100,
-      braking: Math.round(braking * 100) / 100, shiftDown: pressed(4), shiftUp: pressed(5),
+      braking: Math.round(braking * 100) / 100, shiftDown: pressed(4), shiftUp: pressed(5), handbrake: pressed(0),
       confirm: pressed(0), back: pressed(1), pit: pressed(2), recover: pressed(3), menu: pressed(9),
       direction: pressed(12) || pad.axes[1] < -.55 ? 'up' : pressed(13) || pad.axes[1] > .55 ? 'down'
         : pressed(14) || pad.axes[0] < -.55 ? 'left' : pressed(15) || pad.axes[0] > .55 ? 'right' : '' };
@@ -91,7 +91,7 @@
         }
         if (edge('back') || edge('menu')) options.back?.(scope);
       } else {
-        input = { steering: state.steering, throttle: state.throttle, braking: state.braking, shiftUp: state.shiftUp, shiftDown: state.shiftDown };
+        input = { steering: state.steering, throttle: state.throttle, braking: state.braking, shiftUp: state.shiftUp, shiftDown: state.shiftDown, handbrake: state.handbrake };
         if (edge('menu')) { input = {}; options.menu?.(); }
         if (edge('pit')) options.pit?.();
         if (edge('recover')) options.recover?.();

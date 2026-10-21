@@ -73,6 +73,8 @@ O box do jogador também conta com dois chefes de equipe em estações de comput
 
 No menu **Jogar → Modo → Drift**, faça o máximo de pontos em dois minutos, sozinho na pista escolhida. Use os controles habituais: acelere, sustente a curva e use contravolante para controlar a derrapagem. O acerto de drift é exclusivo deste modo.
 
+**Freio de mão:** segure **Espaço**, **A no Xbox / ✕ no PlayStation**, ou o botão **Freio de mão** acima das setas no celular. Dê um toque curto enquanto vira para iniciar a derrapagem; solte e dose o acelerador e o contravolante para sustentá-la. Segurar o freio de mão reduz a velocidade até parar. A aderência retorna gradualmente após soltar, e a função não altera as corridas normais.
+
 - Pontua acima de 30 km/h, com ângulo de derrapagem entre 10° e 65°, dentro do asfalto.
 - Encadear derrapagens aumenta o multiplicador até ×8. Endireitar por 1,2 segundo guarda o combo.
 - Bater, sair da pista, rodar ou reposicionar perde os pontos ainda não guardados.

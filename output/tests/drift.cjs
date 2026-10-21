@@ -76,3 +76,25 @@ assert(Math.abs(medium.driftYaw - yawBefore) < .003, 'Countersteer must not snap
 for (let i = 0; i < 35; i++) api.predictNeuroCar(flat, medium, {});
 assert(Math.abs(medium.angle - medium.driftHeading) < slipBefore, 'Lifting recovers grip');
 console.log('OK: high-speed grip limit, progressive rotation, tire scrub and smooth recovery.');
+const turn = testCar(85 / 54);
+for (let i = 0; i < 35; i++) api.predictNeuroCar(flat, turn, { accelerate: true, right: true });
+const withBrake = structuredClone(turn), withoutBrake = structuredClone(turn);
+for (let i = 0; i < 18; i++) {
+  api.predictNeuroCar(flat, withBrake, { accelerate: true, right: true, handbrake: true });
+  api.predictNeuroCar(flat, withoutBrake, { accelerate: true, right: true });
+}
+assert(withBrake.speed < withoutBrake.speed, 'Handbrake slows the car');
+assert(Math.abs(withBrake.angle - withBrake.driftHeading) > Math.abs(withoutBrake.angle - withoutBrake.driftHeading), 'A short pull initiates rear slip');
+const oldGrip = withBrake.driftRearGrip;
+api.predictNeuroCar(flat, withBrake, { accelerate: true, left: true });
+assert(Math.abs(withBrake.driftRearGrip - oldGrip) < .01, 'Release recovers grip smoothly');
+for (let i = 0; i < 15; i++) api.predictNeuroCar(flat, withBrake, {});
+assert.equal(withBrake.handbrake, 0, 'Release clears brake input');
+for (let i = 0; i < 200; i++) api.predictNeuroCar(flat, withBrake, { accelerate: true, handbrake: true });
+assert.equal(withBrake.speed, 0, 'Holding the handbrake cannot sustain speed or farm drifting');
+const normal = testCar(85 / 54); normal.driftMode = false;
+const normalCopy = structuredClone(normal);
+api.predictNeuroCar(flat, normal, { accelerate: true, handbrake: true });
+api.predictNeuroCar(flat, normalCopy, { accelerate: true });
+assert.deepEqual(normal, normalCopy, 'Normal racing physics unchanged');
+console.log('OK: handbrake initiation, scrub, release, stop and normal race isolation.');
