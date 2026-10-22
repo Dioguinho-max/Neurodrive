@@ -234,6 +234,11 @@
     for (let id = 1; id <= 6; id++) if (!grid.includes(id)) grid.push(id);
     const requestedLaps = Number(options.laps);
     const laps = qualifying ? 3 : Number.isInteger(requestedLaps) && requestedLaps >= 1 && requestedLaps <= 50 ? requestedLaps : 3;
+    // Reference strategy: 5 laps / 1 stop, 10 / 2, 20 / 3; one extra stop per 10 laps.
+    // A normal stint consumes about 70%, preserving a margin for reaching pit entry.
+    const plannedStops = laps < 5 ? 0 : laps < 10 ? 1 : 2 + Math.floor((laps - 10) / 10);
+    const stintLaps = Math.ceil(laps / (plannedStops + 1));
+    const tyreWearRate = qualifying ? .06 : laps < 5 ? .08 : .70 / (stintLaps * 1.08);
     const startDistance = 0;
     const checkpointLength = track.length / 12;
     const aiSpeed = ({ easy: 185, normal: 200, hard: 205 }[difficulty] || 200) / 54;
@@ -278,7 +283,7 @@
         gripUsage: 0, sliding: false, offRoad: false, bodyRoll: 0,
         progress: distance - startDistance, checkpoint: 0,
         finishTime: null, place: null, cooldown: 0, stalled: 0, wallContact: false, wallCooldown: 0,
-        tyreCompound: weatherMode === 'rain' ? 'wet' : 'dry', pitCompound: weatherMode === 'rain' ? 'wet' : 'dry', wetness, rainIntensity, weatherMode, tyreWearRate: qualifying ? .06 : laps < 5 ? .08 : .28, tyreWearEnabled: !drift && (weatherMode !== 'dry' || !qualifying && laps >= 5), tyreLife: 1, tyreBurst: false, burstWheel: -1, tyreDistance: 0, pitRequested: false, pitState: null, pitTimer: 0, pitStops: 0,
+        tyreCompound: weatherMode === 'rain' ? 'wet' : 'dry', pitCompound: weatherMode === 'rain' ? 'wet' : 'dry', wetness, rainIntensity, weatherMode, tyreWearRate, tyreWearEnabled: !drift && (weatherMode !== 'dry' || !qualifying && laps >= 5), tyreLife: 1, tyreBurst: false, burstWheel: -1, tyreDistance: 0, pitRequested: false, pitState: null, pitTimer: 0, pitStops: 0,
         bestLap: null, lastLap: null, lastLapKind: '', checkpointTimes: [],
         lapStart: 0, completedLaps: 0, invalidLap: false,
         recordLapInvalid: false, recordLapStarted: false, recordLap: null,
@@ -580,7 +585,11 @@
         if (car.cooldown > 0) { car.cooldown--; continue; }
         if (!car.player && !car.pitState && car.tyreWearEnabled) {
           const compound = wetness > .45 ? 'wet' : wetness < .12 && rainIntensity < .1 ? 'dry' : car.tyreCompound;
-          if (compound !== car.tyreCompound || car.tyreBurst || car.tyreLife < .55 && laps - car.progress / track.length > .4) {
+          const remainingLaps = Math.max(0, laps - car.progress / track.length);
+          const wearPerLap = car.tyreDistance > track.length * .25
+            ? (1 - car.tyreLife) / (car.tyreDistance / track.length) : tyreWearRate * 1.08;
+          const needsFreshTyres = car.tyreLife < .35 && remainingLaps * wearPerLap > car.tyreLife - .08;
+          if (compound !== car.tyreCompound || car.tyreBurst || needsFreshTyres) {
             car.pitRequested = true; car.pitCompound = compound;
           }
         }

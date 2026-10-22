@@ -80,7 +80,7 @@ traffic.cars[0].player = false;
 traffic.cars[0].driver = traffic.cars[1].driver;
 for (let tick = 0; tick < 18000 && traffic.phase !== 'finished'; tick++) traffic.step({});
 assert.equal(traffic.phase, 'finished', 'Tráfego dos boxes não deve bloquear a prova');
-assert(traffic.cars.every(car => car.pitStops >= 2 && !car.tyreBurst), 'IA antecipa duas trocas antes do estouro');
-// A prova solo termina na chegada do primeiro carro: rivais podem estar saindo da segunda parada.
+assert(traffic.cars.every(car => car.pitStops === 1 && !car.tyreBurst), 'Cinco voltas precisam de uma troca, sem estouros');
+// A prova solo termina na chegada do primeiro carro; rivais ainda podem estar correndo.
 assert(traffic.cars.filter(car => !car.pitState).every(car => car.tyreLife < 1), 'Os pneus voltam a desgastar depois da troca');
 console.log('OK: parada de 8 segundos, pneus novos, progresso preservado e IA nas três pistas; fila de seis carros sem bloqueio.');

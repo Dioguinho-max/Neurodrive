@@ -4,6 +4,7 @@
   const get = (id) => document.getElementById(id);
   const fpsDisplay = window.createNeuroFPS?.(get('show-fps'), get('game-fps'));
   const updateHUD = window.createRaceHUD(get);
+  const teamRadio = window.createNeuroRadio?.(get('neuro-race'));
   const updateSignals = window.createRaceSignals(get);
   // Ferramentas de inspeção são opt-in e não aparecem para o jogador.
   get('race-developer').hidden = !new URLSearchParams(window.location?.search || '').has('dev');
@@ -418,6 +419,7 @@
     renderer?.update(race.cars, player, false, spectator, race.phase === 'finished');
     const ranking = race.standings();
     updateHUD(player, ranking.indexOf(player) + 1, ranking.length, race.laps, race.elapsed, race.phase);
+    teamRadio?.update(player, { key:race, phase:race.phase, laps:race.laps, qualifying:race.qualifying, drift:race.drift, elapsed:race.elapsed }, started && !paused && !intro?.active && !document.hidden);
     get('race-laps').disabled = started && !race.qualifying && race.phase !== 'finished';
     audio?.update(player, race, started && !paused);
     get('neuro-race').classList?.toggle('drift-mode', Boolean(race.drift));

@@ -40,7 +40,7 @@ A classificação não concede moedas. Na chegada, os modos solo e online exibem
 
 ## Pit stops e pneus
 
-Em corridas de **5 voltas ou mais**, os pneus desgastam e perdem aderência gradualmente. A classificação e as provas curtas não têm desgaste.
+Em corridas de **5 voltas ou mais**, a durabilidade acompanha a distância da prova: a referência é **1 parada em 5 voltas, 2 em 10 e 3 em 20**, com mais uma parada a cada 10 voltas adicionais. São referências para pilotagem normal com pneus adequados ao clima, não paradas obrigatórias. A IA considera o desgaste observado e a distância restante antes de pedir uma troca. A mesma regra vale no solo e no servidor online. No tempo seco, classificação e provas curtas não têm desgaste; com chuva, usam desgaste reduzido.
 
 Pneus desgastados dificultam as curvas e recebem alertas no painel. Ao atingir **0%**, um pneu estoura: o carro puxa para um lado, perde aderência e velocidade. A troca nos boxes repara o dano; reposicionar o carro não restaura os pneus. Derrapagens, frenagens e grama aceleram o desgaste.
 
@@ -70,6 +70,8 @@ O box do jogador também conta com dois chefes de equipe em estações de comput
 ## Controles
 
 ### Desafio Drift
+
+Durante a classificação e a corrida, no solo e no online, o **rádio da equipe** traz avisos curtos sobre chuva prevista, início da chuva, pista molhada com pneus secos, pneus gastos ou furados e última volta. Cada aviso dura até 5,5 segundos, com intervalo entre mensagens e prioridade para furos. Fica oculto durante menus e apresentações e não aparece no Drift. Um toque suave precede a leitura por voz no idioma selecionado. Toque, voz e volume têm ajustes próprios salvos no navegador. A voz usa os recursos de fala disponíveis no dispositivo; sem suporte, os avisos escritos continuam funcionando. Abrir menus, ocultar a aba ou encerrar a sessão interrompe a fala.
 
 O menu usa uma apresentação de garagem com carro equipado em destaque, navegação numerada e atalhos para multiplayer e Copa Neuro. **♫ Música da garagem** controla uma trilha eletrônica original, gerada uma vez no navegador. Ela para ao fechar o menu ou ocultar a aba; o volume independente fica em **Ajustes** e é salvo neste dispositivo. A música vem ligada por padrão e começa na primeira interação com o jogo. Desligá-la pelo botão salva essa preferência no navegador.
 

@@ -1,0 +1,13 @@
+.team-radio { position:absolute; left:50%; bottom:28px; transform:translateX(-50%); width:min(350px,40%); box-sizing:border-box; padding:10px 14px; border:1px solid #99f0c83b; border-left:3px solid #99f0c8; border-radius:5px; background:#0c1b27df; color:#eff8f6; pointer-events:none; z-index:5; }
+.team-radio[hidden] { display:none; }
+.team-radio strong { display:block; color:#99f0c8; font-size:10px; letter-spacing:.12em; margin-bottom:4px; }
+.team-radio span { display:block; font-size:14px; line-height:1.4; }
+body:has(dialog[open]) .team-radio { display:none; }
+@media (max-height:600px), (pointer:coarse) {
+  .team-radio { bottom:max(12px,env(safe-area-inset-bottom)); width:36%; padding:7px 9px; }
+  .team-radio strong { font-size:9px; }
+  .team-radio span { font-size:12px; }
+}
+@media (orientation:portrait) and (max-width:600px) {
+  .team-radio { bottom:220px; width:70%; }
+}

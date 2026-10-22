@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="pt-BR">
   <head>
+    <link rel="stylesheet" href="neurodrive-radio.css"><script src="neurodrive-radio-audio.js" defer></script><script src="neurodrive-radio.js" defer></script>
     <link rel="icon" type="image/svg+xml" href="assets/neurodrive-favicon.svg">
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -214,6 +215,12 @@
         <label class="form-label">Qualidade gráfica <select class="form-select" id="race-quality"><option value="performance">Desempenho · recomendado</option><option value="high">Mais detalhes</option><option value="ultra">Super alto · exige mais da GPU</option></select></label>
       <label class="form-check"><input type="checkbox" id="show-fps"> Mostrar FPS</label>
         <label class="form-check"><input id="race-sound" type="checkbox" checked> Som do motor</label>
+        <label class="form-check"><input id="radio-sound" type="checkbox" checked> Toque do rádio</label>
+        <label class="form-check"><input id="radio-voice" type="checkbox" checked> Voz da equipe</label>
+        <label class="form-label">Volume do rádio<input id="radio-volume" type="range" min="0" max="100" value="45" aria-label="Volume do rádio"></label>
+        <label class="form-label">Voz do rádio<select id="radio-speaker"></select></label>
+        <button id="radio-test" type="button">Ouvir teste de voz</button>
+        <p>As vozes disponíveis dependem do dispositivo. Ative a voz da equipe para testar.</p>
         <label class="form-label">Volume da música do menu <input id="menu-music-volume" type="range" min="0" max="100" value="20" aria-label="Volume da música do menu"></label>
         <label class="form-label">Volume <input id="race-volume" type="range" min="0" max="100" value="30" aria-label="Volume do jogo"></label>
         <span class="text-small" id="race-audio-status" role="status"></span>

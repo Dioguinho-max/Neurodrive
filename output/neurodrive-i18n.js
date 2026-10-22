@@ -2,6 +2,17 @@
 (() => {
   'use strict';
   const dictionary = {
+    'Toque do rádio':'Radio notification sound', 'Voz da equipe':'Team voice', 'Volume do rádio':'Radio volume',
+    'Voz do rádio':'Radio voice', 'Ouvir teste de voz':'Preview voice',
+    'Automática — melhor voz disponível':'Automatic — best available voice',
+    'Rádio funcionando. Boa corrida! Cuidado nas frenagens.':'Radio check. Have a great race! Watch your braking.',
+    'As vozes disponíveis dependem do dispositivo. Ative a voz da equipe para testar.':'Available voices depend on your device. Enable team voice to preview.',
+    'RÁDIO DA EQUIPE':'TEAM RADIO', 'Pneu furado. Reduza e entre nos boxes.':'Puncture. Slow down and pit.',
+    'Chuva prevista em breve. Prepare sua estratégia.':'Rain expected soon. Plan your strategy.',
+    'Pneus no limite. Planeje uma parada.':'Tires are worn. Plan a pit stop.',
+    'Pista molhada. Considere pneus de chuva.':'Wet track. Consider wet tires.',
+    'Última volta. Mantenha o ritmo!':'Final lap. Keep up the pace!',
+    'A chuva começou. Cuidado nas frenagens.':'Rain has started. Be careful under braking.',
     'Ponto de largada':'Start line',
     'Campeonato':'Championship', '3 circuitos · uma disputa pelo título':'3 circuits · one title to win',
     'Escolha como jogar':'Choose how to play', 'Conquiste seu lugar no grid':'Earn your place on the grid',

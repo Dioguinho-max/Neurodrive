@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="pt-BR">
 <head>
+  <link rel="stylesheet" href="neurodrive-radio.css"><script src="neurodrive-radio-audio.js" defer></script><script src="neurodrive-radio.js" defer></script>
   <link rel="icon" type="image/svg+xml" href="assets/neurodrive-favicon.svg">
   <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>NeuroDrive · Online</title>
@@ -84,6 +85,12 @@
       <label class="form-label">Gráficos<select class="form-select" id="online-quality"><option value="performance">Leve · recomendado</option><option value="high">Mais detalhes</option><option value="ultra">Super alto · exige mais da GPU</option></select></label>
       <label class="form-check"><input type="checkbox" id="show-fps"> Mostrar FPS</label>
       <label class="form-check"><input type="checkbox" id="online-sound" checked>Som do motor</label>
+      <label class="form-check"><input id="radio-sound" type="checkbox" checked>Toque do rádio</label>
+      <label class="form-check"><input id="radio-voice" type="checkbox" checked>Voz da equipe</label>
+      <label class="form-label">Volume do rádio<input id="radio-volume" type="range" min="0" max="100" value="45" aria-label="Volume do rádio"></label>
+      <label class="form-label">Voz do rádio<select id="radio-speaker"></select></label>
+      <button id="radio-test" type="button">Ouvir teste de voz</button>
+      <p>As vozes disponíveis dependem do dispositivo. Ative a voz da equipe para testar.</p>
       <label class="form-label">Câmera<select class="form-select" id="np-camera"><option value="chase" selected>Terceira pessoa</option><option value="overview">Visão da pista</option><option value="follow">Orbital</option></select></label>
       <div class="viz-controls"><button class="btn" id="np-rotate">Girar</button><button class="btn" id="np-zoom-in">+</button><button class="btn" id="np-zoom-out">−</button><button class="btn" id="np-camera-reset">Restaurar câmera</button><button class="btn" id="online-recover" disabled>Voltar à pista (R)</button></div>
 <p class="pit-help">Corridas de 5 voltas ou mais t?m desgaste dos pneus. Pressione <strong>B</strong> ou use ?Chamar boxes?: a equipe assume na pr?xima entrada e troca os pneus em 8 segundos.</p>

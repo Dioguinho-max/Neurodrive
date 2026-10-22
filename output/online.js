@@ -3,6 +3,7 @@
   const get = (id) => document.getElementById(id);
   const fpsDisplay = window.createNeuroFPS?.(get('show-fps'), get('game-fps'));
   const updateHUD = window.createRaceHUD(get);
+  const teamRadio = window.createNeuroRadio?.(get('neuro-race'));
   const updateSignals = window.createRaceSignals(get);
   const recordNotice = window.createNeuroRecordNotice?.(get);
   let recordSummaries = {};
@@ -265,6 +266,7 @@
       const player = prediction?.sample(performance.now()) || cars[index];
       cars[index] = player;
       updateHUD(player, playerPosition, cars.length, latest.laps, latest.elapsed, latest.phase);
+      teamRadio?.update(player, { key:`${latest.raceId}:${latest.stage}`, phase:latest.phase, laps:latest.laps, qualifying:latest.stage !== 'race', elapsed:latest.elapsed }, !get('online-lobby').open && !intro?.active && !document.hidden);
       const spectator = player.done && latest.stage === 'qualifying' ? cars.find(car => !car.done && !car.pitExit) || player : player;
       easterEgg?.update(renderer);
       renderer.update(cars, player, false, spectator, latest.phase === 'finished'); audio?.update(player, latest, !player.done && !document.hidden);
