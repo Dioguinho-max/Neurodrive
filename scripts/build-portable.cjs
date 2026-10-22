@@ -17,7 +17,7 @@ async function build() {
   for (const name of fs.readdirSync(path.join(root, 'output')))
     if (/\.(html|css|js)$/.test(name)) copy('output/' + name, 'output/' + name);
   for (const name of ['assets', 'vendor']) fs.cpSync(path.join(root, 'output', name), path.join(target, 'output', name), { recursive: true });
-  for (const name of ['server.cjs','lan.cjs','online.cjs','catalog.cjs','pilot.cjs','records.cjs','rewards.cjs','drift.cjs','drift-worker.cjs']) copy('server/' + name, 'server/' + name);
+  for (const name of ['server.cjs','lan.cjs','online.cjs','online-clock.cjs','catalog.cjs','pilot.cjs','records.cjs','rewards.cjs','drift.cjs','drift-worker.cjs']) copy('server/' + name, 'server/' + name);
   fs.cpSync(path.join(root, 'node_modules/ws'), path.join(target, 'node_modules/ws'), { recursive: true });
   fs.mkdirSync(path.join(target, 'runtime'), { recursive: true });
   const licensePath = path.join(target, 'runtime', `NODE-LICENSE-${process.version}.txt`);

@@ -4,6 +4,7 @@
     const history = [];
     let state = null, received = 0, baseTime = 0, phase, visual = null, frameTime = 0;
     let offsetX = 0, offsetY = 0, offsetAngle = 0;
+    let simulated = null, simulatedTime = 0;
     const wrap = (value) => Math.atan2(Math.sin(value), Math.cos(value));
     const commandAt = (time) => {
       for (let i = history.length - 1; i >= 0; i--) if (history[i].time <= time) return history[i].input;
@@ -11,11 +12,14 @@
     };
     function simulate(now) {
       if (!state) return null;
-      const car = { ...state };
+      const car = simulated;
       if (phase !== 'racing' || car.done || car.cooldown || car.pitState || car.pitExit) return car;
       const end = Math.min(now, received + 200);
-      for (let time = baseTime + 1000 / 60; time <= end; time += 1000 / 60) window.predictNeuroCar(track, car, commandAt(time));
-      return car;
+      while (simulatedTime + 1000 / 60 <= end) {
+        simulatedTime += 1000 / 60;
+        window.predictNeuroCar(track, car, commandAt(simulatedTime));
+      }
+      return { ...car };
     }
     return {
       input(input, now) {
@@ -26,6 +30,7 @@
         const reset = !state || nextPhase !== phase || car.done || car.cooldown || car.pitState !== state.pitState || Math.hypot(car.x - state.x, car.y - state.y) > 40;
         state = { ...car }; phase = nextPhase; received = now;
         baseTime = now - Math.min(120, Math.max(0, rtt / 2));
+        simulated = { ...state }; simulatedTime = baseTime;
         const corrected = simulate(now);
         if (!reset && visual && Math.hypot(visual.x - corrected.x, visual.y - corrected.y) < 20) {
           offsetX = visual.x - corrected.x; offsetY = visual.y - corrected.y; offsetAngle = wrap(visual.angle - corrected.angle);

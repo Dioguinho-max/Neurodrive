@@ -43,3 +43,27 @@ predictor.input({ accelerate: true, left: true }, 5400);
 assert.equal(predictor.sample(5500).speed, 0, 'Piloto não acelera durante a troca');
 assert.equal(predictor.sample(5500).x, source.x, 'Servidor controla o atendimento');
 console.log('OK: identical driving physics, instant input, braking, no authoritative mutation, outage limit, recovery and finish.');
+
+// Compare cached prediction with full replay, including a command change between snapshots.
+const originalPredict = api.predictNeuroCar;
+let cachedSteps = 0, replaySteps = 0;
+api.predictNeuroCar = (...args) => { cachedSteps++; return originalPredict(...args); };
+const cached = api.createOnlinePrediction(track);
+cached.input({ accelerate: true }, 0);
+cached.receive(source, 'racing', 0, 120);
+let changed = false;
+for (let now = 0; now <= 200; now += 1000 / 144) {
+  if (!changed && now >= 100) { cached.input({ brake: true }, 100); changed = true; }
+  const actual = cached.sample(now), replay = { ...source };
+  for (let time = -60 + 1000 / 60; time <= now; time += 1000 / 60) {
+    originalPredict(track, replay, time >= 100 ? { brake: true } : { accelerate: true }); replaySteps++;
+  }
+  for (const key of ['x','y','angle','speed','rpm','brake','gear','tyreLife'])
+    assert(Math.abs(actual[key] - replay[key]) < 1e-9, `Cached prediction must match replay: ${key}`);
+}
+assert(cachedSteps < replaySteps / 4, 'Render frames must not replay already simulated physics');
+const before = cachedSteps; cached.sample(5000); const capped = cachedSteps; cached.sample(6000);
+assert.equal(cachedSteps, capped, 'No continuing work during a stalled connection');
+assert(capped - before <= 1);
+api.predictNeuroCar = originalPredict;
+console.log(`OK: cached prediction ${cachedSteps} physics steps vs ${replaySteps} full replay steps in the same 200ms scenario.`);

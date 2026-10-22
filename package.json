@@ -13,6 +13,7 @@
     "build:portable:linux": "node scripts/build-portable.cjs --linux",
     "start:lan": "node server/lan.cjs",
     "test:lan": "node output/tests/lan.cjs",
+    "test:online-performance": "node output/tests/online-performance.cjs",
     "migrate:accounts": "node scripts/migrate-accounts.cjs",
     "test:accounts": "node output/tests/accounts.cjs && node output/tests/pilot.cjs",
     "test:cloud": "node output/tests/cloud.cjs",

@@ -40,6 +40,10 @@ A classificação não concede moedas. Na chegada, os modos solo e online exibem
 
 ## Jogar na rede local com pendrive
 
+O online reaproveita os passos já calculados da previsão local do carro, serializa o estado comum uma vez por sala e evita acumular posições antigas em conexões congestionadas. O painel atualiza a 20 Hz, independentemente da renderização. Essas otimizações valem para o backend publicado e para o servidor do pendrive; não reduzem a latência física da rede.
+
+As consultas dos sensores usam um teste direto de distância, sem criar os objetos de ponto mais próximo a cada leitura. O servidor mantém os passos fixos pelo tempo transcorrido, com recuperação limitada após atrasos. No online, o modo Desempenho limita o desenho a 60 FPS e o cenário atrás do menu a 15 FPS, deixando mais recursos disponíveis quando o hospedeiro também joga. Validação reproduzível: `npm.cmd run test:online-performance`.
+
 O pacote **NeuroDrive-Pendrive** inclui Node.js portátil para Windows x64, contas locais e servidor multiplayer. Execute `INICIAR-JOGO.cmd` no hospedeiro; os amigos abrem o endereço mostrado no navegador, na mesma rede. Não depende do Render ou Supabase. Até seis jogadores por sala, com classificação e corrida. As contas ficam na pasta do pacote e são separadas das contas públicas.
 
 Gere a pasta com `npm.cmd run build:portable`, ou `npm.cmd run build:portable:linux` para incluir também o Node portátil para Linux x64. No Linux, use `INICIAR-JOGO-LINUX.sh` na sua pasta pessoal, sem instalar pacotes nem usar `sudo`. Veja [o passo a passo e as orientações de backup](JOGAR-NO-PENDRIVE.md).

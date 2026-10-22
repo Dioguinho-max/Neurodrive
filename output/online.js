@@ -246,14 +246,19 @@
     }
   }, 16);
   setInterval(() => { if (socket?.readyState === WebSocket.OPEN && self) send({ type: 'ping', time: performance.now() }); }, 1000);
+  let lastHudUpdate = -Infinity, lastRender = -Infinity;
   function draw() {
     recordNotice?.update();
     const now = performance.now();
     intro?.tick(introPrevious === null ? 0 : Math.min(100, Math.max(0, now - introPrevious)));
     introPrevious = now;
-    frames++;
     if (now - measuredAt >= 1000) { fps = Math.round(frames * 1000 / (now - measuredAt)); frames = 0; measuredAt = now; }
-    if (latest && renderer && !document.hidden) {
+    const budget = get('online-lobby').open ? 1000 / 15 : get('online-quality').value === 'performance' ? 1000 / 60 : 0;
+    const renderFrame = latest && renderer && !document.hidden && now - lastRender >= budget - .5;
+    if (renderFrame) {
+      // Retain the fractional frame interval on 75/144 Hz displays.
+      lastRender = budget && Number.isFinite(lastRender) ? now - ((now - lastRender) % budget) : now;
+      frames++;
       if (ceremonyElapsed !== null) {
         if (ceremonyPrevious !== null && !get('online-lobby').open) ceremonyElapsed += Math.min(100, Math.max(0, now - ceremonyPrevious));
         ceremonyPrevious = now;
@@ -265,14 +270,17 @@
       const index = cars.findIndex((car) => car.id === latest.self);
       const player = prediction?.sample(performance.now()) || cars[index];
       cars[index] = player;
-      updateHUD(player, playerPosition, cars.length, latest.laps, latest.elapsed, latest.phase);
+      if (now - lastHudUpdate >= 50) {
+        updateHUD(player, playerPosition, cars.length, latest.laps, latest.elapsed, latest.phase);
+        lastHudUpdate = now;
+      }
       teamRadio?.update(player, { key:`${latest.raceId}:${latest.stage}`, phase:latest.phase, laps:latest.laps, qualifying:latest.stage !== 'race', elapsed:latest.elapsed }, !get('online-lobby').open && !intro?.active && !document.hidden);
       const spectator = player.done && latest.stage === 'qualifying' ? cars.find(car => !car.done && !car.pitExit) || player : player;
       easterEgg?.update(renderer);
       renderer.update(cars, player, false, spectator, latest.phase === 'finished'); audio?.update(player, latest, !player.done && !document.hidden);
     }
     requestAnimationFrame(draw);
-    fpsDisplay?.tick(now, Boolean(latest && renderer));
+    if (renderFrame || !latest || document.hidden) fpsDisplay?.tick(now, Boolean(renderFrame));
   }
   menu(); requestAnimationFrame(draw);
 })();

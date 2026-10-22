@@ -86,6 +86,21 @@
     return result;
   }
 
+  // Sensors only need inside/outside, not a nearest-point object for every segment.
+  function contains(x, y, margin = 0) {
+    const radius = halfWidth - margin;
+    if (!(radius > 0)) return false;
+    const candidates = grid.get(key(Math.floor(x / cellSize), Math.floor(y / cellSize)));
+    if (!candidates) return false;
+    const limit = radius * radius;
+    for (const segment of candidates) {
+      const t = Math.max(0, Math.min(1, ((x - segment.a.x) * segment.dx + (y - segment.a.y) * segment.dy) / segment.size ** 2));
+      const dx = x - segment.a.x - t * segment.dx, dy = y - segment.a.y - t * segment.dy;
+      if (dx * dx + dy * dy < limit) return true;
+    }
+    return false;
+  }
+
   function offset(index, distance) {
     const previous = points[(index - 1 + points.length) % points.length];
     const next = points[(index + 1) % points.length];
@@ -169,7 +184,7 @@
     id: config.id, name: config.name,
     points, segments, length, halfWidth, bounds, nearest, offset, heightAt, pointAt, pit, barrierSegments,
     start: offset(0, 0),
-    contains: (x, y, margin = 0) => nearest(x, y).distance < halfWidth - margin,
+    contains,
   };
   };
   window.NeuroTrack = window.createNeuroTrack();

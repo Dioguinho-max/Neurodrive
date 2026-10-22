@@ -65,8 +65,9 @@ function client(url) {
     for (const peer of peers) peer.send({ type: 'ready', ready: true });
     await peers[0].next(m => m.type === 'lobby' && m.players.every(p => p.ready));
     peers[0].send({ type: 'start' });
-    for (const peer of peers) {
+    for (const [index, peer] of peers.entries()) {
       const state = await peer.next(m => m.type === 'state'); assert.equal(state.stage, 'qualifying'); assert.equal(state.cars.filter(c => c.player).length, 2);
+      assert.equal(state.self, index + 1, 'Shared serialization must preserve each player identity');
     }
     const closed = once(peers[1].ws, 'close'); await api('logout', {}, users[1].cookie); await closed;
     await stop();

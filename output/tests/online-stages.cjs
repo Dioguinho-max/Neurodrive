@@ -7,10 +7,10 @@ const { createRequire } = require('node:module');
 const { WebSocket } = require('ws');
 const filename = path.resolve(__dirname, '../../server/online.cjs');
 const moduleMock = { exports: {} };
-let tick;
-new Function('require', 'module', '__dirname', 'setInterval', 'clearInterval',
+let tick, simulatedNow = 0;
+new Function('require', 'module', '__dirname', 'setInterval', 'clearInterval', 'performance',
   fs.readFileSync(filename, 'utf8') + '\nmodule.exports.engine = engine;')(
-  createRequire(filename), moduleMock, path.dirname(filename), fn => { tick = fn; return 1; }, () => {});
+  createRequire(filename), moduleMock, path.dirname(filename), (fn, ms) => { tick = () => { simulatedNow += ms; fn(); }; return 1; }, () => {}, { now: () => simulatedNow });
 const { attachOnline, engine } = moduleMock.exports;
 const createRace = engine.createNeuroRace, races = [];
 engine.createNeuroRace = (...args) => { const race = createRace(...args); races.push(race); return race; };

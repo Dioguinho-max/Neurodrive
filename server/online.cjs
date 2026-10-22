@@ -3,6 +3,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { WebSocketServer, WebSocket } = require('ws');
 const catalog = require('./catalog.cjs');
+const { createOnlineClock } = require('./online-clock.cjs');
 const engine = {};
 for (const file of ['neuro-pista-track.js', 'neurodrive-race-engine.js']) new Function('window', fs.readFileSync(path.join(__dirname, '../output', file), 'utf8'))(engine);
 
@@ -33,7 +34,7 @@ function attachOnline(server, { origin, store, tickMs = 1000 / 60 }) {
   const recordTimer = setInterval(flushRecords, 5000);
   recordTimer.unref?.();
   const send = (peer, data) => {
-    if (peer.ws.readyState === WebSocket.OPEN && peer.ws.bufferedAmount < 256000) peer.ws.send(JSON.stringify(data));
+    if (peer.ws.readyState === WebSocket.OPEN && peer.ws.bufferedAmount < 256000) peer.ws.send(typeof data === 'string' ? data : JSON.stringify(data));
   };
   function lobby(room) {
     const data = { type: 'lobby', code: room.code, track: room.track, laps: room.laps, weather: room.weather, mode: room.mode, owner: room.owner,
@@ -60,11 +61,19 @@ function attachOnline(server, { origin, store, tickMs = 1000 / 60 }) {
     const race = room.race;
     const cars = race.cars.map((car) => ({ ...car, checkpointTimes: undefined, accountId: undefined, recordLap: undefined,
       reward: room.rewards.get(car.id)?.amount, rewardPending: room.stage === 'race' && car.done && car.finishTime !== null && !car.disconnected && car.player && !room.rewards.get(car.id)?.saved }));
-    for (const peer of room.peers) send(peer, { type: 'state', cars, stage: room.stage, grid: room.grid, raceId:room.raceId,
-      recordNotice:room.recordNotices.get(String(peer.id)),recordSummary:room.recordSummaries.get(`${peer.id}:${room.stage==='waiting'?'qualifying':room.stage}`),
+    // Serialize the common state once per room, not once per connected player.
+    const common = JSON.stringify({ type: 'state', cars, stage: room.stage, grid: room.grid, raceId:room.raceId,
       waiting: room.stage === 'waiting' ? Math.ceil(room.waitTicks / 60) : 0,
       phase: room.stage === 'waiting' ? 'waiting' : race.phase, countdown: race.countdown,
-      startLights: race.startLights, mode: room.mode, elapsed: race.elapsed, laps: race.laps, track: room.track, self: peer.carId });
+      startLights: race.startLights, mode: room.mode, elapsed: race.elapsed, laps: race.laps, track: room.track });
+    for (const peer of room.peers) {
+      // Do not enqueue old positions behind a congested connection; the next snapshot is complete.
+      if (peer.ws.bufferedAmount > 0) continue;
+      const personal = JSON.stringify({ self: peer.carId,
+        recordNotice: room.recordNotices.get(String(peer.id)),
+        recordSummary: room.recordSummaries.get(`${peer.id}:${room.stage === 'waiting' ? 'qualifying' : room.stage}`) });
+      send(peer, common.slice(0, -1) + ',' + personal.slice(1));
+    }
   }
   function start(room) {
     if (room.race) throw new Error('A prova já começou.');
@@ -82,8 +91,8 @@ function attachOnline(server, { origin, store, tickMs = 1000 / 60 }) {
       Object.assign(car, { accountId: peer.id, name: (peer.profile.nickname || peer.profile.username), manual: peer.manual,
         skin: catalog.find((s) => s.id === peer.profile.equipped) });
     });
-    let ticks = 0;
-    room.timer = setInterval(() => {
+    let ticks = 0, snapshotDue = false;
+    const advance = createOnlineClock(() => {
       const inputs = {};
       for (const peer of room.peers) inputs[peer.carId] = Date.now() - peer.lastInput < 500 ? peer.input : { brake: true, noReverse: true };
       if (room.stage === 'waiting') {
@@ -126,13 +135,18 @@ function attachOnline(server, { origin, store, tickMs = 1000 / 60 }) {
           Object.assign(status, { amount, saved: true });
         }).catch(() => { status.retry = Date.now() + 5000; }).finally(() => { status.pending = false; });
       }
-      if (++ticks % 3 === 0) snapshot(room);
+      if (++ticks % 3 === 0) snapshotDue = true;
       if (room.stage === 'race' && room.race.phase === 'finished') {
         room.finishedAt ||= Date.now();
         if (Date.now() - room.finishedAt > 300000) {
           room.peers.forEach((p) => { send(p, { type: 'error', message: 'Sala encerrada. Crie uma nova disputa.' }); p.ws.close(); });
         }
       }
+    }, tickMs, performance.now());
+    room.timer = setInterval(() => {
+      advance(performance.now());
+      // A delayed callback sends only the latest state, never a burst of stale frames.
+      if (snapshotDue) { snapshotDue = false; snapshot(room); }
     }, tickMs);
     snapshot(room);
   }
