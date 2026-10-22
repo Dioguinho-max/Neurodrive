@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="pt-BR">
   <head>
+    <link rel="icon" type="image/svg+xml" href="assets/neurodrive-favicon.svg">
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
     <title>NeuroDrive — Corrida</title>
@@ -188,8 +189,8 @@
           </div>
           <details class="menu-help"><summary>Como funciona a classificação?</summary><p class="text-small">Na classificação, aguarde a saída automática dos boxes a até 60 km/h. Assuma o controle ao entrar na pista: uma volta de aquecimento e duas tentativas cronometradas. A corrida larga no grid.</p></details>
           <section id="circuit-preview" class="circuit-preview" aria-label="Prévia do circuito">
-            <div id="circuit-preview-map" class="circuit-preview-map"></div>
-            <div><small id="circuit-preview-eyebrow">SEU PRÓXIMO CIRCUITO</small><h4 id="circuit-preview-name"></h4><p id="circuit-preview-length"></p><p id="circuit-preview-difficulty"></p><small id="circuit-preview-description"></small></div>
+            <div class="circuit-map-panel"><div id="circuit-preview-map" class="circuit-preview-map"></div><span class="circuit-map-legend"><i aria-hidden="true"></i>Ponto de largada</span></div>
+            <div class="circuit-preview-info"><small id="circuit-preview-eyebrow">SEU PRÓXIMO CIRCUITO</small><h4 id="circuit-preview-name"></h4><div class="circuit-preview-stats"><p id="circuit-preview-length"></p><p id="circuit-preview-difficulty"></p></div><small id="circuit-preview-description"></small></div>
           </section>
           <button class="btn btn-primary" id="race-menu-play">Iniciar classificação</button>
           <p class="text-small" id="race-menu-restart-note" hidden>Uma nova disputa substitui o progresso da sessão atual.</p>

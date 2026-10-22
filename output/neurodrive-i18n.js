@@ -2,6 +2,7 @@
 (() => {
   'use strict';
   const dictionary = {
+    'Ponto de largada':'Start line',
     'Campeonato':'Championship', '3 circuitos · uma disputa pelo título':'3 circuits · one title to win',
     'Escolha como jogar':'Choose how to play', 'Conquiste seu lugar no grid':'Earn your place on the grid',
     'Conecte curvas e multiplique pontos':'Link corners and multiply points', 'Copa Neuro · disputar moedas →':'Neuro Cup · race for coins →',
