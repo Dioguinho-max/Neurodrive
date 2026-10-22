@@ -20,7 +20,7 @@
     <link rel="stylesheet" href="neurodrive-hud.css">
     <script src="neurodrive-weather.js" defer></script><script src="neurodrive-fps.js" defer></script><script src="neurodrive-hud.js" defer></script><script src="neurodrive-gamepad.js" defer></script><link rel="stylesheet" href="neurodrive-gamepad.css">
     <link rel="stylesheet" href="neurodrive-easter-egg.css"><script src="neurodrive-easter-egg.js" defer></script>
-<script src="neurodrive-intro.js" defer></script><script src="neurodrive-drift-online.js" defer></script><script src="neurodrive-race.js" defer></script>
+<script src="neurodrive-intro.js" defer></script><script src="neurodrive-drift-online.js" defer></script><script src="neurodrive-circuit-preview.js" defer></script><script src="neurodrive-race.js" defer></script>
     <link rel="stylesheet" href="neurodrive-menu.css?v=menus-2">
   <link rel="stylesheet" href="neurodrive-mobile.css">
   <link rel="stylesheet" href="neurodrive-home.css">
@@ -126,7 +126,7 @@
             <button class="btn" id="menu-page-settings" aria-pressed="false">Ajustes</button>
             <button class="btn" id="menu-page-records" aria-pressed="false">Recordes</button>
           </nav>
-          <p id="race-menu-status" role="status">Seu próximo grid começa aqui.</p>
+          <p id="race-menu-status" role="status"></p>
           <button class="btn btn-primary" id="race-menu-resume" hidden>Continuar sessão</button>
 
 
@@ -149,9 +149,23 @@
             <aside class="records-personal"><h4>Meu recorde solo · neste dispositivo</h4><strong id="records-solo">—</strong><p>Salvo neste navegador, sem validação do servidor. Não participa da classificação competitiva nem acompanha sua conta em outros dispositivos.</p></aside>
           </section>
           <div id="menu-race-screen">
-          <div class="event-cards"><a class="event-card" href="online.html"><span>MULTIPLAYER</span><strong>Encontre seus rivais</strong><small>Crie uma sala com amigos →</small></a><a class="event-card cup-card" href="online.html?mode=tournament"><span>COPA NEURO</span><strong>Corra por moedas</strong><small>Torneio online · 3 voltas · entrada grátis →</small></a></div>
           <p class="menu-eyebrow">NOVA DISPUTA · SOLO</p><h3>Monte seu próximo grid</h3>
-          <label class="form-label">Modo<select class="form-select" id="menu-mode"><option value="single">Corrida avulsa</option><option value="championship">Campeonato · 3 etapas</option><option value="drift">Drift · desafio de 2 minutos</option></select></label>
+          <svg class="mode-icon-defs" width="0" height="0" aria-hidden="true"><defs><g id="mode-car-icon">
+            <rect x="-18" y="-16" width="7" height="13" rx="2" fill="#050b10"/><rect x="11" y="-16" width="7" height="13" rx="2" fill="#050b10"/>
+            <rect x="-18" y="14" width="7" height="13" rx="2" fill="#050b10"/><rect x="11" y="14" width="7" height="13" rx="2" fill="#050b10"/>
+            <path d="M-10-31Q0-36 10-31L14-22V25Q12 31 8 32H-8Q-12 31-14 25V-22Z" fill="currentColor" stroke="#e7fff0" stroke-width="1"/>
+            <path d="M-10-15H10L8-4H-8Z M-8 14H8L10 22H-10Z" fill="#102836"/>
+            <path d="M-9-1H9V11H-9Z" fill="#ffffff20"/><path d="M-9-27H-4M4-27H9" stroke="#fff4bd" stroke-width="3"/>
+            <path d="M-10 27H-5M5 27H10" stroke="#fe7373" stroke-width="3"/><path d="M-16 30H16" stroke="#10212c" stroke-width="4"/>
+          </g></defs></svg>
+          <div class="mode-shortcuts" aria-label="Escolha como jogar">
+            <button id="mode-shortcut-race" class="mode-shortcut" type="button" aria-pressed="true"><svg viewBox="0 0 240 90" aria-hidden="true"><path class="mode-road" d="M-20 100 Q90 80 110 35 T260 0"/><path class="mode-line" d="M-20 100 Q90 80 110 35 T260 0"/><use class="mode-car" href="#mode-car-icon" transform="translate(108 48) rotate(30) scale(.85)"/></svg><strong>Corrida</strong><small>Conquiste seu lugar no grid</small></button>
+            <button id="mode-shortcut-drift" class="mode-shortcut" type="button" aria-pressed="false"><svg viewBox="0 0 240 90" aria-hidden="true"><path class="mode-road" d="M-10 60 Q70 0 130 40 T255 20"/><path class="mode-line" d="M-10 60 Q70 0 130 40 T255 20"/><use class="mode-car" href="#mode-car-icon" transform="translate(123 44) rotate(-45) scale(.85)"/></svg><strong>Drift</strong><small>Conecte curvas e multiplique pontos</small></button>
+            <a class="mode-shortcut" href="online.html"><svg viewBox="0 0 240 90" aria-hidden="true"><path class="mode-road" d="M-10 110 250 -20"/><path class="mode-line" d="M-10 110 250 -20"/><use class="mode-car" href="#mode-car-icon" transform="translate(85 59) rotate(62) scale(.7)"/><use class="mode-car" href="#mode-car-icon" transform="translate(150 26) rotate(62) scale(.7)"/></svg><strong>Online</strong><small>Dispute com seus amigos</small></a>
+          </div>
+          <button id="mode-shortcut-championship" class="championship-shortcut" type="button" aria-pressed="false"><span aria-hidden="true">🏆</span><strong>Campeonato</strong><small>3 circuitos · uma disputa pelo título</small><span aria-hidden="true">→</span></button>
+          <a class="menu-cup-link" href="online.html?mode=tournament">Copa Neuro · disputar moedas →</a>
+          <input type="hidden" id="menu-mode" value="single">
           <p id="drift-help" hidden>Drift solo: use Espaço ou A / ✕ para um toque de freio de mão ao virar. No celular, use o botão acima das setas. Solte e dose acelerador e contravolante para sustentar a derrapagem. Encadeie derrapagens acima de 30 km/h para chegar a ×8. Endireite por 1,2 s para guardar os pontos. Batidas, rodadas e saídas da pista perdem o combo. Pista seca, sem desgaste de pneus; pontos separados das moedas e dos recordes de volta.</p>
           <section id="drift-menu-goals" hidden aria-label="Metas e recorde de Drift"><strong>Medalhas do circuito</strong><p id="drift-menu-targets"></p><p id="drift-menu-record"></p><small>Recorde local deste navegador, separado das moedas e das medalhas da conta.</small></section>
           <section id="drift-setup-panel" hidden>
@@ -173,6 +187,10 @@
             </label>
           </div>
           <details class="menu-help"><summary>Como funciona a classificação?</summary><p class="text-small">Na classificação, aguarde a saída automática dos boxes a até 60 km/h. Assuma o controle ao entrar na pista: uma volta de aquecimento e duas tentativas cronometradas. A corrida larga no grid.</p></details>
+          <section id="circuit-preview" class="circuit-preview" aria-label="Prévia do circuito">
+            <div id="circuit-preview-map" class="circuit-preview-map"></div>
+            <div><small id="circuit-preview-eyebrow">SEU PRÓXIMO CIRCUITO</small><h4 id="circuit-preview-name"></h4><p id="circuit-preview-length"></p><p id="circuit-preview-difficulty"></p><small id="circuit-preview-description"></small></div>
+          </section>
           <button class="btn btn-primary" id="race-menu-play">Iniciar classificação</button>
           <p class="text-small" id="race-menu-restart-note" hidden>Uma nova disputa substitui o progresso da sessão atual.</p>
 

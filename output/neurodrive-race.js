@@ -42,7 +42,7 @@
     get('race-results-return').hidden = true;
     openMenu();
     window.NeuroGarage?.showPage('race');
-    get('menu-mode').focus();
+    get('mode-shortcut-race').focus();
   }
   let finale = null;
   function clearFinale() {
@@ -127,6 +127,12 @@
     get('drift-arena-option').hidden = !isDrift;
     get('drift-arena-option').disabled = !isDrift;
     if (!isDrift && get('menu-track').value === 'arena') get('menu-track').value = 'serra';
+    get('menu-track').disabled = get('menu-mode').value === 'championship';
+    get('mode-shortcut-race').setAttribute('aria-pressed', String(get('menu-mode').value === 'single'));
+    get('mode-shortcut-championship').setAttribute('aria-pressed', String(get('menu-mode').value === 'championship'));
+    get('mode-shortcut-drift').setAttribute('aria-pressed', String(isDrift));
+    get('race-menu-play').textContent = isDrift ? 'Iniciar Drift' : 'Iniciar classificação';
+    window.updateNeuroCircuitPreview?.(get);
     get('drift-board-list').textContent = '';
     get('drift-board-status').textContent = '';
     const id = get('menu-track').value;
@@ -332,7 +338,7 @@
     get('race-menu-resume').textContent = race.phase === 'finished' ? 'Voltar aos resultados' : 'Continuar sessão';
     get('race-menu-restart-note').hidden = !started;
     get('race-menu-status').textContent = !renderer ? 'Não foi possível iniciar o 3D. Use um navegador com WebGL ou explore o Laboratório de IA.'
-      : started ? `${track.name} · ${race.phase === 'finished' ? 'Sessão encerrada' : 'Sessão pausada — seu progresso está salvo nesta página'}` : 'Seu próximo grid começa aqui.';
+      : started ? `${track.name} · ${race.phase === 'finished' ? 'Sessão encerrada' : 'Sessão pausada — seu progresso está salvo nesta página'}` : '';
     get('race-menu-play').disabled = !renderer;
     get('menu-records').textContent = 'Recordes deste navegador: ' + window.NeuroTracks.filter(circuit => !circuit.driftOnly).map((circuit) =>
       `${circuit.name}: ${career.records[circuit.id] ? timeLabel(career.records[circuit.id]) : 'sem volta registrada'}`).join(' · ');
@@ -354,7 +360,7 @@
   get('menu-new-event').onclick = () => {
     get('menu-state-title').textContent = 'ESCOLHA SEU PRÓXIMO DESAFIO';
     window.NeuroGarage?.showPage('race');
-    get('menu-mode').focus();
+    get('mode-shortcut-race').focus();
   };
   get('menu-pause-settings').onclick = () => {
     window.NeuroGarage?.showPage('settings');
@@ -378,6 +384,14 @@
     for (const id of ['menu-laps', 'menu-weather', 'menu-difficulty']) get(id).disabled = drift;
   };
   get('menu-track').onchange = updateDriftGoals;
+  for (const [id, mode] of [['mode-shortcut-race', 'single'], ['mode-shortcut-drift', 'drift'], ['mode-shortcut-championship', 'championship']]) {
+    get(id).onclick = () => {
+      get('menu-mode').value = mode;
+      get('menu-mode').onchange();
+      get('menu-track').scrollIntoView?.({ block:'nearest', behavior:'auto' });
+      get(get('menu-track').disabled ? 'race-menu-play' : 'menu-track').focus();
+    };
+  }
   get('race-menu').oncancel = (event) => { event.preventDefault(); resumeFromMenu(); };
   get('race-menu-play').onclick = () => {
     if (!renderer) return;

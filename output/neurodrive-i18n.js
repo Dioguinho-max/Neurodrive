@@ -2,6 +2,16 @@
 (() => {
   'use strict';
   const dictionary = {
+    'Campeonato':'Championship', '3 circuitos · uma disputa pelo título':'3 circuits · one title to win',
+    'Escolha como jogar':'Choose how to play', 'Conquiste seu lugar no grid':'Earn your place on the grid',
+    'Conecte curvas e multiplique pontos':'Link corners and multiply points', 'Copa Neuro · disputar moedas →':'Neuro Cup · race for coins →',
+    'Iniciar Drift':'Start Drift', 'Prévia do circuito':'Circuit preview', 'SEU PRÓXIMO CIRCUITO':'YOUR NEXT CIRCUIT',
+    'CAMPEONATO · PRIMEIRA ETAPA':'CHAMPIONSHIP · FIRST ROUND',
+    'Perfil: Intermediário':'Layout: Intermediate', 'Perfil: Acessível':'Layout: Accessible', 'Perfil: Exigente':'Layout: Challenging', 'Perfil: Treino de Drift':'Layout: Drift practice',
+    'Curvas variadas e mudanças de relevo.':'Varied corners and elevation changes.',
+    'Retas longas e curvas abertas de alta velocidade.':'Long straights and sweeping high-speed corners.',
+    'Sequências fechadas que exigem precisão.':'Tight sequences that require precision.',
+    'Pista larga, curvas conectadas e relevo suave.':'Wide track, linked corners and gentle elevation.',
     '♫ Música da garagem':'♫ Garage music', 'Volume da música do menu':'Menu music volume',
     'Acerto de Drift':'Drift setup', 'Estável · mais controle':'Stable · more control', 'Solto · mais derrapagem':'Loose · more sliding',
     'Estável recupera a aderência mais rápido. Solto exige mais contravolante. Os dois disputam o mesmo ranking.':'Stable recovers grip faster. Loose requires more countersteering. Both compete on the same leaderboard.',
@@ -233,6 +243,7 @@
     'CLASSIFICAÇÃO · CONQUISTE SUA POLE':'QUALIFYING · TAKE POLE POSITION', 'GRID FORMADO · CADA POSIÇÃO IMPORTA':'GRID SET · EVERY POSITION COUNTS',
   };
   const patterns = [
+    [/^([\d.]+) km · Traçado completo$/, (_, km) => `${km} km · Full layout`],
     [/^Sua posição: (\d+) · (\d+) pts$/, (_, rank, score) => `Your position: ${rank} · ${score} pts`],
     [/^Pontuação validada: (\d+) pts$/, (_, score) => `Validated score: ${score} pts`],
     [/^([\d.,]+) guardados$/, (_, n) => `${n} banked`],
