@@ -151,6 +151,8 @@
     render();
     if (page === 'store' && skins.length) inspectSkin(previewSkin || skins.find((skin) => skin.id === player?.equipped) || skins[0]);
     else if (page !== 'store') { showroom?.dispose(); showroom = null; }
+    // Page changes start at the heading, even after browsing a long shop/profile.
+    get('race-menu').scrollTop = 0;
   }
   function setAuthMode(mode) {
     authMode = mode;

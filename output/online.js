@@ -40,7 +40,10 @@
     intro?.finish();
     clear();
     get('online-title').textContent = latest ? latest.stage === 'waiting' ? 'Grid definido' : latest.stage === 'qualifying' ? 'Classificação em andamento' : latest.phase === 'finished' ? 'Celebração no pódio' : 'Sua corrida continua' : room ? 'Prepare seu grid' : 'Dispute com seus amigos';
-    if (!get('online-lobby').open) get('online-lobby').showModal();
+    if (!get('online-lobby').open) {
+      get('online-lobby').showModal();
+      get('online-lobby').scrollTop = 0;
+    }
   }
   function resetRoom() {
     easterEgg?.reset();

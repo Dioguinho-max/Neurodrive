@@ -42,7 +42,7 @@
     get('race-results-return').hidden = true;
     openMenu();
     window.NeuroGarage?.showPage('race');
-    get('mode-shortcut-race').focus();
+    get('mode-shortcut-race').focus({ preventScroll: true });
   }
   let finale = null;
   function clearFinale() {
@@ -345,7 +345,8 @@
     get('menu-end-qualifying').hidden = !started || !race.qualifying || race.phase === 'finished';
     get('menu-recover').hidden = !started || race.phase !== 'racing' || race.cars[0].pitExit || Boolean(race.cars[0].pitState);
     if (!get('race-menu').open) get('race-menu').showModal();
-    get(started ? 'race-menu-resume' : 'race-menu-play').focus();
+    get(started ? 'race-menu-resume' : 'menu-page-race').focus({ preventScroll: true });
+    get('race-menu').scrollTop = 0;
   }
 
   function resumeFromMenu() {
@@ -360,11 +361,11 @@
   get('menu-new-event').onclick = () => {
     get('menu-state-title').textContent = 'ESCOLHA SEU PRÓXIMO DESAFIO';
     window.NeuroGarage?.showPage('race');
-    get('mode-shortcut-race').focus();
+    get('mode-shortcut-race').focus({ preventScroll: true });
   };
   get('menu-pause-settings').onclick = () => {
     window.NeuroGarage?.showPage('settings');
-    get('race-transmission').focus();
+    get('menu-page-settings').focus({ preventScroll: true });
   };
   get('menu-back-pause').onclick = openMenu;
   get('menu-end-qualifying').onclick = () => {

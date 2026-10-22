@@ -4,7 +4,7 @@ const assert = require('node:assert/strict');
 const read = (file) => fs.readFileSync(path.join(__dirname, '..', file), 'utf8');
 const nodes = Object.fromEntries([...read('corrida.html').matchAll(/id="([^"]+)"/g)].map((match) =>
   [match[1], { textContent: '', value: 'normal', disabled: false, style: {}, setAttribute() {},
-    open: false, showModal() { this.open = true; }, close() { this.open = false; }, focus() {} }]));
+    open: false, showModal() { this.open = true; this.scrollTop = 600; }, close() { this.open = false; }, focus(options) { this.focusOptions = options; } }]));
 const events = {};
 let frame;
 let lastCars;
@@ -23,6 +23,8 @@ new Function('window', 'document', 'requestAnimationFrame', 'Date', read('neurod
   host, documentMock, (callback) => { frame = callback; }, { now: () => clock },
 );
 assert.equal(nodes['race-menu'].open, true, 'Menu inicial deve abrir antes da largada');
+assert.equal(nodes['race-menu'].scrollTop, 0, 'Opening resets native dialog scroll');
+assert.equal(nodes['menu-page-race'].focusOptions.preventScroll, true, 'Initial focus must not scroll to the start button');
 assert.equal(nodes['race-developer'].hidden, true, 'Ferramentas técnicas devem ficar ocultas para o jogador');
 assert.equal(nodes['race-menu-resume'].hidden, true);
 nodes['menu-track'].value = 'serra';
