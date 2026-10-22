@@ -17,6 +17,20 @@ class CloudStore {
   async init() { await this.pool.query(fs.readFileSync(path.join(__dirname, 'cloud-schema.sql'), 'utf8')); }
   async saveRecord(id, record) { return this.transaction(db => require('./records.cjs').save(db, id, record)); }
   async records(id, filters) { return require('./records.cjs').board(this.pool, id, filters); }
+  async saveDrift(id, result) {
+    if (result.score <= 0) return;
+    await this.pool.query(`INSERT INTO neurodrive.drift_records(player_id,track,score,combo,setup,achieved) VALUES($1,$2,$3,$4,$5,$6)
+      ON CONFLICT(player_id,track) DO UPDATE SET score=EXCLUDED.score,combo=EXCLUDED.combo,setup=EXCLUDED.setup,achieved=EXCLUDED.achieved
+      WHERE EXCLUDED.score > neurodrive.drift_records.score`, [id, result.track, result.score, result.combo, result.setup, Date.now()]);
+  }
+  async driftBoard(id, track) {
+    const rows = (await this.pool.query(`WITH ranked AS (SELECT r.player_id,COALESCE(NULLIF(p.nickname,''),p.username) AS name,r.score,r.setup,
+      rank() OVER(ORDER BY r.score DESC,r.achieved,r.player_id)::int AS position
+      FROM neurodrive.drift_records r JOIN neurodrive.players p ON p.id=r.player_id WHERE r.track=$1)
+      SELECT * FROM ranked WHERE position<=20 OR player_id=$2 ORDER BY position`, [track, id])).rows;
+    const me = rows.find(row => String(row.player_id) === String(id));
+    return { rows: rows.filter(row => row.position <= 20).map(({ player_id, ...row }) => ({ ...row, me: String(player_id) === String(id) })), me: me ? { position: me.position, score: me.score } : null };
+  }
   async transaction(fn) {
     const client = await this.pool.connect();
     try { await client.query('BEGIN'); const result = await fn(client); await client.query('COMMIT'); return result; }

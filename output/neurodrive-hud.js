@@ -3,7 +3,7 @@
   'use strict';
   window.createNeuroDriftCareer = () => {
     const key = 'neurodrive-drift-records-v1';
-    const goals = { serra: [600, 1800, 4000], veloz: [500, 1500, 3500], tecnico: [800, 2200, 5000] };
+    const goals = { arena: [800, 2400, 5500], serra: [600, 1800, 4000], veloz: [500, 1500, 3500], tecnico: [800, 2200, 5000] };
     const names = ['Bronze', 'Prata', 'Ouro'], records = {};
     try {
       const data = JSON.parse(window.localStorage?.getItem(key) || '{}');

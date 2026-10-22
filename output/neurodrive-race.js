@@ -93,9 +93,42 @@
   const career = window.createNeuroCareer();
   const driftCareer = window.createNeuroDriftCareer();
   let driftResult = null;
+  let driftOnline = null;
+  let driftOnlineSubmitted = false;
+  try {
+    const savedSetup = window.localStorage?.getItem('neurodrive-drift-setup');
+    if (['stable', 'loose'].includes(savedSetup)) get('drift-setup').value = savedSetup;
+  } catch {}
+  get('drift-setup').onchange = () => {
+    try { window.localStorage?.setItem('neurodrive-drift-setup', get('drift-setup').value); } catch {}
+  };
+  get('drift-board-refresh').onclick = async () => {
+    const selectedTrack = get('menu-track').value;
+    get('drift-board-status').textContent = 'Buscando ranking…';
+    get('drift-board-list').textContent = '';
+    try {
+      const board = await window.NeuroDriftOnline.board(selectedTrack);
+      if (selectedTrack !== get('menu-track').value) return;
+      for (const row of board.rows) {
+        const item = document.createElement('li');
+        item.textContent = `${row.position}. ${row.name} — ${row.score.toLocaleString()} pts`;
+        item.setAttribute('translate', 'no');
+        if (row.me) item.style.color = '#99f0c8';
+        get('drift-board-list').appendChild(item);
+      }
+      get('drift-board-status').textContent = board.me ? `Sua posição: ${board.me.position} · ${board.me.score} pts` : 'Complete um desafio conectado para entrar no ranking.';
+    } catch (error) { get('drift-board-status').textContent = error.message; }
+  };
 
   function updateDriftGoals() {
     get('drift-menu-goals').hidden = get('menu-mode').value !== 'drift';
+    const isDrift = get('menu-mode').value === 'drift';
+    get('drift-setup-panel').hidden = !isDrift;
+    get('drift-arena-option').hidden = !isDrift;
+    get('drift-arena-option').disabled = !isDrift;
+    if (!isDrift && get('menu-track').value === 'arena') get('menu-track').value = 'serra';
+    get('drift-board-list').textContent = '';
+    get('drift-board-status').textContent = '';
     const id = get('menu-track').value;
     const targets = driftCareer.goals[id] || driftCareer.goals.serra;
     get('drift-menu-targets').textContent = targets.map((value, i) =>
@@ -181,9 +214,18 @@
     clearFinale();
     clearInput();
     get('drift-result-medal').hidden = !race.drift;
+    get('drift-online-status').hidden = !race.drift;
     get('race-results').setAttribute('data-drift', String(Boolean(race.drift)));
     get('race-results-improvement').hidden = Boolean(race.drift);
     if (race.drift) {
+      if (driftOnline && !driftOnlineSubmitted) {
+        driftOnlineSubmitted = true;
+        const attempt = driftOnline;
+        get('drift-online-status').textContent = 'Validando pontuação no servidor…';
+        attempt.finish().then(result => {
+          if (attempt === driftOnline) get('drift-online-status').textContent = `Pontuação validada: ${result.score} pts`;
+        }).catch(error => { if (attempt === driftOnline) get('drift-online-status').textContent = error.message; });
+      }
       driftResult ??= driftCareer.record(track.id, race.driftScore.total, race.driftScore.best);
       const award = driftCareer.status(track.id, race.driftScore.total);
       get('drift-result-medal').setAttribute('data-level', String(award.level));
@@ -292,7 +334,7 @@
     get('race-menu-status').textContent = !renderer ? 'Não foi possível iniciar o 3D. Use um navegador com WebGL ou explore o Laboratório de IA.'
       : started ? `${track.name} · ${race.phase === 'finished' ? 'Sessão encerrada' : 'Sessão pausada — seu progresso está salvo nesta página'}` : 'Seu próximo grid começa aqui.';
     get('race-menu-play').disabled = !renderer;
-    get('menu-records').textContent = 'Recordes deste navegador: ' + window.NeuroTracks.map((circuit) =>
+    get('menu-records').textContent = 'Recordes deste navegador: ' + window.NeuroTracks.filter(circuit => !circuit.driftOnly).map((circuit) =>
       `${circuit.name}: ${career.records[circuit.id] ? timeLabel(career.records[circuit.id]) : 'sem volta registrada'}`).join(' · ');
     get('menu-end-qualifying').hidden = !started || !race.qualifying || race.phase === 'finished';
     get('menu-recover').hidden = !started || race.phase !== 'racing' || race.cars[0].pitExit || Boolean(race.cars[0].pitState);
@@ -330,6 +372,7 @@
   get('race-menu-resume').onclick = resumeFromMenu;
   get('menu-mode').onchange = () => {
     const drift = get('menu-mode').value === 'drift';
+    if (drift) get('menu-track').value = 'arena';
     get('drift-help').hidden = !drift;
     updateDriftGoals();
     for (const id of ['menu-laps', 'menu-weather', 'menu-difficulty']) get(id).disabled = drift;
@@ -452,6 +495,9 @@
   }
 
   function startSession(qualifying) {
+    driftOnline = null;
+    driftOnlineSubmitted = false;
+    get('drift-online-status').textContent = '';
     driftResult = null;
     get('drift-result-medal').hidden = true;
     driftVisualMultiplier = 1;
@@ -476,9 +522,11 @@
     }
     race = window.createNeuroRace(track, sessionDifficulty, {
       mode: drift ? 'drift' : 'race',
+      driftSetup: get('drift-setup').value === 'loose' ? 'loose' : 'stable',
       session: qualifying ? 'qualifying' : 'race', grid: qualifyingGrid, laps: Number(get('race-laps').value),
       transmission: get('race-transmission').value, pitStart: qualifying, weather: get('menu-weather').value,
     });
+    if (drift) driftOnline = window.NeuroDriftOnline?.start(race, track.id, race.cars[0].driftSetup);
     get('race-reward').textContent = qualifying ? 'A classificação define o grid. As moedas são concedidas na corrida.' : '';
     get('race-reward-retry').hidden = true;
     window.NeuroGarage?.beginRace(qualifying || drift ? null : { track: track.id, laps: race.laps });

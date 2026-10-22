@@ -10,6 +10,13 @@ CREATE TABLE IF NOT EXISTS neurodrive.players (
   last_bonus BIGINT NOT NULL DEFAULT 0
 );
 CREATE UNIQUE INDEX IF NOT EXISTS players_name ON neurodrive.players(lower(username));
+CREATE TABLE IF NOT EXISTS neurodrive.drift_records (
+  player_id BIGINT REFERENCES neurodrive.players(id) ON DELETE CASCADE,
+  track TEXT NOT NULL CHECK(track IN ('serra','veloz','tecnico','arena')),
+  score INTEGER NOT NULL CHECK(score > 0), combo INTEGER NOT NULL CHECK(combo >= 0 AND combo <= score),
+  setup TEXT NOT NULL CHECK(setup IN ('stable','loose')), achieved BIGINT NOT NULL,
+  PRIMARY KEY(player_id,track)
+);
 ALTER TABLE neurodrive.players ADD COLUMN IF NOT EXISTS nickname TEXT;
 ALTER TABLE neurodrive.players ADD COLUMN IF NOT EXISTS driver_number INTEGER NOT NULL DEFAULT 0 CHECK(driver_number BETWEEN 0 AND 99);
 ALTER TABLE neurodrive.players ADD COLUMN IF NOT EXISTS avatar TEXT;

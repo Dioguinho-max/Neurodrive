@@ -39,6 +39,15 @@ function messages(ws) {
   try {
     await store.init(); await store.init();
     const legacy = await store.create('legacy_pilot', 'hash', 'salt');
+    await store.saveDrift(legacy.id, {track:'arena',score:800,combo:400,setup:'stable'});
+    await store.saveDrift(legacy.id, {track:'arena',score:600,combo:400,setup:'loose'});
+    assert.equal((await store.driftBoard(legacy.id,'arena')).me.score,800);
+    await store.saveDrift(legacy.id, {track:'arena',score:1000,combo:600,setup:'loose'});
+    const driftBoard = await store.driftBoard(legacy.id,'arena');
+    assert.equal(driftBoard.rows.length,1);
+    assert.equal(driftBoard.rows[0].setup,'loose');
+    assert.equal(driftBoard.me.position,1);
+    assert.equal((await store.driftBoard(legacy.id,'serra')).rows.length,0);
     await pool.query('INSERT INTO neurodrive.results(id,player_id,reward,place,finished) VALUES($1,$2,0,1,123456)', ['legacy',legacy.id]);
     await store.init(); await store.init();
     const history=(await store.profile(legacy.id)).achievements;

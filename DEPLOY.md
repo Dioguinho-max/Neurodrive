@@ -118,3 +118,7 @@ Referências: [Render WebSocket](https://render.com/docs/websocket), [Supabase P
 # Fotos e perfis de pilotos
 
 A atualização de perfil inclui migração automática das contas existentes. Para habilitar fotos no site, configure o bucket `neurodrive-avatars` e as variáveis privadas do Render conforme [PERFIL-PILOTO.md](PERFIL-PILOTO.md). Publique backend e frontend juntos. Sem Storage configurado, a edição de nick e número continua disponível.
+
+# Ranking de Drift
+
+Esta atualização exige publicar backend e frontend juntos. O backend cria a tabela `neurodrive.drift_records` automaticamente com o esquema existente durante a inicialização; não há novas variáveis de ambiente. A pontuação é recalculada em `server/drift-worker.cjs` usando os mesmos arquivos de física do frontend. Reinicie tentativas em andamento após atualizar a física. O proxy da Vercel deve incluir os parâmetros da URL para preservar o filtro de circuito.

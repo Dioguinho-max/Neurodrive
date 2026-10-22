@@ -39,6 +39,12 @@ async function api(route, data, cookie = '', extra = {}) {
     assert.match(registration.cookie, /HttpOnly/);
     assert.match(registration.cookie, /SameSite=Strict/);
     let cookie = registration.cookie.split(';')[0];
+    assert.equal((await api('drift/board?track=arena')).status,401);
+    assert.equal((await api('drift/board?track=invalid',undefined,cookie)).status,400);
+    assert.deepEqual((await api('drift/board?track=arena',undefined,cookie)).data.rows,[]);
+    const driftTicket = await api('drift/start',{track:'arena',setup:'stable'},cookie);
+    assert.equal(driftTicket.status,200);
+    assert.equal((await api('drift/finish',{token:driftTicket.data.token,frames:[]},cookie)).status,409);
     assert.equal((await api('profile', { nickname: 'Diogo Racing', number: 27 })).status, 401);
     const edited = await api('profile', { nickname: 'Diogo Racing', number: 27, coins: 99999 }, cookie);
     assert.equal(edited.data.player.nickname, 'Diogo Racing');

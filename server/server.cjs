@@ -37,6 +37,16 @@ function createApp({ database = path.join(__dirname, 'data', 'neurodrive.sqlite'
   const attempts = new Map();
   const statement = (sql, ...params) => db.prepare(sql).get(...params);
   const run = (sql, ...params) => db.prepare(sql).run(...params);
+  db.exec(`CREATE TABLE IF NOT EXISTS drift_records (
+    player_id INTEGER REFERENCES players(id), track TEXT NOT NULL, score INTEGER NOT NULL,
+    combo INTEGER NOT NULL, setup TEXT NOT NULL, achieved INTEGER NOT NULL, PRIMARY KEY(player_id,track));`);
+  const drift = require('./drift.cjs').createDriftService({
+    saveDrift(id, result) {
+      if (result.score > 0) run(`INSERT INTO drift_records VALUES(?,?,?,?,?,?) ON CONFLICT(player_id,track)
+        DO UPDATE SET score=excluded.score,combo=excluded.combo,setup=excluded.setup,achieved=excluded.achieved
+        WHERE excluded.score>drift_records.score`, id, result.track, result.score, result.combo, result.setup, Date.now());
+    },
+  });
   function transaction(fn) {
     db.exec('BEGIN IMMEDIATE');
     try { const result = fn(); db.exec('COMMIT'); return result; }
@@ -99,6 +109,15 @@ function createApp({ database = path.join(__dirname, 'data', 'neurodrive.sqlite'
       if (req.headers.host !== new URL(allowedOrigin).host) throw fail(403, 'Abra o endereço configurado do jogo.');
       const url = new URL(req.url, allowedOrigin);
       if (url.pathname.startsWith('/api/')) {
+        if (req.method === 'GET' && url.pathname === '/api/drift/board') {
+          const id = user(req), track = url.searchParams.get('track');
+          if (!require('./drift.cjs').tracks.includes(track)) throw fail(400, 'Circuito inválido.');
+          const all = db.prepare(`SELECT r.player_id,COALESCE(NULLIF(p.nickname,''),p.username) AS name,r.score,r.setup,
+            rank() OVER(ORDER BY r.score DESC,r.achieved,r.player_id) AS position
+            FROM drift_records r JOIN players p ON p.id=r.player_id WHERE r.track=? ORDER BY r.score DESC,r.achieved,r.player_id`).all(track);
+          const own = all.find(row => row.player_id === id);
+          return json(200, { rows: all.slice(0,20).map(({player_id,...row}) => ({...row,me:player_id===id})), me:own ? {position:own.position,score:own.score} : null });
+        }
         if (req.method === 'GET' && url.pathname === '/api/records') {
           const filters = require('./records.cjs').filters(url.searchParams);
           return json(200, { available: false, ...filters, seasons: [], entries: [], own: null, leader: null, total: 0 });
@@ -118,7 +137,7 @@ function createApp({ database = path.join(__dirname, 'data', 'neurodrive.sqlite'
         const auth = ['/api/register', '/api/login'].includes(url.pathname);
         if (auth) rateLimit(req);
         if (url.pathname === '/api/avatar') user(req);
-        const data = await body(req, url.pathname === '/api/avatar' ? 280000 : 4096);
+        const data = await body(req, url.pathname === '/api/drift/finish' ? 1000000 : url.pathname === '/api/avatar' ? 280000 : 4096);
         if (auth) {
           const username = typeof data.username === 'string' ? data.username.trim() : '';
           const password = data.password;
@@ -149,6 +168,8 @@ function createApp({ database = path.join(__dirname, 'data', 'neurodrive.sqlite'
           return json(200, { ok: true });
         }
         const id = user(req);
+        if (url.pathname === '/api/drift/start') return json(200, drift.start(id, data));
+        if (url.pathname === '/api/drift/finish') return json(200, await drift.finish(id, data));
         if (url.pathname === '/api/races/start') return json(200, { ticket: rewards.start(id, data) });
         if (url.pathname === '/api/races/finish') {
           const reward = rewards.finish(id, data);

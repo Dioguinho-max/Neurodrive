@@ -21,4 +21,4 @@ for (const config of api.NeuroTracks) {
   }
   assert([...degree.values()].every(count => count === 2), `${config.id}: continuous contour without dangling ends or crossings`);
 }
-console.log('OK: continuous guardrails outside the driving area on all three circuits.');
+console.log('OK: continuous guardrails outside the driving area on every circuit.');

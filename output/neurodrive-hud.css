@@ -109,6 +109,11 @@
 #drift-result-medal[data-level="2"] { color:#e0edf5; border-color:#b7cedb; }
 #drift-result-medal[data-level="3"] { color:#f5d88c; border-color:#e8bf59; }
 #drift-result-medal[hidden], #drift-menu-goals[hidden] { display:none; }
+#drift-setup-panel[hidden] { display:none; }
+#drift-setup-panel { padding:14px 18px; border:1px solid #99f0c833; border-radius:12px; background:#14252e80; }
+#drift-setup-panel p { font-size:13px; color:#b4c9d1; }
+#drift-board-list { list-style:none; padding:0; max-height:240px; overflow:auto; }
+#drift-board-list li { padding:8px 4px; border-bottom:1px solid #ffffff12; }
 #race-results[data-drift="true"] { max-width:720px; }
 #race-results[data-drift="true"] #race-results-title { font-size:clamp(30px,5vw,52px); letter-spacing:-.04em; margin:12px 0; color:#f1faf7; }
 #race-results[data-drift="true"] #race-results-note { color:#a9bdc8; font-weight:400; }

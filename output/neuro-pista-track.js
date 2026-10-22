@@ -18,9 +18,13 @@
       [-600,-350], [-100,-350], [400,-350], [650,-150], [520,70], [240,40],
       [80,250], [360,400], [180,600], [-180,520], [-350,300], [-650,340], [-800,80], [-700,-140],
     ] },
+    { id: 'arena', name: 'Arena Drift', driftOnly: true, width: 82, controls: [
+      [-650,-360], [-100,-360], [430,-280], [630,-30], [370,170],
+      [80,100], [-160,310], [-530,350], [-760,100],
+    ] },
   ];
   window.createNeuroTrack = function createNeuroTrack(id = 'serra') {
-  const config = window.NeuroTracks.find((item) => item.id === id) || window.NeuroTracks[0];
+  const config = window.NeuroTracks.find((item) => item.id === id) || window.NeuroTracks.find(item => item.id === 'serra');
   const controls = config.controls;
   const points = [];
   const halfWidth = config.width;
@@ -120,7 +124,7 @@
   const ys = points.map((p) => p.y);
   const bounds = { minX: Math.min(...xs) - 50, maxX: Math.max(...xs) + 50, minY: Math.min(...ys) - 50, maxY: Math.max(...ys) + 50 };
   // Terreno contínuo: mesma superfície para asfalto, gramado, carros e câmera.
-  const reliefScale = config.id === 'veloz' ? 0.4 : config.id === 'tecnico' ? 1.2 : 1;
+  const reliefScale = config.id === 'arena' ? .15 : config.id === 'veloz' ? 0.4 : config.id === 'tecnico' ? 1.2 : 1;
   function heightAt(x, y) {
     return 30 + reliefScale * (18 * Math.sin(x / 300) + 12 * Math.cos(y / 220)
       + 8 * Math.sin((x + y) / 400));

@@ -153,7 +153,8 @@
       const recovery = countersteer ? .04 : pedal < .1 ? .05
         : .026 + .012 * (1 - clamp(pedal, 0, 1)) + .054 * clamp((kmh - 115) / 65, 0, 1)
           + .05 * (1 - clamp((kmh - 20) / 40, 0, 1));
-      const desiredGrip = recovery * (1 - .6 * (car.handbrake || 0));
+      const setupGrip = car.driftSetup === 'stable' ? 1.22 : car.driftSetup === 'loose' ? .9 : 1;
+      const desiredGrip = recovery * setupGrip * (1 - .6 * (car.handbrake || 0));
       car.driftRearGrip = (car.driftRearGrip ?? recovery) + (desiredGrip - (car.driftRearGrip ?? recovery)) * .16;
       car.driftHeading = wrap((car.driftHeading ?? car.angle) + slip * car.driftRearGrip);
       const scrub = Math.sin(slip) ** 2 * (.009 + .009 * clamp((kmh - 115) / 65, 0, 1)) * Math.abs(car.speed);
@@ -266,7 +267,7 @@
       const human = options.online ? options.humans.includes(id + 1) : id === 0;
       const driver = drivers[(id + drivers.length - 1) % drivers.length];
       return {
-        driftMode: drift, driftHeading: point.angle, id: id + 1, name: human ? 'Você' : driver.name, player: human,
+        driftMode: drift, driftSetup: options.driftSetup, driftHeading: point.angle, id: id + 1, name: human ? 'Você' : driver.name, player: human,
         driver: human ? null : driver,
         // Explicit arcade difficulty bonus; human cars always retain the original drivetrain.
         aiPower: human ? 1 : ({ easy: 1.05, normal: 1.12, hard: 1.4 }[difficulty] || 1.12),

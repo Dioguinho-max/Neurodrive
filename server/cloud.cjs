@@ -21,6 +21,7 @@ function createCloudServer({ store, frontendOrigin, backendOrigin, avatarStorage
   const cookie = (value, age) => `nd_session=${value}; HttpOnly; SameSite=Strict; Path=/; Max-Age=${age}${secure ? '; Secure' : ''}`;
   const root = fs.realpathSync(path.join(__dirname, '../output'));
   let authBusy = 0;
+  const drift = require('./drift.cjs').createDriftService(store);
   const server = http.createServer(async (req, res) => {
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('X-Frame-Options', 'DENY');
@@ -61,7 +62,8 @@ function createCloudServer({ store, frontendOrigin, backendOrigin, avatarStorage
         if (req.headers.origin !== front) throw fail(403, 'Origem não permitida.');
         if (req.headers['content-type']?.split(';')[0] !== 'application/json') throw fail(415, 'Envie JSON.');
         const chunks = []; let bytes = 0;
-        for await (const chunk of req) { bytes += chunk.length; if (bytes > (avatarRequest ? 280000 : 4096)) throw fail(413, 'Pedido muito grande.'); chunks.push(chunk); }
+        const limit = url.pathname === '/api/drift/finish' ? 1000000 : avatarRequest ? 280000 : 4096;
+        for await (const chunk of req) { bytes += chunk.length; if (bytes > limit) throw fail(413, 'Pedido muito grande.'); chunks.push(chunk); }
         try { data = JSON.parse(Buffer.concat(chunks)); } catch { throw fail(400, 'JSON inválido.'); }
         if (!data || typeof data !== 'object' || Array.isArray(data)) throw fail(400, 'Dados inválidos.');
       } else if (req.method !== 'GET') throw fail(405, 'Método inválido.');
@@ -87,6 +89,16 @@ function createCloudServer({ store, frontendOrigin, backendOrigin, avatarStorage
       }
       const id = await store.session(hash(token));
       if (!id) throw fail(401, 'Entre na sua conta para continuar.');
+      if (req.method === 'GET' && url.pathname === '/api/drift/board') {
+        const track = url.searchParams.get('track');
+        if (!require('./drift.cjs').tracks.includes(track)) throw fail(400, 'Circuito inválido.');
+        return json(200, await store.driftBoard(id, track));
+      }
+      if (req.method === 'POST' && url.pathname === '/api/drift/start') {
+        await store.limit(hash('drift:' + id));
+        return json(200, drift.start(id, data));
+      }
+      if (req.method === 'POST' && url.pathname === '/api/drift/finish') return json(200, await drift.finish(id, data));
       if (req.method === 'GET' && url.pathname === '/api/me') return json(200, { player: await store.profile(id) });
       if (req.method === 'GET' && url.pathname === '/api/pilot') {
         const target = await store.find((url.searchParams.get('name') || '').slice(0, 20));

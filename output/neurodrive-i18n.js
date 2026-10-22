@@ -2,6 +2,14 @@
 (() => {
   'use strict';
   const dictionary = {
+    '♫ Música da garagem':'♫ Garage music', 'Volume da música do menu':'Menu music volume',
+    'Acerto de Drift':'Drift setup', 'Estável · mais controle':'Stable · more control', 'Solto · mais derrapagem':'Loose · more sliding',
+    'Estável recupera a aderência mais rápido. Solto exige mais contravolante. Os dois disputam o mesmo ranking.':'Stable recovers grip faster. Loose requires more countersteering. Both compete on the same leaderboard.',
+    'Ranking de Drift · contas':'Drift leaderboard · accounts', 'Atualizar ranking':'Refresh leaderboard',
+    'Buscando ranking…':'Loading leaderboard…', 'Complete um desafio conectado para entrar no ranking.':'Complete a challenge while signed in to join the leaderboard.',
+    'Entre na conta para participar do ranking.':'Sign in to join the leaderboard.',
+    'Ranking indisponível. Seu resultado local continua salvo.':'Leaderboard unavailable. Your local result is still saved.',
+    'Validando pontuação no servidor…':'Validating score on the server…',
     'Freio de mão':'Handbrake', 'Ré':'Reverse', 'COPA NEURO':'NEURO CUP',
     'Drift · desafio de 2 minutos':'Drift · 2-minute challenge',
     'Drift solo: use Espaço ou A / ✕ para um toque de freio de mão ao virar. No celular, use o botão acima das setas. Solte e dose acelerador e contravolante para sustentar a derrapagem. Encadeie derrapagens acima de 30 km/h para chegar a ×8. Endireite por 1,2 s para guardar os pontos. Batidas, rodadas e saídas da pista perdem o combo. Pista seca, sem desgaste de pneus; pontos separados das moedas e dos recordes de volta.':'Solo drift: tap Space or A / ✕ while steering to use the handbrake. On mobile, use the button above the arrows. Release it and balance throttle and countersteering to hold the slide. Chain drifts above 30 km/h to reach ×8. Straighten up for 1.2 seconds to bank points. Crashes, spins and leaving the track lose the combo. Dry track, no tire wear; points are separate from coins and lap records.',
@@ -225,6 +233,8 @@
     'CLASSIFICAÇÃO · CONQUISTE SUA POLE':'QUALIFYING · TAKE POLE POSITION', 'GRID FORMADO · CADA POSIÇÃO IMPORTA':'GRID SET · EVERY POSITION COUNTS',
   };
   const patterns = [
+    [/^Sua posição: (\d+) · (\d+) pts$/, (_, rank, score) => `Your position: ${rank} · ${score} pts`],
+    [/^Pontuação validada: (\d+) pts$/, (_, score) => `Validated score: ${score} pts`],
     [/^([\d.,]+) guardados$/, (_, n) => `${n} banked`],
     [/^([\d.,]+) pontos$/, (_, n) => `${n} points`],
     [/^PRÓXIMO ×(\d+)$/, (_, n) => `NEXT ×${n}`],

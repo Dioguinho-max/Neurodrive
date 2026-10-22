@@ -71,6 +71,14 @@ O box do jogador também conta com dois chefes de equipe em estações de comput
 
 ### Desafio Drift
 
+O menu usa uma apresentação de garagem com carro equipado em destaque, navegação numerada e atalhos para multiplayer e Copa Neuro. **♫ Música da garagem** controla uma trilha eletrônica original, gerada uma vez no navegador. Ela para ao fechar o menu ou ocultar a aba; o volume independente fica em **Ajustes** e é salvo neste dispositivo. A música vem ligada por padrão e começa na primeira interação com o jogo. Desligá-la pelo botão salva essa preferência no navegador.
+
+**Arena Drift** é um circuito largo com curvas conectadas e relevo suave, disponível no seletor de pista do Drift. Escolha **Estável** para recuperar aderência mais rápido ou **Solto** para sustentar a derrapagem com mais contravolante. O acerto fica salvo neste navegador e não altera as corridas normais.
+
+**Ranking de contas:** entre na conta antes de começar, complete os dois minutos e abra **Ranking de Drift · contas → Atualizar ranking** no menu. Mostra os 20 melhores e sua posição, com uma marca por conta e circuito. Ambos os acertos disputam o mesmo ranking; empates mantêm quem registrou primeiro. Não há moedas como prêmio. No servidor local, as contas e o ranking são locais; no site publicado, são salvos no PostgreSQL.
+
+O servidor recalcula a física e os pontos a partir dos comandos gravados, incluindo câmbio manual e reposicionamentos. Não aceita um total informado pelo navegador. A tentativa precisa ser iniciada com a mesma conta, dura no mínimo dois minutos e expira após 30 minutos; reiniciar o backend invalida tentativas abertas. A validação roda em workers limitados para não bloquear as salas online. Isso valida as regras da simulação, mas não prova que os comandos foram produzidos por uma pessoa em vez de automação. Se a conexão falhar, o recorde local continua disponível; ele não é importado automaticamente para o ranking.
+
 No menu **Jogar → Modo → Drift**, faça o máximo de pontos em dois minutos, sozinho na pista escolhida. Use os controles habituais: acelere, sustente a curva e use contravolante para controlar a derrapagem. O acerto de drift é exclusivo deste modo.
 
 **Freio de mão:** segure **Espaço**, **A no Xbox / ✕ no PlayStation**, ou o botão **Freio de mão** acima das setas no celular. Dê um toque curto enquanto vira para iniciar a derrapagem; solte e dose o acelerador e o contravolante para sustentá-la. Segurar o freio de mão reduz a velocidade até parar. A aderência retorna gradualmente após soltar, e a função não altera as corridas normais.
@@ -88,6 +96,7 @@ O Drift tem metas por circuito e um recorde pessoal salvo neste navegador ao com
 | Serra Verde | 600 | 1.800 | 4.000 |
 | Autódromo Veloz | 500 | 1.500 | 3.500 |
 | Vale Técnico | 800 | 2.200 | 5.000 |
+| Arena Drift | 800 | 2.400 | 5.500 |
 
 ### Conquistas e apresentação
 
