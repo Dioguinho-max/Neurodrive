@@ -12,7 +12,7 @@ const DAY = 86400000;
 const hash = (value) => crypto.createHash('sha256').update(value).digest('hex');
 const fail = (status, message) => Object.assign(new Error(message), { status });
 
-function createApp({ database = path.join(__dirname, 'data', 'neurodrive.sqlite'), origin = null, clock = Date.now } = {}) {
+function createApp({ database = path.join(__dirname, 'data', 'neurodrive.sqlite'), origin = null, clock = Date.now, lanHosts = [], multiplayer = false } = {}) {
   if (database !== ':memory:') fs.mkdirSync(path.dirname(database), { recursive: true });
   const db = new DatabaseSync(database);
   db.exec(`PRAGMA foreign_keys=ON; PRAGMA journal_mode=WAL;
@@ -99,7 +99,7 @@ function createApp({ database = path.join(__dirname, 'data', 'neurodrive.sqlite'
     res.setHeader('X-Content-Type-Options', 'nosniff');
     res.setHeader('Referrer-Policy', 'same-origin');
     res.setHeader('X-Frame-Options', 'DENY');
-    const allowedOrigin = origin || `http://127.0.0.1:${server.address().port}`;
+    const allowedOrigin = requestOrigin(req);
     function json(status, value) {
       res.writeHead(status, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
       res.end(JSON.stringify(value));
@@ -122,7 +122,7 @@ function createApp({ database = path.join(__dirname, 'data', 'neurodrive.sqlite'
           const filters = require('./records.cjs').filters(url.searchParams);
           return json(200, { available: false, ...filters, seasons: [], entries: [], own: null, leader: null, total: 0 });
         }
-        if (req.method === 'GET' && url.pathname === '/api/config') return json(200, { online: false, localRewards: true });
+        if (req.method === 'GET' && url.pathname === '/api/config') return json(200, { online: multiplayer, localRewards: true, ...(multiplayer ? { websocketUrl: allowedOrigin.replace(/^http/, 'ws') + '/online' } : {}) });
         if (req.method === 'GET' && url.pathname === '/api/catalog') return json(200, { skins: catalog });
         if (req.method === 'GET' && url.pathname === '/api/me') return json(200, { player: profile(user(req)) });
         if (req.method === 'GET' && url.pathname === '/api/pilot') {
@@ -163,11 +163,13 @@ function createApp({ database = path.join(__dirname, 'data', 'neurodrive.sqlite'
           return json(200, { player: profile(player.id) });
         }
         if (url.pathname === '/api/logout') {
+          if (multiplayer) { try { online.disconnect(user(req)); } catch {} }
           run('DELETE FROM sessions WHERE token_hash=?', hash(token(req)));
           res.setHeader('Set-Cookie', `nd_session=; HttpOnly; SameSite=Strict; Path=/; Max-Age=0${allowedOrigin.startsWith('https:') ? '; Secure' : ''}`);
           return json(200, { ok: true });
         }
         const id = user(req);
+        if (multiplayer && url.pathname === '/api/online-ticket') return json(200, { ticket: online.issue(id) });
         if (url.pathname === '/api/drift/start') return json(200, drift.start(id, data));
         if (url.pathname === '/api/drift/finish') return json(200, await drift.finish(id, data));
         if (url.pathname === '/api/races/start') return json(200, { ticket: rewards.start(id, data) });
@@ -220,6 +222,30 @@ function createApp({ database = path.join(__dirname, 'data', 'neurodrive.sqlite'
       else res.destroy();
     }
   });
+  function requestOrigin(req) {
+    const port = server.address()?.port;
+    const lanHost = lanHosts.find(host => req.headers.host === `${host}:${port}`);
+    return lanHost ? `http://${lanHost}:${port}` : origin || `http://127.0.0.1:${port}`;
+  }
+  const online = multiplayer ? require('./online.cjs').attachOnline(server, {
+    origin: req => req.headers.origin === requestOrigin(req) && req.headers.host === new URL(requestOrigin(req)).host,
+    store: {
+      profile: async id => profile(id),
+      saveRecord: async () => null, // LAN results stay separate from the public competitive ranking.
+      award: async (id, raceId, laps, place, mode, performance) => transaction(() => {
+        const ticket = `lan:${raceId}:${id}`;
+        const prior = statement('SELECT reward FROM races WHERE id=?', ticket);
+        if (prior) return prior.reward;
+        const reward = Math.min(200, 50 + 20 * laps);
+        run('INSERT INTO races(id,player_id,track,laps,started,claimed,reward,place) VALUES(?,?,?,?,?,?,?,?)',
+          ticket, id, performance.track, laps, clock(), clock(), reward, place);
+        run('UPDATE players SET coins=coins+? WHERE id=?', reward, id);
+        return reward;
+      }),
+    },
+  }) : null;
+  if (online) server.on('close', () => online.close());
+  server.closeMultiplayer = () => online?.close();
   server.requestTimeout = 10000;
   server.headersTimeout = 10000;
   server.on('close', () => db.close());

@@ -38,6 +38,12 @@ Ao iniciar uma sala online, todos disputam a classificação: uma volta de aquec
 
 A classificação não concede moedas. Na chegada, os modos solo e online exibem uma cerimônia de 12 segundos dentro do próprio autódromo: os três melhores carros chegam e estacionam junto ao pódio; a câmera se aproxima e mostra os pilotos levantando os troféus. Em seguida aparecem os resultados. A animação não altera tempos, posições ou recompensas. No online, a cerimônia espera o encerramento da prova (todos os humanos terminarem ou o limite de tempo); quem ainda estiver em pista é ordenado pelo progresso. Desconectados não participam do pódio.
 
+## Jogar na rede local com pendrive
+
+O pacote **NeuroDrive-Pendrive** inclui Node.js portátil para Windows x64, contas locais e servidor multiplayer. Execute `INICIAR-JOGO.cmd` no hospedeiro; os amigos abrem o endereço mostrado no navegador, na mesma rede. Não depende do Render ou Supabase. Até seis jogadores por sala, com classificação e corrida. As contas ficam na pasta do pacote e são separadas das contas públicas.
+
+Gere a pasta com `npm.cmd run build:portable`, ou `npm.cmd run build:portable:linux` para incluir também o Node portátil para Linux x64. No Linux, use `INICIAR-JOGO-LINUX.sh` na sua pasta pessoal, sem instalar pacotes nem usar `sudo`. Veja [o passo a passo e as orientações de backup](JOGAR-NO-PENDRIVE.md).
+
 ## Pit stops e pneus
 
 Em corridas de **5 voltas ou mais**, a durabilidade acompanha a distância da prova: a referência é **1 parada em 5 voltas, 2 em 10 e 3 em 20**, com mais uma parada a cada 10 voltas adicionais. São referências para pilotagem normal com pneus adequados ao clima, não paradas obrigatórias. A IA considera o desgaste observado e a distância restante antes de pedir uma troca. A mesma regra vale no solo e no servidor online. No tempo seco, classificação e provas curtas não têm desgaste; com chuva, usam desgaste reduzido.

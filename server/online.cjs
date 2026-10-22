@@ -137,7 +137,8 @@ function attachOnline(server, { origin, store, tickMs = 1000 / 60 }) {
     snapshot(room);
   }
   server.on('upgrade', (req, socket, head) => {
-    if (req.url !== '/online' || req.headers.origin !== origin || wss.clients.size >= 120) { socket.destroy(); return; }
+    const allowed = typeof origin === 'function' ? origin(req) : req.headers.origin === origin;
+    if (req.url !== '/online' || !allowed || wss.clients.size >= 120) { socket.destroy(); return; }
     wss.handleUpgrade(req, socket, head, (ws) => wss.emit('connection', ws));
   });
   wss.on('connection', (ws) => {

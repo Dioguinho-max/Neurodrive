@@ -5,6 +5,8 @@ server/data/
 .env
 node_modules/
 dist/
+NeuroDrive-Pendrive/
+.portable-cache/
 .vercel/
 .env.*
 *.pem
