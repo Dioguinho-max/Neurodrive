@@ -1,0 +1,20 @@
+{
+  "pt-BR": {
+    "model": "pt_BR-cadu-medium",
+    "sha256": "765f0809a6ea9035d4a6d0d008dbf8876e68b2dd32029312672fa8f405bdb535",
+    "speaker_id": 0,
+    "length_scale": 1.06
+  },
+  "pt-BR-faber": {
+    "model": "pt_BR-faber-medium",
+    "sha256": "858555e3a064209c57088fe6bd70c4c3dc54d03eaa00c45d5ecaf43a33f95aa7",
+    "speaker_id": 0,
+    "length_scale": 1.06
+  },
+  "en-US": {
+    "model": "en_US-libritts_r-medium",
+    "sha256": "10bb85e071d616fcf4071f369f1799d0491492ab3c5d552ec19fb548fac13195",
+    "speaker_id": 0,
+    "length_scale": 1.0
+  }
+}

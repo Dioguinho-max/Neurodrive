@@ -122,7 +122,10 @@ function createApp({ database = path.join(__dirname, 'data', 'neurodrive.sqlite'
           const filters = require('./records.cjs').filters(url.searchParams);
           return json(200, { available: false, ...filters, seasons: [], entries: [], own: null, leader: null, total: 0 });
         }
-        if (req.method === 'GET' && url.pathname === '/api/config') return json(200, { online: multiplayer, localRewards: true, ...(multiplayer ? { websocketUrl: allowedOrigin.replace(/^http/, 'ws') + '/online' } : {}) });
+        if (req.method === 'GET' && url.pathname === '/api/config') return json(200, { online: multiplayer, localRewards: true, ...(multiplayer ? {
+          websocketUrl: allowedOrigin.replace(/^http/, 'ws') + '/online',
+          lanOrigins: lanHosts.filter(host=>/^\d+\.\d+\.\d+\.\d+$/.test(host)&&!host.startsWith('127.')).map(host=>`http://${host}:${req.socket.localPort}`),
+        } : {}) });
         if (req.method === 'GET' && url.pathname === '/api/catalog') return json(200, { skins: catalog });
         if (req.method === 'GET' && url.pathname === '/api/me') return json(200, { player: profile(user(req)) });
         if (req.method === 'GET' && url.pathname === '/api/pilot') {
@@ -211,7 +214,7 @@ function createApp({ database = path.join(__dirname, 'data', 'neurodrive.sqlite'
       let resolved;
       try { resolved = fs.realpathSync(file); } catch { throw fail(404, 'Arquivo não encontrado.'); }
       if (!resolved.startsWith(publicRoot + path.sep) || !fs.statSync(resolved).isFile()) throw fail(404, 'Arquivo não encontrado.');
-      const types = { '.svg': 'image/svg+xml', '.png': 'image/png', '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.txt': 'text/plain; charset=utf-8' };
+      const types = { '.wav': 'audio/wav', '.svg': 'image/svg+xml', '.png': 'image/png', '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.css': 'text/css; charset=utf-8', '.txt': 'text/plain; charset=utf-8' };
       if (!types[path.extname(file)] || relative.includes('/tests/')) throw fail(404, 'Arquivo não encontrado.');
       res.writeHead(200, { 'Content-Type': types[path.extname(file)], 'Cache-Control': 'no-cache' });
       if (req.method === 'HEAD') return res.end();

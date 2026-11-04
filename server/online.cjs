@@ -36,9 +36,60 @@ function attachOnline(server, { origin, store, tickMs = 1000 / 60 }) {
   const send = (peer, data) => {
     if (peer.ws.readyState === WebSocket.OPEN && peer.ws.bufferedAmount < 256000) peer.ws.send(typeof data === 'string' ? data : JSON.stringify(data));
   };
-  function lobby(room) {
+  const players = room => [...room.peers].map(p => ({ id: p.id, name: p.profile.nickname || p.profile.username,
+    ready: p.ready, loading: Boolean(p.loading), ping: p.rtt == null ? null : Math.round(p.rtt) }));
+  const circuits = ['serra', 'veloz', 'tecnico'];
+  function rules(room) { return { difficulty:room.difficulty || 'normal', tyreWear:room.tyreWear || 'normal', weather:room.weather, laps:room.laps }; }
+  function raceStats(room) {
+    if (room.stage !== 'race' || room.race?.phase !== 'finished') return null;
+    if (room.stats) return room.stats;
+    const cars = room.race.cars;
+    const winner = cars.find(c => c.place === 1 && Number.isFinite(c.finishTime) && !c.disconnected);
+    const fastest = cars.filter(c=>Number.isFinite(c.bestLap)&&c.bestLap>0).sort((a,b)=>a.bestLap-b.bestLap)[0];
+    return room.stats = { fastest:fastest ? {name:fastest.name,time:fastest.bestLap} : null,
+      drivers:cars.map(c=>{
+        const grid = (room.grid?.findIndex(g=>g.id===c.id) ?? -1)+1;
+        const finished = c.done && !c.disconnected && Number.isFinite(c.finishTime) && c.place > 0;
+        return {id:c.id,name:c.name,grid,place:finished?c.place:null,bestLap:c.bestLap,
+          gained:finished&&grid ? grid-c.place:null,gap:finished&&winner?Math.max(0,c.finishTime-winner.finishTime):null};
+      }).sort((a,b)=>(a.place??99)-(b.place??99)) };
+  }
+  function eventData(room) {
+    const standings = [...(room.championship?.scores.values() || [])].sort((a,b) => b.points-a.points || b.wins-a.wins || a.id.localeCompare(b.id));
+    return { championship: room.championship ? { round: room.championship.round, total: 3,
+      complete: room.championship.round === 3 && room.championship.scored === room.raceId, standings } : null,
+      votes: Object.fromEntries(room.votes || []), rules:rules(room), stats:raceStats(room) };
+  }
+  function scoreRound(room) {
+    const c = room.championship;
+    if (!c || c.scored === room.raceId) return;
+    for (const car of room.race.cars) {
+      if (!car.player) continue;
+      const score = c.scores.get(car.accountId);
+      if (!score) continue;
+      const valid = car.done && !car.disconnected && car.finishTime != null && car.place > 0;
+      const points = valid ? [25,18,15,12,10,8][car.place-1] || 0 : 0;
+      score.points += points;
+      (score.history ||= []).push({round:c.round,points,place:valid?car.place:null});
+      if (valid && car.place === 1) score.wins++;
+    }
+    c.scored = room.raceId;
+  }
+  function presence(room) {
+    const data = { type: 'presence', code: room.code, owner: room.owner, players: players(room), ...eventData(room) };
+    room.peers.forEach(p => send(p, data));
+  }
+  const heartbeat = setInterval(() => {
+    for (const peer of users.values()) {
+      if (peer.pingAt && Date.now() - peer.pingAt > 15000) { peer.ws.terminate(); continue; }
+      if (!peer.pingAt && peer.ws.readyState === WebSocket.OPEN) { peer.pingAt = Date.now(); peer.ws.ping(); }
+    }
+    rooms.forEach(presence);
+  }, 3000);
+  heartbeat.unref?.();
+  function lobby(room, reset = false, reason = null) {
     const data = { type: 'lobby', code: room.code, track: room.track, laps: room.laps, weather: room.weather, mode: room.mode, owner: room.owner,
-      players: [...room.peers].map((p) => ({ id: p.id, name: (p.profile.nickname || p.profile.username), ready: p.ready })) };
+      reset, reason, players: players(room), ...eventData(room) };
     room.peers.forEach((p) => send(p, data));
   }
   function leave(peer) {
@@ -46,16 +97,39 @@ function attachOnline(server, { origin, store, tickMs = 1000 / 60 }) {
     if (!room) return;
     peer.room = null;
     room.peers.delete(peer);
+    room.votes?.delete(peer.id);
+    if (room.owner === peer.id) room.owner = [...room.peers][0]?.id;
     if (room.race) {
       const car = room.race.cars.find((c) => c.accountId === peer.id);
       if (car && (room.stage !== 'race' || !car.done)) Object.assign(car, { disconnected: true, done: true, speed: 0 });
       const gridEntry = room.grid?.find(item => item.id === peer.carId);
       if (gridEntry && room.stage === 'waiting') gridEntry.disconnected = true;
+      presence(room);
     } else {
       if (room.owner === peer.id) room.owner = [...room.peers][0]?.id;
       lobby(room);
     }
     if (!room.peers.size) { clearInterval(room.timer); rooms.delete(room.code); }
+  }
+  function rematch(peer, msg) {
+    const room = peer.room;
+    if (!room || room.owner !== peer.id) throw new Error('Somente o dono pode preparar a revanche.');
+    if (!room.race || room.stage !== 'race' || room.race.phase !== 'finished') throw new Error('Aguarde todos terminarem a corrida.');
+    if (room.race.cars.some(car => car.player && car.done && !car.disconnected && car.finishTime !== null && !room.rewards.get(car.id)?.saved))
+      throw new Error('Aguarde o salvamento das recompensas.');
+    const track = msg.track || room.track;
+    if (!['serra','veloz','tecnico'].includes(track)) throw new Error('Circuito inválido.');
+    const counts = circuits.map(id => [...(room.votes?.values() || [])].filter(v => v === id).length);
+    if (Math.max(...counts) && counts[circuits.indexOf(track)] !== Math.max(...counts)) throw new Error('Escolha uma das pistas mais votadas.');
+    if (room.championship) {
+      if (room.championship.round === 3) throw new Error('Campeonato encerrado. Crie uma nova sala para disputar outro.');
+      room.championship.round++;
+    }
+    room.votes = new Map();
+    clearInterval(room.timer);
+    room.race = null; room.stage = null; room.grid = null; room.finishedAt = null; room.track = track;
+    room.peers.forEach(p => { p.ready = false; p.loading = false; p.input = {}; p.lastInput = 0; });
+    lobby(room, true);
   }
   function snapshot(room) {
     const race = room.race;
@@ -65,7 +139,8 @@ function attachOnline(server, { origin, store, tickMs = 1000 / 60 }) {
     const common = JSON.stringify({ type: 'state', cars, stage: room.stage, grid: room.grid, raceId:room.raceId,
       waiting: room.stage === 'waiting' ? Math.ceil(room.waitTicks / 60) : 0,
       phase: room.stage === 'waiting' ? 'waiting' : race.phase, countdown: race.countdown,
-      startLights: race.startLights, mode: room.mode, elapsed: race.elapsed, laps: race.laps, track: room.track });
+      startLights: race.startLights, mode: room.mode, elapsed: race.elapsed, laps: race.laps, track: room.track,
+      ...(race.phase === 'finished' ? eventData(room) : {}) });
     for (const peer of room.peers) {
       // Do not enqueue old positions behind a congested connection; the next snapshot is complete.
       if (peer.ws.bufferedAmount > 0) continue;
@@ -77,11 +152,15 @@ function attachOnline(server, { origin, store, tickMs = 1000 / 60 }) {
   }
   function start(room) {
     if (room.race) throw new Error('A prova já começou.');
-    if (room.peers.size < 2 || [...room.peers].some((p) => !p.ready)) throw new Error('São necessários dois pilotos, e todos precisam marcar Pronto.');
+    if (room.peers.size < 2 || [...room.peers].some((p) => !p.ready || p.loading)) throw new Error('São necessários dois pilotos, e todos precisam marcar Pronto.');
     room.raceId = crypto.randomUUID();
+    room.stats = null;
     const peers = [...room.peers];
+    if (room.championship && !room.championship.scores.size) {
+      peers.forEach(p => room.championship.scores.set(p.id, { id:p.id, name:p.profile.nickname || p.profile.username, points:0, wins:0 }));
+    }
     room.stage = 'qualifying';
-    room.race = engine.createNeuroRace(engine.createNeuroTrack(room.track), 'normal', { online: true, humans: peers.map((_, i) => i + 1), session: 'qualifying', pitStart: true, weather: room.weather });
+    room.race = engine.createNeuroRace(engine.createNeuroTrack(room.track), room.difficulty || 'normal', { online: true, humans: peers.map((_, i) => i + 1), session: 'qualifying', pitStart: true, weather: room.weather, tyreWear:room.tyreWear });
     room.rewards = new Map();
     room.recordSeen = new Map();
     room.recordSummaries = new Map(); room.recordNotices = new Map();
@@ -98,9 +177,9 @@ function attachOnline(server, { origin, store, tickMs = 1000 / 60 }) {
       if (room.stage === 'waiting') {
         if (--room.waitTicks <= 0) {
           const qualifiers = room.race.cars;
-          room.race = engine.createNeuroRace(engine.createNeuroTrack(room.track), 'normal', {
+          room.race = engine.createNeuroRace(engine.createNeuroTrack(room.track), room.difficulty || 'normal', {
             online: true, humans: qualifiers.filter(car => car.player).map(car => car.id),
-            laps: room.laps, grid: room.grid.map(car => car.id), weather: room.weather,
+            laps: room.laps, grid: room.grid.map(car => car.id), weather: room.weather, tyreWear:room.tyreWear,
           });
           for (const car of room.race.cars) {
             const prior = qualifiers.find(item => item.id === car.id);
@@ -137,6 +216,7 @@ function attachOnline(server, { origin, store, tickMs = 1000 / 60 }) {
       }
       if (++ticks % 3 === 0) snapshotDue = true;
       if (room.stage === 'race' && room.race.phase === 'finished') {
+        scoreRound(room);
         room.finishedAt ||= Date.now();
         if (Date.now() - room.finishedAt > 300000) {
           room.peers.forEach((p) => { send(p, { type: 'error', message: 'Sala encerrada. Crie uma nova disputa.' }); p.ws.close(); });
@@ -159,6 +239,12 @@ function attachOnline(server, { origin, store, tickMs = 1000 / 60 }) {
     const peer = { ws, id: null, room: null, ready: false, input: {}, lastInput: 0, messages: 0, window: Date.now() };
     const timeout = setTimeout(() => { if (!peer.id) ws.close(1008, 'Autenticação necessária'); }, 5000);
     const lifetime = setTimeout(() => ws.close(1000, 'Sessão online encerrada'), 3600000);
+    ws.on('pong', () => {
+      if (!peer.pingAt) return;
+      const sample = Date.now() - peer.pingAt;
+      peer.rtt = peer.rtt == null ? sample : peer.rtt * .7 + sample * .3;
+      peer.pingAt = null;
+    });
     ws.on('message', async (raw) => {
       try {
         if (Date.now() - peer.window > 1000) { peer.window = Date.now(); peer.messages = 0; }
@@ -183,22 +269,47 @@ function attachOnline(server, { origin, store, tickMs = 1000 / 60 }) {
         }
         if (msg.type === 'ping' && Number.isFinite(msg.time)) { send(peer, { type: 'pong', time: msg.time }); return; }
         if (msg.type === 'leave') { leave(peer); send(peer, { type: 'left' }); return; }
+        if (msg.type === 'rematch') { rematch(peer, msg); return; }
+        if (msg.type === 'settings') {
+          const room = peer.room;
+          if (!room || room.owner !== peer.id) throw new Error('Somente o dono pode alterar as regras.');
+          if (room.race) throw new Error('As regras só podem mudar antes da classificação.');
+          if (!['easy','normal','hard'].includes(msg.difficulty) || !['reduced','normal','intense'].includes(msg.tyreWear)
+            || !['dry','rain','changing'].includes(msg.weather) || ![1,3,5,10].includes(msg.laps)) throw new Error('Regras inválidas.');
+          Object.assign(room,{difficulty:msg.difficulty,tyreWear:msg.tyreWear,weather:msg.weather,laps:room.mode==='tournament'?3:msg.laps});
+          room.peers.forEach(p=>{p.ready=false;p.loading=false;});
+          lobby(room,true,'settings'); return;
+        }
+        if (msg.type === 'vote') {
+          const room = peer.room;
+          if (!room?.race || room.stage !== 'race' || room.race.phase !== 'finished' || eventData(room).championship?.complete)
+            throw new Error('A votação abre ao terminar a corrida.');
+          if (!circuits.includes(msg.track)) throw new Error('Circuito inválido.');
+          room.votes ||= new Map(); room.votes.set(peer.id, msg.track); presence(room); return;
+        }
         if (msg.type === 'create') {
           if (peer.room) throw new Error('Saia da sala atual primeiro.');
           if (rooms.size >= 20) throw new Error('Servidor cheio. Tente mais tarde.');
           if (!['serra', 'veloz', 'tecnico'].includes(msg.track) || ![1, 3, 5, 10].includes(msg.laps)) throw new Error('Circuito ou voltas inválidos.');
           let code;
           do { code = crypto.randomBytes(3).toString('hex').toUpperCase(); } while (rooms.has(code));
-          const mode = msg.mode === 'tournament' ? 'tournament' : 'race';
+          const mode = ['tournament','championship'].includes(msg.mode) ? msg.mode : 'race';
           const room = { weather: ['dry', 'rain', 'changing'].includes(msg.weather) ? msg.weather : 'dry', code, owner: peer.id, track: msg.track, mode, laps: mode === 'tournament' ? 3 : msg.laps, peers: new Set([peer]) };
-          peer.room = room; peer.ready = false; rooms.set(code, room); lobby(room);
+          room.difficulty = ['easy','normal','hard'].includes(msg.difficulty) ? msg.difficulty : 'normal';
+          room.tyreWear = ['reduced','normal','intense'].includes(msg.tyreWear) ? msg.tyreWear : 'normal';
+          room.votes = new Map();
+          if (mode === 'championship') room.championship = { round:1, scores:new Map(), scored:null };
+          peer.room = room; peer.ready = false; peer.loading = false; rooms.set(code, room); lobby(room);
         } else if (msg.type === 'join') {
           if (peer.room) throw new Error('Saia da sala atual primeiro.');
           const room = rooms.get(typeof msg.code === 'string' ? msg.code.toUpperCase() : '');
           if (!room || room.race || room.peers.size >= 6) throw new Error('Sala indisponível ou já em corrida.');
-          peer.room = room; peer.ready = false; room.peers.add(peer); lobby(room);
+          if (room.championship?.scores.size && !room.championship.scores.has(peer.id)) throw new Error('Este campeonato já começou.');
+          peer.room = room; peer.ready = false; peer.loading = false; room.peers.add(peer); lobby(room);
+        } else if (msg.type === 'preparing' && peer.room && !peer.room.race) {
+          peer.loading = msg.loading === true; peer.ready = false; lobby(peer.room);
         } else if (msg.type === 'ready' && peer.room && !peer.room.race) {
-          peer.ready = msg.ready === true; peer.manual = msg.manual === true; lobby(peer.room);
+          peer.ready = msg.ready === true; peer.loading = false; peer.manual = msg.manual === true; lobby(peer.room);
         } else if (msg.type === 'start' && peer.room?.owner === peer.id) start(peer.room);
         else if (msg.type === 'input' && peer.room?.race) {
           peer.input = Object.fromEntries(['accelerate', 'brake', 'left', 'right', 'shiftUp', 'shiftDown', 'noReverse'].map((key) => [key, msg[key] === true]));
@@ -222,7 +333,7 @@ function attachOnline(server, { origin, store, tickMs = 1000 / 60 }) {
       return ticket;
     },
     disconnect(id) { users.get(String(id))?.ws.close(1000, 'Conta desconectada'); },
-    close() { clearInterval(recordTimer); rooms.forEach((room) => clearInterval(room.timer)); wss.clients.forEach((ws) => ws.terminate()); wss.close(); },
+    close() { clearInterval(recordTimer); clearInterval(heartbeat); rooms.forEach((room) => clearInterval(room.timer)); wss.clients.forEach((ws) => ws.terminate()); wss.close(); },
   };
 }
 module.exports = { attachOnline };

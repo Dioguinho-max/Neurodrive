@@ -11,7 +11,7 @@ const database = path.join(directory, 'accounts.sqlite');
 let server, base;
 const clients = [];
 async function start() {
-  server = createApp({ database, multiplayer: true, lanHosts: ['localhost'] });
+  server = createApp({ database, multiplayer: true, lanHosts: ['localhost','192.168.1.20'] });
   server.listen(0, '127.0.0.1'); await once(server, 'listening');
   base = `http://127.0.0.1:${server.address().port}`;
 }
@@ -37,6 +37,7 @@ function client(url) {
   try {
     await start();
     const config = (await api('config')).body;
+    assert.deepEqual(config.lanOrigins,[`http://192.168.1.20:${server.address().port}`]);
     assert.equal(config.online, true); assert.equal(config.localRewards, true);
     const invalidHostStatus = await new Promise((resolve, reject) => {
       require('node:http').get(base + '/api/config', { headers: { Host: 'untrusted.example' } }, response => {
@@ -49,7 +50,7 @@ function client(url) {
     assert.equal((await api('online-ticket', {})).status, 401);
     assert.equal((await api('register', { username: 'blocked', password: 'TestPassword123' }, '', 'https://evil.example')).status, 403);
     const users = [];
-    for (const username of ['lan_one', 'lan_two']) {
+    for (const username of ['lan_one', 'lan_two', 'lan_three', 'lan_four', 'lan_five', 'lan_six']) {
       const user = await api('register', { username, password: 'TestPassword123' }); assert.equal(user.status, 200); users.push(user);
     }
     const peers = [];
@@ -60,15 +61,17 @@ function client(url) {
     }
     peers[0].send({ type: 'create', track: 'veloz', laps: 5 });
     const lobby = await peers[0].next(m => m.type === 'lobby');
-    peers[1].send({ type: 'join', code: lobby.code });
-    await peers[0].next(m => m.type === 'lobby' && m.players.length === 2);
+    for (const peer of peers.slice(1)) peer.send({ type: 'join', code: lobby.code });
+    await peers[0].next(m => m.type === 'lobby' && m.players.length === 6);
     for (const peer of peers) peer.send({ type: 'ready', ready: true });
     await peers[0].next(m => m.type === 'lobby' && m.players.every(p => p.ready));
     peers[0].send({ type: 'start' });
     for (const [index, peer] of peers.entries()) {
-      const state = await peer.next(m => m.type === 'state'); assert.equal(state.stage, 'qualifying'); assert.equal(state.cars.filter(c => c.player).length, 2);
+      const state = await peer.next(m => m.type === 'state'); assert.equal(state.stage, 'qualifying'); assert.equal(state.cars.filter(c => c.player).length, 6);
       assert.equal(state.self, index + 1, 'Shared serialization must preserve each player identity');
     }
+    const presence = await peers[0].next(m => m.type === 'presence' && m.players.length === 6 && m.players.every(p => Number.isFinite(p.ping)));
+    assert(presence.players.every(p => p.ping >= 0), 'Server measures actual WebSocket round trips');
     const closed = once(peers[1].ws, 'close'); await api('logout', {}, users[1].cookie); await closed;
     await stop();
     await start();
@@ -76,7 +79,10 @@ function client(url) {
     assert.equal(login.status, 200); assert.equal(login.body.player.username, 'lan_one');
     assert.equal((await fetch(base + '/server/data/accounts.sqlite')).status, 404);
     assert.equal((await fetch(base + '/online.html')).status, 200);
-    console.log('OK: LAN accounts persist, local WebSocket tickets, two-player room/start, logout and origin protection.');
+    const clip = await fetch(base + '/assets/radio/pt-BR/preview.wav');
+    assert.equal(clip.status,200);assert.equal(clip.headers.get('content-type'),'audio/wav');
+    assert.equal(Buffer.from(await clip.arrayBuffer()).toString('ascii',0,4),'RIFF');
+    console.log('OK: LAN accounts persist, six players on one port, distinct identities, room/start, ping, logout and origin protection.');
   } finally {
     clients.forEach(ws => ws.terminate());
     if (server?.listening) await stop();

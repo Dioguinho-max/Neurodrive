@@ -223,6 +223,7 @@
     get('drift-result-medal').hidden = !race.drift;
     get('drift-online-status').hidden = !race.drift;
     get('race-results').setAttribute('data-drift', String(Boolean(race.drift)));
+    get('race-results-stay').hidden = true;
     get('race-results-improvement').hidden = Boolean(race.drift);
     if (race.drift) {
       if (driftOnline && !driftOnlineSubmitted) {
@@ -259,6 +260,7 @@
       : 'Resultado ao encerrar a prova do jogador. Quem ainda estava em pista é ordenado pelo progresso e não recebe um tempo de chegada.';
     get('race-results-improvement').textContent = window.NeuroAchievements?.improvement(sessionBestBefore === null ? null : Math.round(sessionBestBefore * 1000), race.cars[0].bestLap === null ? null : Math.round(race.cars[0].bestLap * 1000)) || '';
     get('race-results-rows').innerHTML = get('race-ranking').innerHTML;
+    window.NeuroResults?.refresh();
     get('race-results-table').hidden = !race.qualifying;
     get('race-podium').hidden = race.qualifying;
     get('race-podium').innerHTML = race.qualifying ? '' : [1, 0, 2].map((index) => {
@@ -274,6 +276,7 @@
       get('race-results-return').textContent = 'Voltando ao menu em 10 segundos. Você poderá rever estes resultados pelo menu.';
     }
     get('race-results-return').hidden = resultsReturnRemaining === null;
+    get('race-results-stay').hidden = resultsReturnRemaining === null;
     get('championship-next').hidden = !championship || race.qualifying || championship.stage >= 2;
     get('championship-results').hidden = !championship || race.qualifying;
     if (championship && !race.qualifying) {
@@ -295,6 +298,11 @@
     startSession(true);
   };
   get('race-results-close').onclick = () => { if (race.qualifying) get('race-results').close(); else returnToMenu(); };
+  get('race-results-stay').onclick = () => {
+    resultsReturnRemaining = null;
+    get('race-results-return').hidden = true;
+    get('race-results-stay').hidden = true;
+  };
   get('race-results').oncancel = (event) => {
     if (!race.qualifying) { event.preventDefault(); returnToMenu(); }
   };

@@ -26,7 +26,11 @@ async function build() {
     if (!response.ok) throw new Error('Nao foi possivel obter a licenca do Node.js.');
     fs.writeFileSync(licensePath, await response.text());
   }
-  fs.copyFileSync(process.execPath, path.join(target, 'runtime/node.exe'));
+  const runtimePath = path.join(target, 'runtime/node.exe');
+  const runtimeHash = file => crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex');
+  // Windows locks a running executable. Preserve it only when it is byte-identical.
+  if (!fs.existsSync(runtimePath) || fs.statSync(runtimePath).size !== fs.statSync(process.execPath).size
+    || runtimeHash(runtimePath) !== runtimeHash(process.execPath)) fs.copyFileSync(process.execPath, runtimePath);
   if (process.argv.includes('--linux')) {
     const cache = path.join(root, '.portable-cache');
     fs.mkdirSync(cache, { recursive: true });

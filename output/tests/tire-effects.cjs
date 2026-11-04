@@ -37,7 +37,9 @@ function emitted(speed, pedal, sliding = false) {
   const sun = scene.children.find((object) => object.isDirectionalLight);
   assert.equal(sun.shadow.mapSize.x, 2048);
   const visual = scene.children.find((object) => object.isGroup);
-  const wheels = visual.children.filter((part) => part.isGroup);
+  const wheels = [];
+  visual.traverse(part => { if (part.userData.wheelPivot) wheels.push(part); });
+  assert.equal(wheels.length, 4, 'Inspect the four wheel pivots, not suspension groups');
   assert(wheels.every((pivot) => pivot.children[0].geometry.parameters.radialSegments === 32));
   renderer.update([car], car, false);
   renderer.setQuality('performance');

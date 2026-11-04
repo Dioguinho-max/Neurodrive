@@ -24,9 +24,10 @@ function inbox(ws) {
 }
 (async () => {
   const server = http.createServer(), awards = [], records = [];
+  let releaseAward;
   const online = attachOnline(server, { origin: 'http://test', store: {
     profile: async id => ({ username: `Pilot_${id}`, equipped: 'original' }),
-    award: async (...args) => { awards.push(args); return 70; },
+    award: async (...args) => { awards.push(args); return new Promise(resolve => { releaseAward = resolve; }); },
     saveRecord: async (...args) => { records.push(args); return {previous:47000,milliseconds:45000,improvement:2000,circuit:true,track:'serra',season:'beta-1'}; },
   } });
   let a, b;
@@ -41,12 +42,17 @@ function inbox(ws) {
     a.send({ type: 'create', track: 'serra', laps: 5, weather: 'changing' }); const room = await a.next(m => m.type === 'lobby');
     assert.equal(room.weather, 'changing');
     b.send({ type: 'join', code: room.code }); await b.next(m => m.type === 'lobby');
+    b.send({ type: 'preparing', loading: true });
+    await a.next(m => m.type === 'lobby' && m.players.some(p => p.loading));
+    a.send({ type: 'start' }); await a.next(m => m.type === 'error');
     a.send({ type: 'ready', ready: true }); b.send({ type: 'ready', ready: true });
     await a.next(m => m.type === 'lobby' && m.players.length === 2 && m.players.every(p => p.ready));
     a.send({ type: 'start' }); const first = await a.next(m => m.type === 'state');
     assert.equal(first.stage, 'qualifying'); assert(first.cars.every(car => car.pitExit));
     assert(first.cars.every(car => car.weatherMode === 'changing' && car.wetness === 0));
     assert.equal(first.laps, 3); assert(first.cars.every(car => !car.rewardPending));
+    b.send({ type: 'rematch' }); assert.match((await b.next(m => m.type === 'error')).message, /dono/);
+    a.send({ type: 'rematch' }); assert.match((await a.next(m => m.type === 'error')).message, /terminarem/);
     races[0].cars.forEach((car, index) => { car.bestLap = 50 - index; car.finishTime = 100; car.done = true; });
     races[0].cars[0].recordLap = {lap:2,milliseconds:45000};
     races[0].endQualifying(); for (let i = 0; i < 3; i++) tick();
@@ -72,8 +78,27 @@ function inbox(ws) {
     Object.assign(races[1].cars[0], { done: true, finishTime: 120, place: 1 });
     for (let i = 0; i < 185; i++) { tick(); if (i % 15 === 0) await new Promise(resolve => setImmediate(resolve)); }
     await a.next(m => m.stage === 'race' && m.phase === 'finished');
+    a.send({ type: 'rematch' }); assert.match((await a.next(m => m.type === 'error')).message, /recompensas/);
+    releaseAward(70);
     await new Promise(resolve => setImmediate(resolve)); tick();
     assert.equal(awards.length, 1); assert.equal(awards[0][0], 'a'); assert.equal(awards[0][2], 5);
+    a.send({ type: 'rematch', track: 'invalid' }); assert.match((await a.next(m => m.type === 'error')).message, /inválido/);
+    a.send({ type: 'rematch', track: 'veloz' });
+    const again = await a.next(m => m.type === 'lobby' && m.reset);
+    assert.equal(again.code, room.code); assert.equal(again.track, 'veloz'); assert.equal(again.laps,5);
+    assert(again.players.every(p => !p.ready && !p.loading));
+    assert.equal(awards.length,1,'Rematch does not issue duplicate rewards');
+    b = await connect('b'); b.send({type:'join',code:room.code});
+    await b.next(m=>m.type==='lobby' && m.players.length===2);
+    a.send({type:'leave'}); await a.next(m=>m.type==='left');
+    const promoted=await b.next(m=>m.type==='lobby' && m.owner==='b'); assert.equal(promoted.players.length,1);
+    a.send({type:'join',code:room.code}); await a.next(m=>m.type==='lobby' && m.players.length===2);
+    a.send({type:'ready',ready:true}); b.send({type:'ready',ready:true});
+    await b.next(m=>m.type==='lobby' && m.players.every(p=>p.ready));
+    b.send({type:'start'}); const restarted=await b.next(m=>m.type==='state' && m.raceId!==first.raceId);
+    assert.equal(restarted.track,'veloz');assert.equal(restarted.stage,'qualifying');
+    assert(restarted.cars.every(c=>!c.done && c.completedLaps===0 && !c.rewardPending));
+    console.log('OK: preparing status, owner authorization, reward barrier, same room rematch, track switch and owner transfer.');
     console.log('OK: classificaÃ§Ã£o sem moedas, espera, grid por tempo, desconexÃ£o, corrida e recompensa Ãºnica.');
   } finally { a?.ws.terminate(); b?.ws.terminate(); online.close(); await new Promise(resolve => server.close(resolve)); }
 })().catch(error => { console.error(error); process.exitCode = 1; });

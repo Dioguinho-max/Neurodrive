@@ -8,8 +8,7 @@ for (const file of ['neuro-pista-track.js', 'neurodrive-race-engine.js']) {
 for (const definition of host.NeuroTracks) {
   const track = host.createNeuroTrack(definition.id);
   assert(track.points.every((point) => track.contains(point.x, point.y, 9)));
-  const session = host.createNeuroRace(track, 'normal', { session: 'qualifying' });
-  session.cars.forEach((car) => { car.player = false; });
+  const session = host.createNeuroRace(track, 'normal', { session: 'qualifying', online: true, humans: [] });
   for (let i = 0; i < 18500 && session.phase !== 'finished'; i++) session.step();
   assert.equal(session.phase, 'finished');
   const timed = session.standings().filter((car) => car.bestLap !== null);

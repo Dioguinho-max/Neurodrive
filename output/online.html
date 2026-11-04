@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="pt-BR">
 <head>
-  <link rel="stylesheet" href="neurodrive-radio.css"><script src="neurodrive-radio-audio.js" defer></script><script src="neurodrive-radio.js" defer></script>
+  <link rel="stylesheet" href="neurodrive-radio.css"><script src="neurodrive-radio-clips.js" defer></script><script src="neurodrive-radio-audio.js" defer></script><script src="neurodrive-radio.js" defer></script>
   <link rel="icon" type="image/svg+xml" href="assets/neurodrive-favicon.svg">
   <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
   <title>NeuroDrive · Online</title>
@@ -13,7 +13,7 @@
   <link rel="stylesheet" href="neurodrive-mobile.css">
   <script src="neurodrive-achievements.js" defer></script><link rel="stylesheet" href="neurodrive-achievements.css">
   <link rel="stylesheet" href="neurodrive-easter-egg.css"><script src="neurodrive-easter-egg.js" defer></script>
-<script src="neurodrive-intro.js" defer></script><script src="online.js" defer></script>
+<script src="neurodrive-intro.js" defer></script><script src="vendor/qrcode.js" defer></script><script src="neurodrive-online-social.js" defer></script><script src="online.js" defer></script>
 <link rel="stylesheet" href="neurodrive-home.css">
 <link rel="stylesheet" href="neurodrive-weather.css">
 <link rel="stylesheet" href="neurodrive-i18n.css"><script src="neurodrive-i18n.js" defer></script>
@@ -21,6 +21,8 @@
 <script src="neurodrive-fullscreen.js" defer></script>
 <script src="neurodrive-mobile-pit.js" defer></script>
 
+<link rel="stylesheet" href="neurodrive-results.css">
+<link rel="stylesheet" href="neurodrive-online-menu.css">
 </head>
 <body><div id="weather-rain" class="weather-rain" aria-hidden="true"></div><main id="neuro-race">
       <output id="game-fps" class="game-fps" aria-label="Desempenho gr&#225;fico" hidden>FPS &mdash;</output>
@@ -58,11 +60,22 @@
           <button class="btn touch-pedal touch-accelerator" data-drive="accelerate" aria-label="Acelerar"><svg viewBox="0 0 56 100" aria-hidden="true"><path class="pedal-body" d="M15 6h26l5 81q0 7-7 7H17q-7 0-7-7Z"/><path d="M21 18h14M20 30h16M19 42h18M18 54h20M18 66h20M17 78h22"/></svg></button>
         </div>
       </div>
+  <aside id="online-health" role="status" hidden></aside>
+  <aside id="online-spectator" hidden aria-label="Modo espectador"><span id="online-spectator-name"></span><div><button class="btn" type="button" id="online-spectator-prev" aria-label="Piloto anterior">←</button><button class="btn" type="button" id="online-spectator-next" aria-label="Próximo piloto">→</button></div></aside>
   <dialog id="online-lobby" class="race-results" aria-labelledby="online-title">
-    <nav class="online-navigation" aria-label="Navegação do jogo"><div class="online-brand">NEURO<span>DRIVE</span></div><a class="btn" href="corrida.html">← Menu principal</a></nav>
+    <aside class="online-menu-hero">
+      <p class="online-kicker">SEU GRID. SEUS AMIGOS.</p>
+      <div class="online-brand" aria-label="NeuroDrive" translate="no">NEURO<span>DRIVE</span></div>
+      <div class="online-hero-art" aria-hidden="true"><svg viewBox="0 0 480 300"><path d="M-50 240C130 260 55 40 230 75S310 310 530 70"/><g transform="translate(155 96) rotate(-35)"><rect x="-16" y="-30" width="32" height="60" rx="8"/><path d="M-11-12H11L9 5H-9Z"/></g><g transform="translate(340 211) rotate(62)"><rect x="-16" y="-30" width="32" height="60" rx="8"/><path d="M-11-12H11L9 5H-9Z"/></g></svg><span>ONLINE / 06</span></div>
+      <p class="online-hero-caption">Uma sala. Grandes disputas.</p>
+      <a class="btn online-home-link" href="corrida.html">← Menu principal</a>
+      <div class="beta-notice"><strong class="beta-badge">BETA</strong> Online · 2 a 6 jogadores</div>
+    </aside>
+    <div class="online-menu-content">
+    <nav class="online-menu-tabs" aria-label="Menu online"><button type="button" class="btn" id="online-tab-session" aria-pressed="true" aria-controls="online-session-page"><small>01</small>Sala e disputa</button><button type="button" class="btn" id="online-tab-settings" aria-pressed="false" aria-controls="online-preferences"><small>02</small>Ajustes</button></nav>
+    <section id="online-session-page">
     <p class="race-results-eyebrow">Online · beta · 2 a 6 jogadores</p><h1 id="online-title">Dispute com seus amigos</h1>
-    <div class="beta-notice"><strong class="beta-badge">BETA</strong> Jogo em desenvolvimento. Você pode encontrar bugs e mudanças durante os testes.</div>
-    <fieldset class="language-settings"><legend>Idioma</legend><div class="language-options" role="group" aria-label="Idioma" translate="no">
+    <fieldset id="online-language" class="language-settings"><legend>Idioma</legend><div class="language-options" role="group" aria-label="Idioma" translate="no">
 <button class="btn" type="button" data-language="pt-BR" aria-pressed="true" lang="pt-BR"><svg viewBox="0 0 28 20" aria-hidden="true"><path fill="#229e45" d="M0 0h28v20H0z"/><path fill="#ffe34b" d="m14 2 12 8-12 8L2 10Z"/><circle cx="14" cy="10" r="5" fill="#20469c"/><path d="M9 9q5-2 10 2" fill="none" stroke="white" stroke-width="1.3"/></svg>Portugu&#234;s</button>
 <button class="btn" type="button" data-language="en-US" aria-pressed="false" lang="en-US"><svg viewBox="0 0 28 20" aria-hidden="true"><path fill="white" d="M0 0h28v20H0z"/><path stroke="#c9384b" stroke-width="1.54" d="M0 .77h28M0 3.85h28M0 6.92h28M0 10h28M0 13.08h28M0 16.15h28M0 19.23h28"/><path fill="#25426f" d="M0 0h12v10.77H0z"/><path fill="white" d="m3 2 .5 1h1l-.8.7.3 1L3 4l-1 .7.3-1L1.5 3h1Zm5 0 .5 1h1l-.8.7.3 1L8 4l-1 .7.3-1L6.5 3h1ZM3 6l.5 1h1l-.8.7.3 1L3 8l-1 .7.3-1L1.5 7h1Zm5 0 .5 1h1l-.8.7.3 1L8 8l-1 .7.3-1L6.5 7h1Z"/></svg>English</button>
 </div></fieldset>
@@ -70,18 +83,64 @@
     <p id="online-connection">Conexão ainda não medida.</p>
     <button class="btn btn-primary" id="online-connect">Entrar no multiplayer</button>
     <div id="online-options" hidden><label class="form-label">Clima<select class="form-select" id="online-weather"><option value="dry">Seco</option><option value="rain">Chuva</option><option value="changing">Variável · chuva durante a prova</option></select></label>
-      <label class="form-label">Disputa<select class="form-select" id="online-mode"><option value="race">Corrida com amigos</option><option value="tournament">Copa Neuro · torneio de 3 voltas</option></select></label>
-      <p class="tournament-rules">Copa Neuro: entrada gratuita, 2–6 jogadores e três voltas. Quem terminar recebe 110 moedas; bônus de pódio: +90 / +60 / +30. Limites: 200 por prova e 500 por dia UTC. Abandono não premia. Saldo validado pelo servidor e salvo na conta.</p>
+      <label class="form-label">Disputa<select class="form-select" id="online-mode"><option value="race">Corrida com amigos</option><option value="championship">Campeonato · 3 etapas</option><option value="tournament">Copa Neuro · torneio de 3 voltas</option></select></label>
+      <details id="online-championship-help" hidden><summary>Regras do campeonato</summary><p>Campeonato: 3 etapas, pontos por chegada (25 / 18 / 15 / 12 / 10 / 8). Sem chegada válida, sem pontos. A IA disputa posições, mas o título é entre jogadores.</p></details>
+      <details id="online-cup-help" hidden><summary>Regras da Copa Neuro</summary><p class="tournament-rules">Copa Neuro: entrada gratuita, 2–6 jogadores e três voltas. Quem terminar recebe 110 moedas; bônus de pódio: +90 / +60 / +30. Limites: 200 por prova e 500 por dia UTC. Abandono não premia. Saldo validado pelo servidor e salvo na conta.</p></details>
       <div class="viz-controls"><label class="form-label">Circuito<select class="form-select" id="online-track"><option value="serra">Serra Verde</option><option value="veloz">Autódromo Veloz</option><option value="tecnico">Vale Técnico</option></select></label>
       <label class="form-label">Voltas<select class="form-select" id="online-laps"><option value="1">1 volta</option><option value="3" selected>3 voltas</option><option value="5">5 voltas</option><option value="10">10 voltas</option></select></label><button class="btn" id="online-create">Criar sala</button></div>
       <form id="online-join"><label class="form-label">Código da sala<input id="online-code" maxlength="6" minlength="6" pattern="[a-fA-F0-9]{6}" required autocomplete="off" placeholder="ABC123"></label><button class="btn" type="submit">Entrar na sala</button></form>
     </div>
-    <section id="online-room" hidden><h2 id="online-room-code"></h2><ul id="online-players"></ul>
+    <section id="online-room" hidden><h2 id="online-room-code"></h2>
+      <details id="online-invite" hidden><summary>Convidar amigos · link e QR Code</summary>
+        <select class="form-select" id="online-invite-origin" aria-label="Endereço da rede"></select>
+        <div class="online-invite-content"><div id="online-invite-qr" role="img" aria-label="QR Code para entrar na sala"></div><div><label class="form-label">Link da sala<input id="online-invite-link" readonly></label><button class="btn" id="online-invite-copy" type="button">Copiar convite</button><p id="online-invite-note" role="status"></p></div></div>
+      </details>
+      <p id="online-roster-summary" role="status"></p><ul id="online-players"></ul>
+      <p id="online-rules-summary"></p>
+      <details id="online-settings" hidden><summary>Personalizar regras da sala</summary>
+        <div class="online-settings-grid">
+          <label class="form-label">Clima<select id="online-rule-weather" class="form-select"><option value="dry">Seco</option><option value="rain">Chuva</option><option value="changing">Variável</option></select></label>
+          <label class="form-label">Voltas<select id="online-rule-laps" class="form-select"><option>1</option><option>3</option><option>5</option><option>10</option></select></label>
+          <label class="form-label">Dificuldade da IA<select id="online-rule-difficulty" class="form-select"><option value="easy">Fácil</option><option value="normal">Normal</option><option value="hard">Difícil</option></select></label>
+          <label class="form-label">Desgaste dos pneus<select id="online-rule-wear" class="form-select"><option value="reduced">Reduzido · 60%</option><option value="normal">Normal · 100%</option><option value="intense">Intenso · 150%</option></select></label>
+        </div>
+        <p>Alterar regras cancela as confirmações. Todos precisam confirmar novamente.</p>
+        <button id="online-save-rules" class="btn" type="button">Aplicar regras</button>
+      </details>
       <label class="form-check"><input type="checkbox" id="online-manual"> Câmbio manual (E sobe, Q reduz)</label>
       <div class="viz-controls"><button class="btn" id="online-ready">Pronto</button><button class="btn btn-primary" id="online-start">Iniciar classifica&#231;&#227;o</button><button class="btn" id="online-leave">Sair da sala</button></div>
+      <section id="online-championship" hidden aria-labelledby="online-championship-title">
+        <h3 id="online-championship-title"></h3><p id="online-champion" role="status"></p><ol id="online-scores"></ol>
+      </section>
+      <section id="online-statistics" hidden aria-labelledby="online-statistics-title">
+        <h3 id="online-statistics-title">Destaques da corrida</h3>
+        <p id="online-fastest"></p><ul id="online-stat-drivers"></ul>
+      </section>
+      <section id="online-rematch-panel" hidden aria-labelledby="online-rematch-title">
+        <h3 id="online-rematch-title">Mais uma disputa?</h3><p id="online-rematch-message" role="status"></p>
+        <div id="online-voting">
+          <h4>Vote na próxima pista</h4><p>Um voto por jogador. Você pode mudar seu voto. O dono confirma uma das mais votadas.</p>
+          <div class="online-vote-grid">
+            <button class="btn" id="online-vote-serra" type="button" aria-pressed="false">Serra Verde</button>
+            <button class="btn" id="online-vote-veloz" type="button" aria-pressed="false">Autódromo Veloz</button>
+            <button class="btn" id="online-vote-tecnico" type="button" aria-pressed="false">Vale Técnico</button>
+          </div>
+        </div>
+        <div id="online-rematch-controls" hidden>
+          <button class="btn btn-primary" id="online-rematch-same" type="button">Repetir circuito</button>
+          <label class="form-label">Próximo circuito<select class="form-select" id="online-rematch-track"><option value="serra">Serra Verde</option><option value="veloz">Autódromo Veloz</option><option value="tecnico">Vale Técnico</option></select></label>
+          <button class="btn" id="online-rematch-change" type="button">Preparar outra pista</button>
+        </div>
+      </section>
     </section>
-    <p>Vagas restantes são preenchidas por IA. O dono inicia quando todos estiverem prontos. A corrida não pausa ao abrir o menu; desconectar abandona a prova. Classifica&#231;&#227;o de at&#233; 5 minutos, espera de 10 segundos e corrida de at&#233; 15 minutos.</p>
-    <details><summary>Som, câmera e controles</summary>
+    <details class="online-howto"><summary>Como funciona a disputa</summary><p>Vagas restantes são preenchidas por IA. O dono inicia quando todos estiverem prontos. A corrida não pausa ao abrir o menu; desconectar abandona a prova. Classifica&#231;&#227;o de at&#233; 5 minutos, espera de 10 segundos e corrida de at&#233; 15 minutos.</p></details>
+<div id="online-podium" hidden></div><section id="online-grid" hidden><h2 id="online-grid-title">Grid</h2><ol id="online-grid-rows"></ol></section>
+    <p id="online-reward" role="status"></p><p id="online-improvement" class="session-improvement" hidden></p>
+    <button class="btn" id="online-back" hidden>Voltar à pista</button>
+    </section>
+    <section id="online-preferences" hidden aria-label="Ajustes">
+      <p class="online-kicker">DO SEU JEITO</p><h2>Ajustes</h2>
+    <details open><summary>Som, câmera e controles</summary>
       <label class="form-label">Gráficos<select class="form-select" id="online-quality"><option value="performance">Leve · recomendado</option><option value="high">Mais detalhes</option><option value="ultra">Super alto · exige mais da GPU</option></select></label>
       <label class="form-check"><input type="checkbox" id="show-fps"> Mostrar FPS</label>
       <label class="form-check"><input type="checkbox" id="online-sound" checked>Som do motor</label>
@@ -90,15 +149,14 @@
       <label class="form-label">Volume do rádio<input id="radio-volume" type="range" min="0" max="100" value="45" aria-label="Volume do rádio"></label>
       <label class="form-label">Voz do rádio<select id="radio-speaker"></select></label>
       <button id="radio-test" type="button">Ouvir teste de voz</button>
-      <p>As vozes disponíveis dependem do dispositivo. Ative a voz da equipe para testar.</p>
+      <p>Voz gerada por IA, incluída no jogo e disponível offline. Ative a voz da equipe para ouvir a amostra.</p>
       <label class="form-label">Câmera<select class="form-select" id="np-camera"><option value="chase" selected>Terceira pessoa</option><option value="overview">Visão da pista</option><option value="follow">Orbital</option></select></label>
       <div class="viz-controls"><button class="btn" id="np-rotate">Girar</button><button class="btn" id="np-zoom-in">+</button><button class="btn" id="np-zoom-out">−</button><button class="btn" id="np-camera-reset">Restaurar câmera</button><button class="btn" id="online-recover" disabled>Voltar à pista (R)</button></div>
-<p class="pit-help">Corridas de 5 voltas ou mais t?m desgaste dos pneus. Pressione <strong>B</strong> ou use ?Chamar boxes?: a equipe assume na pr?xima entrada e troca os pneus em 8 segundos.</p>
+<p class="pit-help">Confira o desgaste nas regras da sala. Pressione <strong>B</strong> ou use “Chamar boxes”: a equipe assume na próxima entrada e troca os pneus.</p>
       <p>WASD ou setas para dirigir. Q/E para trocar no manual. R reposiciona. Esc abre a sala.</p>
     </details>
 
-<div id="online-podium" hidden></div><section id="online-grid" hidden><h2 id="online-grid-title">Grid</h2><ol id="online-grid-rows"></ol></section>
-    <p id="online-reward" role="status"></p><p id="online-improvement" class="session-improvement" hidden></p>
-    <button class="btn" id="online-back" hidden>Voltar à pista</button>
+    </section>
+    </div>
   </dialog>
 <dialog id="race-intro" class="race-intro" aria-labelledby="race-intro-title"><div class="intro-circuit"><p id="race-intro-stage"></p><h2 id="race-intro-title"></h2><p>Online</p></div><aside id="intro-forecast" class="intro-forecast" hidden data-weather="dry" aria-labelledby="intro-forecast-title"><div class="intro-forecast-heading"><h3 id="intro-forecast-title">Previsão do tempo</h3><span>FIM DE SEMANA</span></div><section id="intro-forecast-qualifying" class="intro-forecast-session" data-current="false"><svg class="intro-weather-icon" viewBox="0 0 48 48" aria-hidden="true"><g class="forecast-sun"><circle cx="18" cy="17" r="7"/><path d="M18 4v3m0 20v3M5 17h3m20 0h3M9 8l2 2m14 14 2 2M9 26l2-2M25 10l2-2"/></g><path class="forecast-cloud" d="M13 33h23a7 7 0 0 0 0-14 10 10 0 0 0-19-2 8 8 0 0 0-4 16Z"/><path class="forecast-rain" d="m18 38-2 4m10-4-2 4m10-4-2 4"/></svg><div><div class="intro-forecast-label"><span>Classificação</span><small id="intro-forecast-qualifying-now" hidden>ESTA SESSÃO</small></div><strong id="intro-forecast-qualifying-condition">Tempo seco</strong><p id="intro-forecast-qualifying-detail">Tempo firme do início ao fim.</p></div></section><section id="intro-forecast-race" class="intro-forecast-session" data-current="false"><svg class="intro-weather-icon" viewBox="0 0 48 48" aria-hidden="true"><g class="forecast-sun"><circle cx="18" cy="17" r="7"/><path d="M18 4v3m0 20v3M5 17h3m20 0h3M9 8l2 2m14 14 2 2M9 26l2-2M25 10l2-2"/></g><path class="forecast-cloud" d="M13 33h23a7 7 0 0 0 0-14 10 10 0 0 0-19-2 8 8 0 0 0-4 16Z"/><path class="forecast-rain" d="m18 38-2 4m10-4-2 4m10-4-2 4"/></svg><div><div class="intro-forecast-label"><span>Corrida</span><small id="intro-forecast-race-now" hidden>ESTA SESSÃO</small></div><strong id="intro-forecast-race-condition">Tempo seco</strong><p id="intro-forecast-race-detail">Tempo firme do início ao fim.</p></div></section><p id="intro-forecast-tyres" class="intro-forecast-tyres">Largada: pneus de seco</p></aside><button class="btn" id="race-intro-skip">Pular</button></dialog></main></body></html>

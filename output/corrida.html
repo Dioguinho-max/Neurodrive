@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="pt-BR">
   <head>
-    <link rel="stylesheet" href="neurodrive-radio.css"><script src="neurodrive-radio-audio.js" defer></script><script src="neurodrive-radio.js" defer></script>
+    <link rel="stylesheet" href="neurodrive-radio.css"><script src="neurodrive-radio-clips.js" defer></script><script src="neurodrive-radio-audio.js" defer></script><script src="neurodrive-radio.js" defer></script>
     <link rel="icon" type="image/svg+xml" href="assets/neurodrive-favicon.svg">
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -34,6 +34,7 @@
 <script src="neurodrive-fullscreen.js" defer></script>
 <script src="neurodrive-mobile-pit.js" defer></script>
 
+<link rel="stylesheet" href="neurodrive-results.css"><script src="neurodrive-results.js" defer></script>
 </head>
   <body><div id="weather-rain" class="weather-rain" aria-hidden="true"></div>
     <main id="neuro-race">
@@ -220,7 +221,7 @@
         <label class="form-label">Volume do rádio<input id="radio-volume" type="range" min="0" max="100" value="45" aria-label="Volume do rádio"></label>
         <label class="form-label">Voz do rádio<select id="radio-speaker"></select></label>
         <button id="radio-test" type="button">Ouvir teste de voz</button>
-        <p>As vozes disponíveis dependem do dispositivo. Ative a voz da equipe para testar.</p>
+        <p>Voz gerada por IA, incluída no jogo e disponível offline. Ative a voz da equipe para ouvir a amostra.</p>
         <label class="form-label">Volume da música do menu <input id="menu-music-volume" type="range" min="0" max="100" value="20" aria-label="Volume da música do menu"></label>
         <label class="form-label">Volume <input id="race-volume" type="range" min="0" max="100" value="30" aria-label="Volume do jogo"></label>
         <span class="text-small" id="race-audio-status" role="status"></span>
@@ -330,6 +331,7 @@
         <button class="btn" id="race-reward-retry" hidden>Tentar resgatar recompensa</button>
         <div id="race-podium" class="race-podium"></div>
         <div id="race-results-table" class="race-timing-scroll">
+          <div class="results-table-toolbar"><span>Toque nos detalhes para ver todos os tempos</span><button class="btn" id="race-results-details" type="button" aria-expanded="false" aria-controls="race-results-rows">Mais detalhes</button></div>
           <table class="table race-timing">
             <thead><tr><th scope="col">Pos.</th><th scope="col">Piloto</th><th scope="col">Volta</th><th scope="col">Última volta</th><th scope="col">Melhor volta</th><th scope="col">Tempo total</th><th scope="col">Diferença</th><th scope="col">Estado</th></tr></thead>
             <tbody id="race-results-rows"></tbody>
@@ -337,6 +339,7 @@
         </div>
         <div id="championship-results" hidden></div>
         <div class="viz-controls race-results-actions">
+          <button class="btn" id="race-results-stay" type="button" hidden>Continuar vendo</button>
           <button class="btn btn-primary" id="championship-next" hidden>Próxima etapa</button>
           <button class="btn btn-primary" id="race-results-continue">Ver classificação completa</button>
           <button class="btn" id="race-results-close">Voltar à pista</button>

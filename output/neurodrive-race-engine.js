@@ -238,7 +238,8 @@
     // A normal stint consumes about 70%, preserving a margin for reaching pit entry.
     const plannedStops = laps < 5 ? 0 : laps < 10 ? 1 : 2 + Math.floor((laps - 10) / 10);
     const stintLaps = Math.ceil(laps / (plannedStops + 1));
-    const tyreWearRate = qualifying ? .06 : laps < 5 ? .08 : .70 / (stintLaps * 1.08);
+    const tyreWearRate = (qualifying ? .06 : laps < 5 ? .08 : .70 / (stintLaps * 1.08))
+      * ({ reduced:.6, normal:1, intense:1.5 }[options.tyreWear] || 1);
     const startDistance = 0;
     const checkpointLength = track.length / 12;
     const aiSpeed = ({ easy: 185, normal: 200, hard: 205 }[difficulty] || 200) / 54;
@@ -283,7 +284,7 @@
         gripUsage: 0, sliding: false, offRoad: false, bodyRoll: 0,
         progress: distance - startDistance, checkpoint: 0,
         finishTime: null, place: null, cooldown: 0, stalled: 0, wallContact: false, wallCooldown: 0,
-        tyreCompound: weatherMode === 'rain' ? 'wet' : 'dry', pitCompound: weatherMode === 'rain' ? 'wet' : 'dry', wetness, rainIntensity, weatherMode, tyreWearRate, tyreWearEnabled: !drift && (weatherMode !== 'dry' || !qualifying && laps >= 5), tyreLife: 1, tyreBurst: false, burstWheel: -1, tyreDistance: 0, pitRequested: false, pitState: null, pitTimer: 0, pitStops: 0,
+        tyreCompound: weatherMode === 'rain' ? 'wet' : 'dry', pitCompound: weatherMode === 'rain' ? 'wet' : 'dry', wetness, rainIntensity, weatherMode, tyreWearRate, tyreWearEnabled: !drift && (['reduced','normal','intense'].includes(options.tyreWear) || weatherMode !== 'dry' || !qualifying && laps >= 5), tyreLife: 1, tyreBurst: false, burstWheel: -1, tyreDistance: 0, pitRequested: false, pitState: null, pitTimer: 0, pitStops: 0,
         bestLap: null, lastLap: null, lastLapKind: '', checkpointTimes: [],
         lapStart: 0, completedLaps: 0, invalidLap: false,
         recordLapInvalid: false, recordLapStarted: false, recordLap: null,

@@ -111,7 +111,7 @@ new Function('window', read('neurodrive-audio.js'))(host);
   assert.equal(gains[0].gain.value, 0);
   const introStart = oscillators.length;
   await audio.playIntro('overview', 'dry');
-  assert(oscillators.slice(introStart).some(voice => voice.type === 'sawtooth'), 'Rhythmic bass and lead');
+  assert(oscillators.slice(introStart).every(voice => voice.type === 'sine'), 'Warm menu-style bass and arpeggio, without harsh sawtooth lead');
   assert(buffers.length > 1, 'Drum percussion is scheduled');
   const openingVoices = oscillators.length;
   assert(oscillators.slice(introStart).every(voice => voice.startedAt >= 1 && voice.startedAt < 3.4), 'First bar ends at camera cut');

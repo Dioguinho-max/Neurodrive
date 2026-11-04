@@ -22,6 +22,9 @@ server.listen(port, '0.0.0.0', () => {
   if (!addresses.length) console.log('Nenhuma rede encontrada. Conecte ao Wi-Fi ou cabo e reinicie.');
   console.log('\nCrie contas locais, abra Online e compartilhe o codigo da sala.');
   console.log('Ate 6 jogadores por sala. Deixe esta janela aberta durante as partidas.');
+  console.log(`Uma unica porta (${port}) atende todos os jogadores ao mesmo tempo.`);
+  console.log('Todos usam o MESMO endereco IP acima, cada um com sua propria conta.');
+  console.log('O hospedeiro ocupa uma das 6 vagas se tambem estiver jogando.');
   console.log(process.platform === 'win32' ? 'Se o Windows perguntar, permita o Node.js na rede privada.' : 'Se houver firewall bloqueando a porta 3000, solicite a liberacao ao responsavel pela rede.');
   console.log('Redes de convidados podem bloquear a comunicacao entre computadores.');
   console.log('\nContas e moedas ficam em server/data, nesta pasta.');

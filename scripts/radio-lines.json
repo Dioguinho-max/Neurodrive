@@ -1,0 +1,9 @@
+[
+  {"id":"preview","pt-BR":"Rádio funcionando. Boa corrida! Cuidado nas frenagens.","spoken-pt-BR":"Teste de rádio. Tudo pronto. Boa corrida!","en-US":"Radio check. Have a great race! Watch your braking."},
+  {"id":"puncture","pt-BR":"Pneu furado. Reduza e entre nos boxes.","spoken-pt-BR":"Pneu furado. Reduza e pare nos boxes.","en-US":"Puncture. Slow down and pit."},
+  {"id":"worn","pt-BR":"Pneus no limite. Planeje uma parada.","spoken-pt-BR":"Os pneus estão gastos. Prepare uma parada.","en-US":"Tires are worn. Plan a pit stop."},
+  {"id":"wet","pt-BR":"Pista molhada. Considere pneus de chuva.","spoken-pt-BR":"Há água na pista. Considere usar pneus de chuva.","en-US":"Wet track. Consider rain tires."},
+  {"id":"last-lap","pt-BR":"Última volta. Mantenha o ritmo!","spoken-pt-BR":"Última volta. Continue assim!","en-US":"Final lap. Keep up the pace!"},
+  {"id":"forecast","pt-BR":"Chuva prevista em breve. Prepare sua estratégia.","en-US":"Rain expected soon. Plan your strategy."},
+  {"id":"rain","pt-BR":"A chuva começou. Cuidado nas frenagens.","spoken-pt-BR":"Começou a chover. Tenha cuidado ao frear.","en-US":"The rain has started. Watch your braking."}
+]

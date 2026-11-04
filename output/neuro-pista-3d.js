@@ -305,6 +305,7 @@
     const sponsorTags = ['M O T O R S', 'E N E R G Y', 'R A C I N G', 'T I R E S'];
     const sponsorColors = ['#10273b', '#132c26', '#39182a', '#191e36'];
     const sponsorAccents = ['#6ed8ff', '#c7f567', '#ff678e', '#f3b65f'];
+    const sponsorImages = [];
     const signPostGeometry = new THREE.BoxGeometry(1, 10, 1);
     sponsorNames.forEach((name, index) => {
       const label = document.createElement('canvas');
@@ -342,6 +343,7 @@
       ctx.fillStyle = accent; ctx.font = 'bold 16px sans-serif'; ctx.fillText(sponsorTags[index], 141, 101);
       polygon([[468,0],[492,0],[456,128],[432,128]], accent);
       polygon([[500,0],[512,0],[476,128],[464,128]], '#ffffff');
+      sponsorImages.push(label);
       const texture = new THREE.CanvasTexture(label);
       texture.colorSpace = THREE.SRGBColorSpace; textures.push(texture);
       const face = new THREE.MeshBasicMaterial({ map: texture });
@@ -1277,7 +1279,7 @@
         if (!ceremony) {
           const distance = track.pit.garage(0).distance;
           const origin = circuitPoint(distance, -6);
-          const podium = window.createNeuroPodiumScene(THREE, ranking);
+          const podium = window.createNeuroPodiumScene(THREE, ranking, { sponsorImages });
           const terrain = Array.from({ length: 24 }, (_, i) => {
             const angle = i * Math.PI / 12;
             return track.heightAt(origin.x + Math.cos(angle) * 23, origin.y + Math.sin(angle) * 23);

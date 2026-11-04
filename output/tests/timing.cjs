@@ -11,7 +11,8 @@ for (const laps of [0, -1, 51, 2.5, NaN]) assert.equal(host.createNeuroRace(trac
 assert.equal(host.createNeuroRace(track, 'normal', { session: 'qualifying', laps: 50 }).laps, 3);
 for (const laps of [1, 5]) {
   const race = host.createNeuroRace(track, 'normal', { laps });
-  race.cars.forEach((car) => { car.player = false; });
+  // Keep solo completion rules while giving the automated player a full AI profile.
+  race.cars.forEach(car => { car.driver ||= { ...race.cars[1].driver }; car.player = false; });
   for (let tick = 0; tick < 25000 && race.phase !== 'finished'; tick++) race.step();
   const car = race.cars[0];
   assert.equal(race.phase, 'finished');

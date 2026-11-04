@@ -6,6 +6,16 @@ O NeuroDrive começou como um experimento de carros aprendendo a dirigir com red
 
 O projeto está em **beta**, com física de estilo arcade e melhorias contínuas de visual, pilotagem e multiplayer. Não é um simulador profissional de automobilismo.
 
+**Campeonato online:** três etapas na mesma sala, classificação acumulada por conta e anúncio do campeão. Entre corridas, os jogadores votam na próxima pista; o dono confirma uma das mais votadas. Funciona no servidor hospedado e no pendrive, com interface PT/EN e adaptação para celular. As regras e os limites de persistência estão em [Jogar no pendrive](JOGAR-NO-PENDRIVE.md#campeonato-e-votação). Atualize frontend e backend juntos; não exige migração de banco.
+
+**Salas personalizadas e destaques:** o dono configura clima, voltas, dificuldade da IA e intensidade do desgaste antes da classificação. Mudanças exigem nova confirmação de todos. Os resultados mostram melhor volta, posições ganhas e diferença para o vencedor; o campeonato detalha a pontuação por etapa. Disponível também no pendrive.
+
+O menu online segue a identidade do menu principal, com marca em duas linhas e navegação entre **Sala e disputa** e **Ajustes**. Idioma, áudio, gráficos e câmera ficam nos ajustes; as regras de campeonato e Copa Neuro aparecem conforme o modo escolhido. A apresentação usa ilustração vetorial leve e se adapta ao celular.
+
+Para executar a bateria de testes, use `npm test` (`npm.cmd test` no PowerShell). Consulte a [revisão de qualidade](REVISAO-QUALIDADE.md) para conhecer as correções verificadas e os limites dessa validação.
+
+As salas online mostram a preparação da pista, a confirmação e o ping de cada jogador. Ao terminar uma corrida e salvar suas recompensas, o dono pode repetir o circuito ou escolher outro sem trocar o código da sala. Todos confirmam novamente antes da próxima classificação. Esses recursos também funcionam no pacote local de pendrive; publique frontend e backend juntos para atualizar a versão hospedada.
+
 ## Recursos
 
 - **Easter egg:** uma surpresa foi adicionada ao jogo.
@@ -39,6 +49,8 @@ Ao iniciar uma sala online, todos disputam a classificação: uma volta de aquec
 A classificação não concede moedas. Na chegada, os modos solo e online exibem uma cerimônia de 12 segundos dentro do próprio autódromo: os três melhores carros chegam e estacionam junto ao pódio; a câmera se aproxima e mostra os pilotos levantando os troféus. Em seguida aparecem os resultados. A animação não altera tempos, posições ou recompensas. No online, a cerimônia espera o encerramento da prova (todos os humanos terminarem ou o limite de tempo); quem ainda estiver em pista é ordenado pelo progresso. Desconectados não participam do pódio.
 
 ## Jogar na rede local com pendrive
+
+Os resultados do solo mostram uma visão compacta dos tempos, com **Mais detalhes** para expandir os dados e **Continuar vendo** para cancelar o retorno automático ao menu. No celular, a tabela vira uma lista de pilotos, com rótulos nos tempos e ações acessíveis durante a rolagem. O painel do pódio usa os mesmos logotipos dos patrocinadores da pista.
 
 O online reaproveita os passos já calculados da previsão local do carro, serializa o estado comum uma vez por sala e evita acumular posições antigas em conexões congestionadas. O painel atualiza a 20 Hz, independentemente da renderização. Essas otimizações valem para o backend publicado e para o servidor do pendrive; não reduzem a latência física da rede.
 
@@ -81,7 +93,13 @@ O box do jogador também conta com dois chefes de equipe em estações de comput
 
 ### Desafio Drift
 
-Durante a classificação e a corrida, no solo e no online, o **rádio da equipe** traz avisos curtos sobre chuva prevista, início da chuva, pista molhada com pneus secos, pneus gastos ou furados e última volta. Cada aviso dura até 5,5 segundos, com intervalo entre mensagens e prioridade para furos. Fica oculto durante menus e apresentações e não aparece no Drift. Um toque suave precede a leitura por voz no idioma selecionado. Toque, voz e volume têm ajustes próprios salvos no navegador. A voz usa os recursos de fala disponíveis no dispositivo; sem suporte, os avisos escritos continuam funcionando. Abrir menus, ocultar a aba ou encerrar a sessão interrompe a fala.
+Durante a classificação e a corrida, no solo e no online, o **rádio da equipe** traz avisos curtos sobre chuva prevista, início da chuva, pista molhada com pneus secos, pneus gastos ou furados e última volta. Cada aviso dura até 5,5 segundos, com intervalo entre mensagens e prioridade para furos. Fica oculto durante menus e apresentações e não aparece no Drift. Um toque suave precede a fala no idioma selecionado. Toque, voz e volume têm ajustes próprios salvos no navegador. Abrir menus, ocultar a aba ou encerrar a sessão interrompe a fala.
+
+**Equipe Neuro · Cadu (IA offline)** é a voz padrão em português, com **Faber** como alternativa. Há sete falas por voz e sete em inglês, geradas previamente com Piper e distribuídas como WAV mono (aproximadamente 2,57 MiB no total). As falas em português usam frases curtas e pausas; os avisos de chuva e última volta dizem “Há água na pista” e “Continue assim”. Não depende de API, internet ou geração de IA durante a partida. O motor reduz suavemente o volume durante a fala e retorna ao normal ao terminar. As vozes do sistema continuam como alternativa explícita; se um áudio neural falhar, o aviso escrito permanece sem trocar automaticamente para a voz do sistema. Compare as opções em **Ajustes → Voz do rádio → Ouvir teste de voz**. A reprodução pode exigir uma interação inicial com a página.
+
+Créditos e fontes dos modelos: [assets/radio/CREDITS.md](output/assets/radio/CREDITS.md). Os textos estão em [scripts/radio-lines.json](scripts/radio-lines.json). Para gerar novamente, instale `piper-tts==1.8.0` em um ambiente Python separado, execute `python -m piper.download_voices --download-dir .portable-cache/voice-models pt_BR-cadu-medium pt_BR-faber-medium en_US-libritts_r-medium` e depois `python scripts/generate-radio-voices.py`. O ambiente e os modelos não fazem parte do pacote do jogo.
+
+A apresentação de pista e clima usa o estilo eletrônico da música da garagem, com 108 BPM, baixo suave e arpejos em seno. Pular a apresentação cancela as notas agendadas no solo e online.
 
 O menu usa uma apresentação de garagem com carro equipado em destaque, navegação numerada e atalhos para multiplayer e Copa Neuro. **♫ Música da garagem** controla uma trilha eletrônica original, gerada uma vez no navegador. Ela para ao fechar o menu ou ocultar a aba; o volume independente fica em **Ajustes** e é salvo neste dispositivo. A música vem ligada por padrão e começa na primeira interação com o jogo. Desligá-la pelo botão salva essa preferência no navegador.
 
@@ -248,3 +266,11 @@ O NeuroDrive é um projeto experimental para aprender, construir e se divertir c
 ## Licença
 
 A licença MIT do Three.js está preservada em [output/vendor/THREE-LICENSE.txt](output/vendor/THREE-LICENSE.txt). Ela se aplica à biblioteca. Uma licença própria para o código do NeuroDrive ainda não foi definida neste repositório.
+
+### Convites e acompanhamento online
+
+- Convide por link ou QR Code gerado offline. O link preenche a sala; no pendrive, utiliza o IP da rede em vez de localhost.
+- Avisos durante a prova distinguem ping alto, falta de atualiza??es e FPS baixo persistente.
+- Depois de terminar, acompanhe os pilotos ainda na pista pelas setas do painel ou pelas teclas `[` e `]`, com instrumentos do carro acompanhado.
+
+O gerador de QR Code usa [qrcode-generator, de Kazuhiko Arase](https://github.com/kazuhikoarase/qrcode-generator), inclu?do em `output/vendor/qrcode.js`, sob licen?a MIT (`output/vendor/QRCODE-LICENSE.txt`).

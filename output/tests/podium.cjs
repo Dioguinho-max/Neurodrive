@@ -32,3 +32,19 @@ assert(camera.position.distanceTo(openingCamera) > 20, 'Camera aproxima o podio'
 assert.equal(JSON.stringify(race.cars), before, 'Animacao nao altera a corrida');
 renderer.setCeremony(null); assert(!scene.children.some(item => item.userData.mapPodium));
 renderer.dispose(); console.log('OK: carros estacionam no mapa, camera aproxima, pilotos erguem trofeus e resultados ficam intactos.');
+
+// The podium atlas must use all four track logos, with no repeated painting on animation frames.
+const painted = [];
+const ctx = { fillRect() {}, fillText() {}, drawImage(...args) { painted.push(args); } };
+const logos = Array.from({ length: 4 }, (_, id) => ({ id, width: 512, height: 128 }));
+const branded = {};
+new Function('window', 'document', fs.readFileSync(path.join(__dirname, '../neurodrive-podium.js'), 'utf8'))(
+  branded, { createElement: () => ({ getContext: () => ctx }) });
+const brandedPodium = branded.createNeuroPodiumScene(THREE, ranking, { sponsorImages: logos });
+assert.equal(painted.length, 20);
+assert.equal(new Set(painted.map(args => args[0])).size, 4);
+assert(painted.every(args => args[3] / args[4] === 4), 'Logos preserve their proportions');
+brandedPodium.update(7); brandedPodium.update(10);
+assert.equal(painted.length, 20, 'No repainting logos during animation');
+brandedPodium.dispose();
+console.log('OK: podium reuses four sponsor logos in one static atlas.');

@@ -1,6 +1,6 @@
 /* Pódio montado no mesmo cenário e renderizador do autódromo. */
 (() => {
-  window.createNeuroPodiumScene = (THREE, ranking) => {
+  window.createNeuroPodiumScene = (THREE, ranking, { sponsorImages = [] } = {}) => {
     const scene = new THREE.Object3D(), pilots = [], textures = [];
     scene.userData.mapPodium = true;
     const top = ranking.filter(car => !car.disconnected).slice(0, 3);
@@ -36,8 +36,14 @@
             ctx.fillStyle = '#55e4bd'; ctx.font = 'bold 25px sans-serif'; ctx.fillText('CELEBRAÇÃO DOS CAMPEÕES', 512, 158);
             for (let row = 0; row < 4; row++) for (let col = 0; col < 5; col++) {
               ctx.fillStyle = (col + row) % 2 ? '#183449' : '#112b3d'; ctx.fillRect(col * 205 + 4, 190 + row * 78, 197, 70);
-              ctx.fillStyle = '#a4bccb'; ctx.font = 'bold 21px sans-serif';
-              ctx.fillText(['NEURO', 'PULSO', 'APEX'][((row + col) % 3)], col * 205 + 102, 234 + row * 78);
+              const logo = sponsorImages[(row + col) % sponsorImages.length];
+              if (logo) {
+                // Reuse the track artwork without stretching its 4:1 aspect ratio.
+                ctx.drawImage(logo, col * 205 + 10, 202 + row * 78, 185, 46.25);
+              } else {
+                ctx.fillStyle = '#a4bccb'; ctx.font = 'bold 21px sans-serif';
+                ctx.fillText(['APEX', 'NOVA', 'PULSO', 'VERTEX'][(row + col) % 4], col * 205 + 102, 234 + row * 78);
+              }
             }
           });
           mesh(new THREE.PlaneGeometry(22.9, 9.9), banner, scene, 0, 5, -4.41);

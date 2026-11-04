@@ -81,29 +81,30 @@
       engineGain.gain.setTargetAtTime(0, now, .03);
       rainGain?.gain.setTargetAtTime(0, now, .03);
       master.gain.setTargetAtTime(volume, now, .03);
-      // 100 BPM: the 2.4-second camera cut lands on the next four-beat bar.
-      // A driving bass riff, backbeat and short lead replace the floating chimes.
+      // Same 108 BPM, minor arpeggio and warm bass palette as the garage menu.
+      // Each camera shot receives a short phrase; skip still cancels every voice.
       const bars = shot === 'overview' ? 1 : 2;
-      const melody = [329.63, 329.63, 392, 440, 493.88, 440, 392, 293.66];
+      const beat = 60 / 108, melody = [0,7,12,7,3,7,10,7];
       for (let bar = 0; bar < bars; bar++) {
-        const offset = bar * 2.4;
-        const root = shot === 'forecast' && bar === 0 ? 65.41 : 82.41;
+        const offset = bar * beat * 4;
+        const root = shot === 'overview' ? 55 : [43.65,49][bar];
         for (let step = 0; step < 8; step++) {
-          const at = offset + step * .3;
-          introNote(root * (step === 6 ? 1.5 : 1), at, .24, .065, 'sawtooth');
+          const at = offset + step * beat / 2;
+          if (step % 2 === 0 || step === 7) introNote(root, at, beat*.65, .09, 'sine');
           introDrum('hat', at);
-          if (step % 4 === 0) introDrum('kick', at);
+          if (step === 0 || step === 4 || step === 6) introDrum('kick', at);
           if (step % 4 === 2) introDrum('snare', at);
-          introNote(melody[step], at, step === 7 ? .27 : .20, .032, 'sawtooth');
+          const note = root * 4 * 2 ** (melody[(step+bar)%8]/12);
+          introNote(note, at, beat*.9, .035, 'sine');
+          introNote(note*2, at, beat*.7, .007, 'sine');
         }
-        // Short power-chord accents on the downbeats.
-        for (const beat of [0, 1.2]) for (const ratio of [2, 3]) {
-          introNote(root * ratio, offset + beat, .45, .018, 'triangle');
+        for (const interval of [0,3,7]) {
+          introNote(root*2*2**(interval/12), offset, beat*3.8, .014, 'sine');
         }
       }
       if (shot === 'forecast') {
-        introDrum('kick', 4.8);
-        [164.81, 246.94, 329.63].forEach(note => introNote(note, 4.8, .6, .025, 'triangle'));
+        introDrum('kick', beat*8);
+        [110,130.81,164.81].forEach(note => introNote(note, beat*8, .55, .018, 'sine'));
       }
     }
 
@@ -217,7 +218,7 @@
         return;
       }
       const now = context.currentTime;
-      master.gain.setTargetAtTime(volume, now, 0.02);
+      master.gain.setTargetAtTime(volume * (window.NeuroRadioSpeaking ? .72 : 1), now, 0.08);
       updateRain(car, now);
       const combustionFrequency = car.rpm / 60 * 2;
       low.frequency.setTargetAtTime(car.rpm / 60, now, 0.035);

@@ -1,0 +1,67 @@
+/* Shared visual language with the main menu, without an extra 3D renderer. */
+.online-invite-content { display:grid;grid-template-columns:168px minmax(0,1fr);gap:20px;align-items:center; }
+#online-invite-qr svg { display:block;width:168px;height:168px;background:#fff; }
+#online-invite-link { box-sizing:border-box;width:100%;min-width:0;font-size:13px; }
+#online-health { position:absolute;top:76px;left:50%;transform:translateX(-50%);z-index:4;padding:8px 14px;border:1px solid #d9b56566;border-radius:8px;background:#18252deb;color:#ffe1a3;font-size:13px;max-width:55%;text-align:center;pointer-events:none; }
+#online-spectator { position:absolute;bottom:24px;left:50%;transform:translateX(-50%);z-index:5;max-width:70%;padding:12px 20px;background:#10202bef;border:1px solid #98f1be66;border-radius:12px;text-align:center;color:#ecfff5; }
+#online-spectator-name { display:block;overflow-wrap:anywhere;font-weight:700;margin-bottom:8px; }
+#online-spectator .btn { min-width:56px;min-height:44px;margin:0 5px; }
+body:has(#online-spectator:not([hidden])) .race-touch { display:none; }
+@media(max-width:600px) { .online-invite-content { grid-template-columns:1fr; } #online-invite-qr { justify-self:center; } #online-spectator { bottom:12px;padding:10px;max-width:58%; } #online-health { top:60px;font-size:11px; } }
+#online-lobby { box-sizing:border-box; padding:32px max(24px,calc((100vw - 1440px)/2)); background:radial-gradient(ellipse at 12% 12%,#1c43384a,transparent 55%),#080f19; color:#edf6f6; }
+#online-lobby[open] { display:grid; grid-template-columns:minmax(240px,.65fr) minmax(0,1.35fr); gap:clamp(28px,5vw,72px); align-items:start; }
+#online-lobby [hidden] { display:none!important; }
+.online-menu-hero { position:sticky; top:0; min-width:0; padding-top:16px; }
+#online-lobby .online-brand { font-size:clamp(52px,5.5vw,82px); font-weight:950; font-style:italic; line-height:.9; letter-spacing:-.06em; margin:28px 0; }
+#online-lobby .online-brand span { display:block; margin-top:6px; color:#98f1be; }
+.online-kicker { font-size:12px; color:#9dbab7; letter-spacing:.16em; }
+.online-hero-art { position:relative; border:1px solid #87b7ae30; border-radius:14px; overflow:hidden; background:radial-gradient(ellipse at 40% 60%,#285148,#101c29 80%); }
+.online-hero-art svg { display:block; width:100%; }
+.online-hero-art svg>path { fill:none; stroke:#101e28; stroke-width:75; }
+.online-hero-art g rect { fill:#98f1be; stroke:#d9fff0; stroke-width:2; }
+.online-hero-art g+g rect { fill:#eacb83; stroke:#fff2bf; }
+.online-hero-art g path { fill:#16303a; }
+.online-hero-art>span { position:absolute; bottom:16px; left:18px; font-size:12px; letter-spacing:.2em; color:#aac9c3; }
+.online-hero-caption { color:#aac1c7; font-size:17px; margin:18px 0; }
+#online-lobby .online-home-link { display:inline-flex; align-items:center; margin-bottom:16px; border-color:#749b9144; }
+.online-menu-content { min-width:0; }
+.online-menu-tabs { display:grid; grid-template-columns:1fr 1fr; gap:6px; border-top:2px solid #98f1be; padding:12px 0; border-bottom:1px solid #ffffff20; margin-bottom:28px; }
+#online-lobby .online-menu-tabs .btn { display:grid; gap:6px; padding:14px; border:0; background:#ffffff03; text-transform:uppercase; font-size:13px; font-weight:800; }
+.online-menu-tabs small { font-size:11px; opacity:.6; letter-spacing:.15em; }
+#online-lobby .online-menu-tabs [aria-pressed="true"] { background:#98f1be; color:#092018; }
+#online-lobby h1 { font-size:clamp(28px,3.2vw,44px); margin:12px 0 24px; letter-spacing:-.035em; }
+#online-lobby h2 { font-size:28px; letter-spacing:-.025em; }
+#online-lobby .btn { min-height:46px; padding:12px 18px; border-radius:6px; cursor:pointer; }
+#online-lobby .btn:focus-visible, #online-lobby summary:focus-visible { outline:2px solid #a2f4ce; outline-offset:4px; }
+#online-lobby .btn:disabled { opacity:.45; cursor:not-allowed; }
+#online-lobby .online-vote-grid .btn { min-height:110px; padding-top:70px; }
+#online-lobby .form-label { display:grid; gap:8px; font-size:15px; min-width:0; margin:14px 0; }
+#online-lobby .form-select { width:100%; box-sizing:border-box; min-width:0; padding:10px; background:#132330; border:1px solid #506779; border-radius:7px; }
+#online-message { background:#19313b; border-left:3px solid #98f1be; padding:14px 16px; line-height:1.6; font-size:14px; }
+#online-connection { color:#91a9b8; font-size:13px; }
+#online-connect, #online-create, #online-back { width:100%; background:#98f1be; color:#10271d; font-weight:800; }
+#online-options { border:1px solid #799c9c33; background:#10202b; padding:22px; border-radius:14px; }
+#online-options>.viz-controls { display:grid; grid-template-columns:1fr 1fr; align-items:end; }
+#online-create { grid-column:1/-1; }
+#online-join { padding-top:20px; border-top:1px solid #ffffff20; margin-top:24px; }
+#online-join .form-label { flex:1; }
+#online-code { box-sizing:border-box; width:100%; letter-spacing:.16em; text-transform:uppercase; }
+#online-room { padding:20px; margin:24px 0; border:1px solid #759c9238; background:#10202b; border-radius:14px; }
+#online-players { grid-template-columns:1fr; }
+#online-room-code { overflow-wrap:anywhere; }
+#online-lobby details { background:#ffffff03; border:1px solid #ffffff15; padding:16px; margin:18px 0; }
+#online-lobby details p { color:#a9bdc9; line-height:1.65; font-size:14px; }
+#online-preferences .form-check { display:flex; align-items:center; gap:10px; margin:16px 0; font-size:15px; }
+#online-preferences input[type="range"] { width:100%; accent-color:#98f1be; }
+#online-lobby .language-settings { margin:24px 0; }
+@media(max-width:850px) {
+ #online-lobby[open] { display:block; padding:20px 16px; }
+ .online-menu-hero { position:static; display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:16px; padding:0; }
+ #online-lobby .online-brand { font-size:36px; margin:0; }
+ .online-menu-hero>.online-kicker,.online-hero-art,.online-hero-caption,.online-menu-hero>.beta-notice { display:none; }
+ #online-lobby .online-home-link { margin:0; font-size:12px; }
+ .online-menu-tabs { margin:24px 0; }
+ #online-room,#online-options { padding:14px; }
+}
+@media(max-width:420px) { #online-options>.viz-controls { grid-template-columns:1fr; } #online-join { display:grid; grid-template-columns:1fr; } }
+@media(max-width:600px) { #online-lobby .online-vote-grid .btn { min-height:72px; padding:12px 12px 12px 45%; } }
