@@ -2,6 +2,7 @@
 (() => {
   const cache = new Map();
   const descriptions = {
+    urbano: ['Experimental', 'Circuito urbano com túnel, curvas fechadas e uma reta longa. Sem ranking ou moedas durante o teste.'],
     serra: ['Intermediário', 'Curvas variadas e mudanças de relevo.'],
     veloz: ['Acessível', 'Retas longas e curvas abertas de alta velocidade.'],
     tecnico: ['Exigente', 'Sequências fechadas que exigem precisão.'],

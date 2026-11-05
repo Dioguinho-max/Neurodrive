@@ -99,6 +99,8 @@
       lastScope = scope; lastDirection = state.direction; previous = state;
     }
     requestAnimationFrame(tick);
-    return { input: () => input };
+    return { input: () => input, pad: () => {
+      try{return activeIndex===null?null:navigator.getGamepads?.()[activeIndex];}catch{return null;}
+    } };
   };
 })();

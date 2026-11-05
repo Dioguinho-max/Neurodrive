@@ -9,6 +9,20 @@
     let introActive = false, introToken = 0;
     const introVoices = new Set();
     let introNoise;
+    let passNoise;
+    const passVoices=new Set();
+    function playPass(side, strength) {
+      if(!enabled||!context||context.state!=='running'||introActive||passVoices.size>=2)return;
+      if(!passNoise){passNoise=context.createBuffer(1,Math.floor(context.sampleRate*.28),context.sampleRate);const data=passNoise.getChannelData(0);for(let i=0;i<data.length;i++)data[i]=Math.random()*2-1;}
+      const source=context.createBufferSource(),gain=context.createGain(),band=context.createBiquadFilter(),pan=context.createStereoPanner?.();
+      source.buffer=passNoise;band.type='bandpass';band.frequency.value=650;band.Q.value=.6;
+      const now=context.currentTime;
+      gain.gain.setValueAtTime(0,now);gain.gain.linearRampToValueAtTime(.018+Math.max(0,Math.min(1,strength))*.018,now+.07);gain.gain.exponentialRampToValueAtTime(.0001,now+.26);
+      source.connect(band);band.connect(gain);
+      if(pan){pan.pan.value=Math.max(-.8,Math.min(.8,side*.8));gain.connect(pan);pan.connect(master);}else gain.connect(master);
+      passVoices.add(source);source.onended=()=>{passVoices.delete(source);source.disconnect();band.disconnect();gain.disconnect();pan?.disconnect();};
+      source.start();source.stop(now+.28);
+    }
 
     function stopIntro() {
       introActive = false; introToken++;
@@ -153,6 +167,7 @@
 
     function silence() {
       stopIntro();
+      for(const source of passVoices){try{source.stop();}catch{}}passVoices.clear();
       if (!context) return;
       const now = context.currentTime;
       engineGain.gain.cancelScheduledValues(now);
@@ -237,7 +252,7 @@
     }
 
     return {
-      unlock, update, silence, playIntro, stopIntro,
+      unlock, update, silence, playIntro, stopIntro, playPass,
       setEnabled(value) { enabled = Boolean(value); if (!enabled) silence(); },
       setVolume(value) { volume = Math.max(0, Math.min(1, Number(value) || 0)); },
       dispose() {

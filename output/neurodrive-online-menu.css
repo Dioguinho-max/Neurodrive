@@ -65,3 +65,12 @@ body:has(#online-spectator:not([hidden])) .race-touch { display:none; }
 }
 @media(max-width:420px) { #online-options>.viz-controls { grid-template-columns:1fr; } #online-join { display:grid; grid-template-columns:1fr; } }
 @media(max-width:600px) { #online-lobby .online-vote-grid .btn { min-height:72px; padding:12px 12px 12px 45%; } }
+
+#online-challenge-hud { position:absolute;z-index:3;top:90px;left:50%;transform:translateX(-50%);padding:10px 18px;max-width:40%;background:#102630b8;border:1px solid #9fe8cc55;border-radius:10px;text-align:center;pointer-events:none;color:#effff8; }
+#online-challenge-hud span { display:block;font-size:12px; }
+#online-challenge-hud strong { display:block;font-size:20px;margin-top:4px; }
+#online-challenge-hud[hidden] { display:none; }
+#online-session-scores li { padding:10px;border-bottom:1px solid #8bb9ac30;overflow-wrap:anywhere; }
+@media(max-width:900px),(pointer:coarse) { #online-challenge-hud { top:58px;padding:6px 10px;max-width:32%; } #online-challenge-hud strong { font-size:14px; } #online-challenge-hud span { font-size:10px; } }
+
+#neuro-race[data-timed-challenge="true"] .drive-session>span:nth-child(2) { display:none; }

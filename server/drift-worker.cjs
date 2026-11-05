@@ -4,9 +4,9 @@ const path = require('node:path');
 const engine = {};
 for (const file of ['neuro-pista-track.js', 'neurodrive-race-engine.js']) new Function('window', fs.readFileSync(path.join(__dirname, '../output', file), 'utf8'))(engine);
 try {
-  const { track, setup, frames } = workerData;
+  const { track, setup, frames, vehicle } = workerData;
   if (!Array.isArray(frames) || frames.length < 7200 || frames.length > 7450) throw Error('frames');
-  const race = engine.createNeuroRace(engine.createNeuroTrack(track), 'normal', { mode: 'drift', driftSetup: setup });
+  const race = engine.createNeuroRace(engine.createNeuroTrack(track), 'normal', { mode: 'drift', driftSetup: setup, vehicle });
   for (const frame of frames) {
     if (race.phase === 'finished' || !Array.isArray(frame) || frame.length !== 5
       || !frame.every(Number.isFinite) || Math.abs(frame[0]) > 1 || frame[1] < 0 || frame[1] > 1

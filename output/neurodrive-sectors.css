@@ -1,0 +1,5 @@
+.sector-hud{position:absolute;right:18px;top:84px;z-index:7;width:230px;pointer-events:none;padding:10px 12px;border:1px solid #a2f5d344;border-radius:10px;background:#0c1b26bc;color:#e8f3f8;font-variant-numeric:tabular-nums;box-sizing:border-box}
+.sector-hud[hidden]{display:none}.sector-hud>strong{display:block;font-size:11px;font-weight:500;letter-spacing:.04em;color:#bdd0db}.sector-hud>span{display:block;font-size:21px;font-weight:750;margin:3px 0 7px}.sector-splits{display:flex;gap:5px}.sector-splits span{flex:1;text-align:center;font-size:11px;border-bottom:3px solid #63737b;padding:4px 0;background:#ffffff08;border-radius:3px}
+.sector-hud .green{color:#9bf3c9;border-color:#9bf3c9}.sector-hud .red{color:#ff9d9d;border-color:#ff9d9d}.sector-hud .purple{color:#dbadff;border-color:#cb87ff}
+@media(pointer:coarse),(max-width:900px){.sector-hud{right:auto;left:50%;transform:translateX(-50%);top:72px;width:186px;padding:6px 8px}.sector-hud>strong{font-size:10px}.sector-hud>span{font-size:16px;margin:2px 0 3px}.sector-splits span{font-size:10px;padding:2px 0}}
+@media(max-width:540px) and (orientation:portrait){.sector-hud{top:162px}}

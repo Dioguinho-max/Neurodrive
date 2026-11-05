@@ -43,14 +43,16 @@ async function advance(n) { for(let i=0;i<n;i++){tick();if(i%15===0)await pause(
     const configured=await a.next(m=>m.type==='lobby'&&m.reset);
     assert(configured.players.every(p=>!p.ready));assert.equal(configured.rules.difficulty,'hard');
     for(let round=1;round<=3;round++){
-      a.send({type:'ready',ready:true});b.send({type:'ready',ready:true});
+      a.send({type:'ready',ready:true,vehicle:'agile'});b.send({type:'ready',ready:true,vehicle:'power'});
       await a.next(m=>m.type==='lobby'&&m.players.every(p=>p.ready));a.send({type:'start'});
       await a.next(m=>m.type==='state'&&m.stage==='qualifying');
+      assert.equal(current.cars[0].vehicle,'agile');assert.equal(current.cars[1].vehicle,'power');
       assert.equal(current.cars[2].aiPower,1.4);assert.equal(current.cars[0].tyreWearRate,.06*1.5);
       a.send(settings);assert.match((await a.next(m=>m.type==='error')).message,/antes/);
       a.send({type:'vote',track:'veloz'});assert.match((await a.next(m=>m.type==='error')).message,/votação/);
       current.cars.forEach((car,i)=>{car.bestLap=i===1?40:50+i;});
       current.endQualifying();await advance(603);await a.next(m=>m.stage==='race');
+      assert.equal(current.cars[0].vehicle,'agile');assert.equal(current.cars[1].vehicle,'power');
       assert.equal(current.laps,5);assert.equal(current.cars[0].weatherMode,'rain');
       await advance(185);
       current.cars.forEach((car,i)=>Object.assign(car,{done:true,finishTime:100+i,place:i+1,bestLap:35+i}));

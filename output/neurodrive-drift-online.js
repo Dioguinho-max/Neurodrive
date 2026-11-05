@@ -10,7 +10,7 @@
     board: track => request(`board?track=${encodeURIComponent(track)}`),
     start(race, track, setup) {
       let frames = [], recover = false;
-      const ready = request('start', { track, setup }).catch(error => ({ error: error.message }));
+      const ready = request('start', { track, setup, vehicle:race.cars[0].vehicle || 'balanced' }).catch(error => ({ error: error.message }));
       const originalStep = race.step, originalRecover = race.recoverPlayer;
       race.recoverPlayer = () => { recover = true; };
       race.step = input => {

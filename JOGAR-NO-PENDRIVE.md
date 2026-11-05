@@ -105,3 +105,9 @@ npm.cmd run build:portable:linux
 Esse comando baixa o arquivo oficial do Node Linux da mesma versão do Node usado no gerador e verifica o SHA-256 com o manifesto oficial antes de extrair o executável e a licença. Requer internet na geração, não durante o jogo.
 
 O gerador inclui o executável Node usado para rodar esse comando, os arquivos do jogo e `ws` com sua licença. A primeira geração consulta a licença oficial da versão do Node na internet. Não copia `.env`, credenciais, banco do desenvolvedor nem arquivos de Git. Uma nova geração preserva as contas já existentes na pasta do pacote.
+
+## Desafios rápidos na mesma rede
+
+Ao criar a sala, escolha **Corrida curta**, **Melhor volta** ou **Duelo de Drift**. Todos entram pelo mesmo endereço do hospedeiro, selecionam seus carros e confirmam **Pronto**. Melhor volta e Drift duram dois minutos e não têm colisão entre os jogadores. Os desafios não concedem moedas; o placar da sessão acumula pontos nas revanches e permanece enquanto a sala existir.
+
+O Drift aceita Espaço, A / ✕ no controle ou o botão de freio de mão no celular. Câmera, som de passagem e vibração opcional ficam em **Ajustes → Sensação de pilotagem**. Reinicie o servidor do pendrive e recarregue as páginas dos amigos depois de atualizar os arquivos.

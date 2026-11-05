@@ -20,9 +20,33 @@
 
   // Transmissão automática simplificada: faixas de velocidade e força por marcha.
   const MAX_RACE_SPEED = 205 / 54;
+  const vehicles = Object.freeze({
+    balanced: Object.freeze({ name:'Equilibrado', speed:205, power:1, grip:1, brake:1, rear:1 }),
+    agile: Object.freeze({ name:'Ágil', speed:195, power:1.07, grip:1.10, brake:1.06, rear:1.08 }),
+    power: Object.freeze({ name:'Velocista', speed:215, power:.97, grip:.94, brake:.97, rear:1 }),
+    drift: Object.freeze({ name:'Drift', speed:200, power:1.03, grip:.96, brake:1, rear:.82 }),
+  });
+  const vehicleId = value => Object.hasOwn(vehicles, value) ? value : 'balanced';
+  const vehicle = car => vehicles[vehicleId(car.vehicle)];
+  window.NeuroVehicles = vehicles;
+  window.neuroVehicleId = vehicleId;
+  // Pure geometry, evaluated before moving any car: no grid-order advantage.
+  window.neuroDraftTarget = (car, cars) => {
+    if (car.done || car.disconnected || car.pitExit || car.pitState || car.cooldown || car.offRoad || car.driftMode || car.speed < 80/54) return 0;
+    let best=0;
+    const cos=Math.cos(car.angle), sin=Math.sin(car.angle);
+    for(const other of cars) {
+      if(other===car || other.done || other.disconnected || other.pitExit || other.pitState || other.cooldown || other.offRoad || other.speed<80/54 || Math.abs(wrap(other.angle-car.angle))>.22) continue;
+      const dx=other.x-car.x, dy=other.y-car.y, ahead=dx*cos+dy*sin, side=Math.abs(-dx*sin+dy*cos);
+      if(ahead<20 || ahead>150) continue;
+      const width=10+ahead*.035;
+      best=Math.max(best,clamp((150-ahead)/90,0,1)*clamp((ahead-20)/15,0,1)*clamp(1-side/width,0,1));
+    }
+    return best;
+  };
   const gearLimits = [34, 66, 102, 140, 173, 205];
   const gearForce = [0.010, 0.009, 0.008, 0.006, 0.0045, 0.0041];
-  const REV_LIMIT = 6800;
+  const REV_LIMIT = 8000;
   const drivers = [
     { name: 'Luna Costa', style: 'Técnica', pace: 0.98, corner: 1.02, gap: 1, color: '#e45d89' },
     { name: 'Rafa Torres', style: 'Ousado', pace: 1.02, corner: 1.06, gap: 0.94, color: '#f0a43c' },
@@ -32,6 +56,10 @@
     { name: 'Dani Reis', style: 'Equilibrado', pace: 1, corner: 1, gap: 1.04, color: '#5aba89' },
   ];
   function updatePowertrain(car, pedal, maximumSpeed, allowReverse) {
+    const spec=vehicle(car);
+    car.slipstream=clamp((car.slipstream||0)+clamp((car.draftTarget||0)-(car.slipstream||0),-.06,.025),0,1);
+    const ratio=spec.speed/205;
+    maximumSpeed=maximumSpeed*ratio + (car.driftMode ? 0 : car.slipstream*6/54);
     if (car.player && !car.manual && car.gear !== 0) {
       car.reverseHold = allowReverse && pedal < -.5 && car.speed < .02 ? (car.reverseHold || 0) + 1 : 0;
       if (car.reverseHold >= 30) { car.gear = 0; car.brake = 0; }
@@ -48,7 +76,7 @@
       return;
     }
     const kmh = car.speed * 54;
-    const coupledRpm = 900 + kmh / gearLimits[car.gear - 1] * 5900;
+    const coupledRpm = 900 + kmh / (gearLimits[car.gear - 1]*ratio) * (REV_LIMIT - 900);
     car.throttle = Math.max(0, pedal);
     car.limiter = pedal > 0 && coupledRpm >= REV_LIMIT - 20;
     car.cutTicks = car.limiter ? car.cutTicks + 1 : 0;
@@ -58,18 +86,18 @@
       car.shiftTicks = 14;
       car.limiter = false;
       car.cutTicks = 0;
-    } else if (!car.manual && car.gear > 1 && kmh < gearLimits[car.gear - 2] * 0.78) {
+    } else if (!car.manual && car.gear > 1 && kmh < gearLimits[car.gear - 2] * ratio * 0.78) {
       car.gear--;
       car.shiftTicks = 10;
     }
-    const drag = 0.0015 + 0.0006 * (car.speed / 3.2) ** 2;
+    const drag = 0.0015 + 0.0006 * (car.speed / 3.2) ** 2 * (1-.65*car.slipstream);
     car.brake += clamp(Math.max(0, -pedal) - car.brake, -0.08, 0.045);
     const traction = weatherGripFactor(car);
-    const force = car.brake > 0 ? -car.brake * 0.026 * traction
-      : car.shiftTicks || (car.manual && car.limiter) ? 0 : pedal * gearForce[car.gear - 1] * Math.sqrt(traction)
+    const force = car.brake > 0 ? -car.brake * 0.026 * traction * spec.brake
+      : car.shiftTicks || (car.manual && car.limiter) ? 0 : pedal * gearForce[car.gear - 1] * Math.sqrt(traction) * spec.power
         * (car.player ? 1 : 1 + ((car.aiPower || 1) - 1) * (1 - .8 * clamp(car.wetness || 0, 0, 1)));
     car.speed = clamp(car.speed + force - drag, 0, maximumSpeed);
-    const targetRpm = clamp(900 + car.speed * 54 / gearLimits[car.gear - 1] * 5900, 900, REV_LIMIT);
+    const targetRpm = clamp(900 + car.speed * 54 / (gearLimits[car.gear - 1]*ratio) * (REV_LIMIT - 900), 900, REV_LIMIT);
     // Embreagem acopla gradualmente após a largada, sem trocar marchas parado.
     if (car.launchTicks > 0) { car.launchTicks--; car.rpm += (targetRpm - car.rpm) * 0.16; }
     else car.rpm = targetRpm;
@@ -99,7 +127,7 @@
     const lateralDemand = Math.abs(requestedYaw * car.speed) * 900;
     // Margem arcade no asfalto: curvas suaves e médias são mais tolerantes.
     const tyreGrip = tyreGripFactor(car);
-    const grip = (car.offRoad ? 1.55 : 2.6) * 9.81 * tyreGrip;
+    const grip = (car.offRoad ? 1.55 : 2.6) * 9.81 * tyreGrip * vehicle(car).grip;
     const brakeLoad = Math.min(0.6, car.brake * 0.6);
     const lateralGrip = grip * Math.sqrt(1 - brakeLoad * brakeLoad);
     car.gripUsage = lateralDemand / lateralGrip;
@@ -154,7 +182,7 @@
         : .026 + .012 * (1 - clamp(pedal, 0, 1)) + .054 * clamp((kmh - 115) / 65, 0, 1)
           + .05 * (1 - clamp((kmh - 20) / 40, 0, 1));
       const setupGrip = car.driftSetup === 'stable' ? 1.22 : car.driftSetup === 'loose' ? .9 : 1;
-      const desiredGrip = recovery * setupGrip * (1 - .6 * (car.handbrake || 0));
+      const desiredGrip = recovery * setupGrip * vehicle(car).rear * (1 - .6 * (car.handbrake || 0));
       car.driftRearGrip = (car.driftRearGrip ?? recovery) + (desiredGrip - (car.driftRearGrip ?? recovery)) * .16;
       car.driftHeading = wrap((car.driftHeading ?? car.angle) + slip * car.driftRearGrip);
       const scrub = Math.sin(slip) ** 2 * (.009 + .009 * clamp((kmh - 115) / 65, 0, 1)) * Math.abs(car.speed);
@@ -210,7 +238,7 @@
     const shift = command.shiftUp ? 1 : command.shiftDown ? -1 : 0;
     if (car.manual && shift && shift !== (car.lastShift || 0) && !car.shiftTicks && !car.cooldown) {
       const gear = clamp(car.gear + shift, 0, 6);
-      if (gear !== car.gear && (gear === 0 || car.gear === 0 ? Math.abs(car.speed) < .02 : shift > 0 || car.speed * 54 <= gearLimits[gear - 1])) {
+      if (gear !== car.gear && (gear === 0 || car.gear === 0 ? Math.abs(car.speed) < .02 : shift > 0 || car.speed * 54 <= gearLimits[gear - 1]*vehicle(car).speed/205)) {
         car.gear = gear; car.shiftTicks = 14; car.cutTicks = 0;
       }
     }
@@ -263,7 +291,7 @@
       };
     }
 
-    const cars = Array.from({ length: drift ? 1 : 6 }, (_, id) => {
+    const cars = Array.from({ length: drift || options.challengeSolo ? 1 : 6 }, (_, id) => {
       // Grid escalonado: nenhum adversário larga lado a lado com o jogador.
       const slot = grid.indexOf(id + 1);
       const distance = qualifying ? 0 : startDistance - slot * 30;
@@ -273,6 +301,8 @@
       const human = options.online ? options.humans.includes(id + 1) : id === 0;
       const driver = drivers[(id + drivers.length - 1) % drivers.length];
       return {
+        vehicle: vehicleId(options.vehicles?.[id+1] ?? (human ? options.vehicle : ['agile','power','balanced','drift','balanced'][id%5])),
+        slipstream:0, draftTarget:0,
         driftMode: drift, driftSetup: options.driftSetup, driftHeading: point.angle, id: id + 1, name: human ? 'Você' : driver.name, player: human,
         driver: human ? null : driver,
         // Explicit arcade difficulty bonus; human cars always retain the original drivetrain.
@@ -286,6 +316,7 @@
         finishTime: null, place: null, cooldown: 0, stalled: 0, wallContact: false, wallCooldown: 0,
         tyreCompound: weatherMode === 'rain' ? 'wet' : 'dry', pitCompound: weatherMode === 'rain' ? 'wet' : 'dry', wetness, rainIntensity, weatherMode, tyreWearRate, tyreWearEnabled: !drift && (['reduced','normal','intense'].includes(options.tyreWear) || weatherMode !== 'dry' || !qualifying && laps >= 5), tyreLife: 1, tyreBurst: false, burstWheel: -1, tyreDistance: 0, pitRequested: false, pitState: null, pitTimer: 0, pitStops: 0,
         bestLap: null, lastLap: null, lastLapKind: '', checkpointTimes: [],
+        sectorTiming: { current: [null,null,null], best: [null,null,null], reference: null, checkpoints: [], delta: null, invalid: false },
         lapStart: 0, completedLaps: 0, invalidLap: false,
         recordLapInvalid: false, recordLapStarted: false, recordLap: null,
         inputs: [1, 1, 1, 1, 1, 0], activations: [[], [], [0, 0]],
@@ -322,7 +353,7 @@
       const nearest = track.nearest(car.x, car.y);
       const currentLane = (car.x - nearest.x) * -nearest.ty + (car.y - nearest.y) * nearest.tx;
       const clearLane = (candidate) => nearby.every(({ ahead, side }) =>
-        ahead < -45 || ahead > 130 || Math.abs(currentLane + side - candidate) > 21);
+        ahead < -45 || ahead > 65 || Math.abs(currentLane + side - candidate) > 21);
       const previewBend = Math.abs(wrap(pointAt(car.progress + 145).angle - pointAt(car.progress + 40).angle));
       if (!car.tacticTicks) {
         lane = 0;
@@ -330,7 +361,11 @@
           && (car.speed > other.speed + 0.03 || other.speed < .8))
           .sort((a, b) => a.ahead - b.ahead)[0];
         const laneWidth = Math.min(26, track.halfWidth - 18);
-        if (previewBend < .5 + aggression * .15 && slower) {
+        const tow=nearby.filter(({other,ahead,side})=>ahead>70&&ahead<150&&Math.abs(side)<25&&other.speed>1.5&&Math.abs(wrap(other.angle-car.angle))<.2).sort((a,b)=>a.ahead-b.ahead)[0];
+        if (previewBend < .15 && tow && (!slower || slower.ahead>70) && car.speed<vehicle(car).speed/54) {
+          const candidate=clamp(currentLane+tow.side,-laneWidth,laneWidth);
+          if(clearLane(candidate)) lane=candidate;
+        } else if (previewBend < .5 + aggression * .15 && slower) {
           const choices = [-laneWidth, laneWidth].sort((a, b) => Math.abs(a - currentLane) - Math.abs(b - currentLane));
           lane = choices.find(clearLane) ?? 0;
           if (lane) car.tacticTicks = 140;
@@ -363,10 +398,10 @@
       const curvature = bend / Math.max(20, Math.hypot(laterPoint.x - aheadPoint.x, laterPoint.y - aheadPoint.y));
       // Mais próximo da aderência de 2.6 g, com margem para tráfego e correções.
       const cornerGrip = ({ easy: 2.1, normal: 2.5, hard: 2.85 }[difficulty] || 2.5) * car.driver.corner
-        * tyreGripFactor(car) * (1 - .26 * clamp((previewBend - .45) / .75, 0, 1))
+        * tyreGripFactor(car) * vehicle(car).grip * (1 - .26 * clamp((previewBend - .45) / .75, 0, 1))
         * (1 - .12 * clamp(Math.abs(car.racingLane) / 26, 0, 1));
       const safeSpeed = Math.sqrt(9.81 * cornerGrip * 0.25 / Math.max(curvature, 0.0001)) / 15;
-      const targetCornerSpeed = Math.min(aiSpeed * driverPace, Math.max(0.7, safeSpeed));
+      const targetCornerSpeed = Math.min(aiSpeed * driverPace * vehicle(car).speed/205 + (car.slipstream||0)*6/54, Math.max(0.7, safeSpeed));
       pedal = Math.max(pedal, clamp((targetCornerSpeed - car.speed) * 1.8, -1, 1));
       // Coast through small overspeed instead of repeatedly stabbing the brakes.
       if (car.speed > targetCornerSpeed + .2) pedal = -clamp((car.speed - targetCornerSpeed - .1) * 1.8, 0.08, 1);
@@ -552,7 +587,7 @@
       if (player.manual && !player.pitExit && phase === 'racing' && shift && shift !== previousShift && !player.shiftTicks && !player.cooldown) {
         const gear = clamp(player.gear + shift, 0, 6);
         // Bloqueia reduções que ultrapassariam o corte do motor.
-        if (gear !== player.gear && (gear === 0 || player.gear === 0 ? Math.abs(player.speed) < .02 : shift > 0 || player.speed * 54 <= gearLimits[gear - 1])) {
+        if (gear !== player.gear && (gear === 0 || player.gear === 0 ? Math.abs(player.speed) < .02 : shift > 0 || player.speed * 54 <= gearLimits[gear - 1]*vehicle(player).speed/205)) {
           player.gear = gear;
           player.shiftTicks = 14;
           player.cutTicks = 0;
@@ -577,6 +612,7 @@
         return;
       }
       elapsed += 1 / 60;
+      for(const car of cars) car.draftTarget=window.neuroDraftTarget(car,cars);
       const before = cars.map((car) => ({ x: car.x, y: car.y, s: car.pitState ? car.pitTrackProgress : track.nearest(car.x, car.y).progress, pit: car.pitExit }));
       for (const car of cars) {
         if (car.done) continue;
@@ -663,7 +699,21 @@
         if (car.progress >= (car.checkpoint + 1) * checkpointLength) {
           car.checkpoint++;
           car.checkpointTimes[car.checkpoint] = elapsed;
+          const timing = car.sectorTiming, part = (car.checkpoint - 1) % 12;
+          // Interpolate the crossing inside this physics tick, rather than quantizing to 60 Hz.
+          const crossing = elapsed - Math.max(0, Math.min(1, (car.progress - car.checkpoint * checkpointLength) / Math.max(.001, delta))) / 60;
+          timing.checkpoints[part] = crossing - car.lapStart;
+          if ((part + 1) % 4 === 0) {
+            const sector = Math.floor(part / 4);
+            timing.current[sector] = timing.checkpoints[part] - (sector ? timing.checkpoints[part - 4] : 0);
+          }
         }
+        const timing = car.sectorTiming;
+        timing.invalid = !!(car.recordLapInvalid || car.invalidLap || qualifying && car.completedLaps === 0);
+        const portion = Math.max(0, car.progress / checkpointLength - car.completedLaps * 12);
+        const part = Math.min(11, Math.floor(portion)), fraction = Math.min(1, portion - part);
+        timing.delta = !timing.invalid && timing.reference ? elapsed - car.lapStart -
+          ((part ? timing.reference[part - 1] : 0) * (1 - fraction) + timing.reference[part] * fraction) : null;
         car.stalled = delta > 0.1 ? 0 : car.stalled + 1;
         if (!car.player && !car.pitState && car.stalled > 120) recover(car);
         if (car.checkpoint >= laps * 12 && car.progress >= track.length * laps) {
@@ -676,6 +726,12 @@
         const completed = Math.min(laps, Math.floor(car.progress / track.length));
         if (completed > car.completedLaps && car.checkpoint >= completed * 12) {
           const lapTime = elapsed - car.lapStart;
+          if (!timing.invalid && timing.checkpoints.length === 12 && timing.current.every(v => Number.isFinite(v) && v > 0)) {
+            timing.best = timing.best.map((v,i) => v === null ? timing.current[i] : Math.min(v, timing.current[i]));
+            if (!timing.reference || timing.checkpoints[11] < timing.reference[11]) timing.reference = timing.checkpoints.slice();
+          }
+          timing.last = timing.current.slice();
+          timing.current = [null,null,null]; timing.checkpoints = []; timing.delta = null;
           if (car.recordLapStarted && !car.recordLapInvalid && !car.invalidLap && lapTime > 0) {
             car.recordLap = { lap: completed, milliseconds: Math.round(lapTime * 1000) };
           }

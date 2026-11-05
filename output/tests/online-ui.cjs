@@ -21,6 +21,7 @@ let socket;
 class Socket { static OPEN = 1; constructor() { socket = this; this.readyState = 1; this.sent = []; } send(data) { this.sent.push(JSON.parse(data)); } }
 for (const file of ['neuro-pista-track.js', 'neurodrive-race-engine.js', 'neurodrive-hud.js', 'neurodrive-online-buffer.js', 'neurodrive-prediction.js']) new Function('window', read(file))(windowMock);
 new Function('window','document',read('neurodrive-achievements.js'))(windowMock,documentMock);
+new Function('window','document',read('neurodrive-challenges.js'))(windowMock,documentMock);
 new Function('window','document',read('neurodrive-online-social.js'))(windowMock,documentMock);
 new Function('window','document',read('neurodrive-intro.js'))(windowMock,documentMock);
 new Function('window', 'document', 'WebSocket', 'fetch', 'performance', 'setInterval', 'requestAnimationFrame', read('online.js'))(

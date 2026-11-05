@@ -3,6 +3,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { WebSocketServer, WebSocket } = require('ws');
 const catalog = require('./catalog.cjs');
+const {modes:challengeModes,createChallenge,scoreSession}=require('./challenges.cjs');
 const { createOnlineClock } = require('./online-clock.cjs');
 const engine = {};
 for (const file of ['neuro-pista-track.js', 'neurodrive-race-engine.js']) new Function('window', fs.readFileSync(path.join(__dirname, '../output', file), 'utf8'))(engine);
@@ -38,10 +39,10 @@ function attachOnline(server, { origin, store, tickMs = 1000 / 60 }) {
   };
   const players = room => [...room.peers].map(p => ({ id: p.id, name: p.profile.nickname || p.profile.username,
     ready: p.ready, loading: Boolean(p.loading), ping: p.rtt == null ? null : Math.round(p.rtt) }));
-  const circuits = ['serra', 'veloz', 'tecnico'];
+  const circuits = ['serra', 'veloz', 'tecnico', 'urbano'];
   function rules(room) { return { difficulty:room.difficulty || 'normal', tyreWear:room.tyreWear || 'normal', weather:room.weather, laps:room.laps }; }
   function raceStats(room) {
-    if (room.stage !== 'race' || room.race?.phase !== 'finished') return null;
+    if (challengeModes.includes(room.mode) || room.stage !== 'race' || room.race?.phase !== 'finished') return null;
     if (room.stats) return room.stats;
     const cars = room.race.cars;
     const winner = cars.find(c => c.place === 1 && Number.isFinite(c.finishTime) && !c.disconnected);
@@ -58,7 +59,7 @@ function attachOnline(server, { origin, store, tickMs = 1000 / 60 }) {
     const standings = [...(room.championship?.scores.values() || [])].sort((a,b) => b.points-a.points || b.wins-a.wins || a.id.localeCompare(b.id));
     return { championship: room.championship ? { round: room.championship.round, total: 3,
       complete: room.championship.round === 3 && room.championship.scored === room.raceId, standings } : null,
-      votes: Object.fromEntries(room.votes || []), rules:rules(room), stats:raceStats(room) };
+      sessionStandings:[...(room.sessionScores?.values()||[])].sort((a,b)=>b.points-a.points||b.wins-a.wins||a.name.localeCompare(b.name)), votes: Object.fromEntries(room.votes || []), rules:rules(room), stats:raceStats(room) };
   }
   function scoreRound(room) {
     const c = room.championship;
@@ -115,10 +116,10 @@ function attachOnline(server, { origin, store, tickMs = 1000 / 60 }) {
     const room = peer.room;
     if (!room || room.owner !== peer.id) throw new Error('Somente o dono pode preparar a revanche.');
     if (!room.race || room.stage !== 'race' || room.race.phase !== 'finished') throw new Error('Aguarde todos terminarem a corrida.');
-    if (room.race.cars.some(car => car.player && car.done && !car.disconnected && car.finishTime !== null && !room.rewards.get(car.id)?.saved))
+    if (!challengeModes.includes(room.mode) && room.race.cars.some(car => car.player && car.done && !car.disconnected && car.finishTime !== null && !room.rewards.get(car.id)?.saved))
       throw new Error('Aguarde o salvamento das recompensas.');
     const track = msg.track || room.track;
-    if (!['serra','veloz','tecnico'].includes(track)) throw new Error('Circuito inválido.');
+    if (!['serra','veloz','tecnico','urbano'].includes(track)) throw new Error('Circuito inválido.');
     const counts = circuits.map(id => [...(room.votes?.values() || [])].filter(v => v === id).length);
     if (Math.max(...counts) && counts[circuits.indexOf(track)] !== Math.max(...counts)) throw new Error('Escolha uma das pistas mais votadas.');
     if (room.championship) {
@@ -134,7 +135,7 @@ function attachOnline(server, { origin, store, tickMs = 1000 / 60 }) {
   function snapshot(room) {
     const race = room.race;
     const cars = race.cars.map((car) => ({ ...car, checkpointTimes: undefined, accountId: undefined, recordLap: undefined,
-      reward: room.rewards.get(car.id)?.amount, rewardPending: room.stage === 'race' && car.done && car.finishTime !== null && !car.disconnected && car.player && !room.rewards.get(car.id)?.saved }));
+      reward: room.rewards.get(car.id)?.amount, rewardPending: !challengeModes.includes(room.mode) && room.stage === 'race' && car.done && car.finishTime !== null && !car.disconnected && car.player && !room.rewards.get(car.id)?.saved }));
     // Serialize the common state once per room, not once per connected player.
     const common = JSON.stringify({ type: 'state', cars, stage: room.stage, grid: room.grid, raceId:room.raceId,
       waiting: room.stage === 'waiting' ? Math.ceil(room.waitTicks / 60) : 0,
@@ -159,15 +160,17 @@ function attachOnline(server, { origin, store, tickMs = 1000 / 60 }) {
     if (room.championship && !room.championship.scores.size) {
       peers.forEach(p => room.championship.scores.set(p.id, { id:p.id, name:p.profile.nickname || p.profile.username, points:0, wins:0 }));
     }
-    room.stage = 'qualifying';
+    const challenge=challengeModes.includes(room.mode);
+    room.stage = challenge?'race':'qualifying';
     room.race = engine.createNeuroRace(engine.createNeuroTrack(room.track), room.difficulty || 'normal', { online: true, humans: peers.map((_, i) => i + 1), session: 'qualifying', pitStart: true, weather: room.weather, tyreWear:room.tyreWear });
+    if(challenge) room.race=createChallenge(engine,engine.createNeuroTrack(room.track),room.mode,peers);
     room.rewards = new Map();
     room.recordSeen = new Map();
     room.recordSummaries = new Map(); room.recordNotices = new Map();
     peers.forEach((peer, index) => {
       peer.carId = index + 1;
       const car = room.race.cars[index];
-      Object.assign(car, { accountId: peer.id, name: (peer.profile.nickname || peer.profile.username), manual: peer.manual,
+      Object.assign(car, { accountId: peer.id, name: (peer.profile.nickname || peer.profile.username), manual: peer.manual, vehicle:engine.neuroVehicleId(peer.vehicle),
         skin: catalog.find((s) => s.id === peer.profile.equipped) });
     });
     let ticks = 0, snapshotDue = false;
@@ -183,7 +186,7 @@ function attachOnline(server, { origin, store, tickMs = 1000 / 60 }) {
           });
           for (const car of room.race.cars) {
             const prior = qualifiers.find(item => item.id === car.id);
-            Object.assign(car, { accountId: prior.accountId, name: prior.name, manual: prior.manual, skin: prior.skin });
+            Object.assign(car, { accountId: prior.accountId, name: prior.name, manual: prior.manual, vehicle:prior.vehicle, skin: prior.skin });
             if (prior.disconnected) Object.assign(car, { disconnected: true, done: true, speed: 0 });
           }
           room.stage = 'race';
@@ -191,7 +194,7 @@ function attachOnline(server, { origin, store, tickMs = 1000 / 60 }) {
         }
       } else room.race.step(inputs);
       for (const car of room.race.cars) {
-        if (!store.saveRecord || !car.player || car.disconnected || !car.recordLap || room.recordSeen.get(car.id) === car.recordLap) continue;
+        if (challenge || room.track === 'urbano' || !store.saveRecord || !car.player || car.disconnected || !car.recordLap || room.recordSeen.get(car.id) === car.recordLap) continue;
         room.recordSeen.set(car.id, car.recordLap);
         const record = { track: room.track, milliseconds: car.recordLap.milliseconds, achieved: Date.now(), skin: car.skin?.id || 'original', raceId:room.raceId,stage:room.stage,eventId:`${room.raceId}:${room.stage}:${car.id}:${car.recordLap.lap}` };
         const key = `${car.accountId}:${room.track}`, queued = recordQueue.get(key);
@@ -205,7 +208,8 @@ function attachOnline(server, { origin, store, tickMs = 1000 / 60 }) {
         room.stage = 'waiting'; room.waitTicks = 600;
       }
       for (const car of room.race.cars) {
-        if (room.stage !== 'race' || !car.player || !car.done || car.disconnected || car.finishTime === null) continue;
+        if (challenge || room.stage !== 'race' || !car.player || !car.done || car.disconnected || car.finishTime === null) continue;
+        if(room.track==='urbano'){room.rewards.set(car.id,{amount:0,saved:true});continue;}
         const status = room.rewards.get(car.id) || {};
         if (status.saved || status.pending || Date.now() < (status.retry || 0)) continue;
         status.pending = true;
@@ -216,7 +220,7 @@ function attachOnline(server, { origin, store, tickMs = 1000 / 60 }) {
       }
       if (++ticks % 3 === 0) snapshotDue = true;
       if (room.stage === 'race' && room.race.phase === 'finished') {
-        scoreRound(room);
+        scoreRound(room); scoreSession(room);
         room.finishedAt ||= Date.now();
         if (Date.now() - room.finishedAt > 300000) {
           room.peers.forEach((p) => { send(p, { type: 'error', message: 'Sala encerrada. Crie uma nova disputa.' }); p.ws.close(); });
@@ -276,6 +280,7 @@ function attachOnline(server, { origin, store, tickMs = 1000 / 60 }) {
           if (room.race) throw new Error('As regras só podem mudar antes da classificação.');
           if (!['easy','normal','hard'].includes(msg.difficulty) || !['reduced','normal','intense'].includes(msg.tyreWear)
             || !['dry','rain','changing'].includes(msg.weather) || ![1,3,5,10].includes(msg.laps)) throw new Error('Regras inválidas.');
+          if(challengeModes.includes(room.mode)) throw new Error('As regras dos desafios são fixas.');
           Object.assign(room,{difficulty:msg.difficulty,tyreWear:msg.tyreWear,weather:msg.weather,laps:room.mode==='tournament'?3:msg.laps});
           room.peers.forEach(p=>{p.ready=false;p.loading=false;});
           lobby(room,true,'settings'); return;
@@ -290,11 +295,12 @@ function attachOnline(server, { origin, store, tickMs = 1000 / 60 }) {
         if (msg.type === 'create') {
           if (peer.room) throw new Error('Saia da sala atual primeiro.');
           if (rooms.size >= 20) throw new Error('Servidor cheio. Tente mais tarde.');
-          if (!['serra', 'veloz', 'tecnico'].includes(msg.track) || ![1, 3, 5, 10].includes(msg.laps)) throw new Error('Circuito ou voltas inválidos.');
+          if (!['serra', 'veloz', 'tecnico', 'urbano'].includes(msg.track) || ![1, 3, 5, 10].includes(msg.laps)) throw new Error('Circuito ou voltas inválidos.');
           let code;
           do { code = crypto.randomBytes(3).toString('hex').toUpperCase(); } while (rooms.has(code));
-          const mode = ['tournament','championship'].includes(msg.mode) ? msg.mode : 'race';
+          const mode = ['tournament','championship',...challengeModes].includes(msg.mode) ? msg.mode : 'race';
           const room = { weather: ['dry', 'rain', 'changing'].includes(msg.weather) ? msg.weather : 'dry', code, owner: peer.id, track: msg.track, mode, laps: mode === 'tournament' ? 3 : msg.laps, peers: new Set([peer]) };
+          if(challengeModes.includes(mode)){room.weather='dry';room.laps=1;}
           room.difficulty = ['easy','normal','hard'].includes(msg.difficulty) ? msg.difficulty : 'normal';
           room.tyreWear = ['reduced','normal','intense'].includes(msg.tyreWear) ? msg.tyreWear : 'normal';
           room.votes = new Map();
@@ -309,10 +315,10 @@ function attachOnline(server, { origin, store, tickMs = 1000 / 60 }) {
         } else if (msg.type === 'preparing' && peer.room && !peer.room.race) {
           peer.loading = msg.loading === true; peer.ready = false; lobby(peer.room);
         } else if (msg.type === 'ready' && peer.room && !peer.room.race) {
-          peer.ready = msg.ready === true; peer.loading = false; peer.manual = msg.manual === true; lobby(peer.room);
+          peer.ready = msg.ready === true; peer.loading = false; peer.manual = msg.manual === true; peer.vehicle = engine.neuroVehicleId(msg.vehicle ?? peer.vehicle); lobby(peer.room);
         } else if (msg.type === 'start' && peer.room?.owner === peer.id) start(peer.room);
         else if (msg.type === 'input' && peer.room?.race) {
-          peer.input = Object.fromEntries(['accelerate', 'brake', 'left', 'right', 'shiftUp', 'shiftDown', 'noReverse'].map((key) => [key, msg[key] === true]));
+          peer.input = Object.fromEntries(['accelerate', 'brake', 'left', 'right', 'shiftUp', 'shiftDown', 'noReverse', 'handbrake'].map((key) => [key, msg[key] === true]));
           for (const key of ['steering', 'throttle', 'braking']) {
             peer.input[key] = Number.isFinite(msg[key]) ? Math.max(key === 'steering' ? -1 : 0, Math.min(1, msg[key])) : 0;
           }

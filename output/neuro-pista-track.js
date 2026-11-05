@@ -10,6 +10,11 @@
     [-650, 100], [-550, -60], [-500, -260],
   ].map(([x, y]) => [x * 1.35, y * 1.35]);
   window.NeuroTracks = [
+    { id: 'urbano', name: 'Distrito Neon (experimental)', experimental: true, theme: 'urban', width: 54, controls: [
+      [-1000,-650], [-300,-650], [500,-650], [1050,-650], [1200,-480], [1200,-100],
+      [1040,60], [660,60], [500,220], [500,600], [320,780], [-100,780],
+      [-260,600], [-260,280], [-460,100], [-960,100], [-1160,-100], [-1160,-450],
+    ] },
     { id: 'serra', name: 'Serra Verde', width: 52, controls: original },
     { id: 'veloz', name: 'Autódromo Veloz', width: 56, controls: [
       [-650,-220], [0,-220], [650,-220], [850,0], [650,220], [0,220], [-650,220], [-850,0],
@@ -139,7 +144,7 @@
   const ys = points.map((p) => p.y);
   const bounds = { minX: Math.min(...xs) - 50, maxX: Math.max(...xs) + 50, minY: Math.min(...ys) - 50, maxY: Math.max(...ys) + 50 };
   // Terreno contínuo: mesma superfície para asfalto, gramado, carros e câmera.
-  const reliefScale = config.id === 'arena' ? .15 : config.id === 'veloz' ? 0.4 : config.id === 'tecnico' ? 1.2 : 1;
+  const reliefScale = config.theme === 'urban' ? .08 : config.id === 'arena' ? .15 : config.id === 'veloz' ? 0.4 : config.id === 'tecnico' ? 1.2 : 1;
   function heightAt(x, y) {
     return 30 + reliefScale * (18 * Math.sin(x / 300) + 12 * Math.cos(y / 220)
       + 8 * Math.sin((x + y) / 400));
@@ -181,7 +186,7 @@
     return cachedBarriers = result;
   }
   return {
-    id: config.id, name: config.name,
+    id: config.id, name: config.name, theme: config.theme, experimental: !!config.experimental,
     points, segments, length, halfWidth, bounds, nearest, offset, heightAt, pointAt, pit, barrierSegments,
     start: offset(0, 0),
     contains,

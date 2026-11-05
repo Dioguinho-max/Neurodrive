@@ -25,8 +25,8 @@ for (const file of ['neuro-pista-track.js', 'neurodrive-race-engine.js']) new Fu
     return race.cars[0].driftRearGrip;
   };
   assert(grip('stable') > grip('loose'), 'Stable setup recovers more grip');
-  for (const setup of ['stable','loose']) {
-    const race = api.createNeuroRace(api.createNeuroTrack('arena'), 'normal', {mode:'drift',driftSetup:setup});
+  for (const vehicle of ['balanced','agile','power','drift']) for (const setup of ['stable','loose']) {
+    const race = api.createNeuroRace(api.createNeuroTrack('arena'), 'normal', {mode:'drift',driftSetup:setup,vehicle});
     const attempt = client.NeuroDriftOnline.start(race, 'arena', setup);
     for (let tick=0;race.phase !== 'finished';tick++) {
       if (tick===600) race.recoverPlayer();

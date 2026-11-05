@@ -1,0 +1,16 @@
+const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
+const nodes={};for(const key of ['camera','passing','vibration'])nodes['race-feedback-'+key]={};
+const events={},window={addEventListener:(k,f)=>events[k]=f},document={hidden:false,getElementById:id=>nodes[id],addEventListener:(k,f)=>events[k]=f};
+new Function('window','document',fs.readFileSync(path.join(__dirname,'../neurodrive-feedback.js'),'utf8'))(window,document);
+let passes=0,pulses=0,resets=0;
+const pad={vibrationActuator:{playEffect:(kind,params)=>{assert.equal(kind,'dual-rumble');assert(params.strongMagnitude<=.38);pulses++;return Promise.resolve();},reset:()=>{resets++;return Promise.resolve();}}};
+const feedback=window.createNeuroDrivingFeedback('race',{playPass:()=>passes++},()=>pad);
+const car={id:1,x:0,y:0,angle:0,speed:3,gear:3},other={id:2,x:10,y:15,speed:2};
+feedback.update(car,[car,other],true,0);other.x=-10;feedback.update(car,[car,other],true,100);assert.equal(passes,1);
+other.x=10;feedback.update(car,[car,other],true,200);assert.equal(passes,1,'No repeated sound during oscillation');
+car.impact=.8;feedback.update(car,[car,other],true,300);assert.equal(pulses,0,'Vibration is opt-in');
+nodes['race-feedback-vibration'].checked=true;nodes['race-feedback-vibration'].onchange();
+car.impact=0;feedback.update(car,[car,other],true,600);car.impact=.8;feedback.update(car,[car,other],true,900);assert.equal(pulses,1);
+feedback.update(car,[car,other],true,950);assert.equal(pulses,1);events.blur();assert.equal(resets,1);
+feedback.update(car,[car,other],false,2000);other.x=-10;feedback.update(car,[car,other],true,2100);assert.equal(passes,1,'Resume cannot invent a passing event');
+console.log('OK: passing cooldown, no phantom resume, optional bounded rumble and blur reset.');

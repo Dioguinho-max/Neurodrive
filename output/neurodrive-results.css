@@ -43,7 +43,8 @@
 #race-results [hidden] { display: none !important; }
 #online-grid ol { list-style: none; counter-reset: grid-place; padding: 0; display: grid; gap: 8px; }
 #online-grid li { counter-increment: grid-place; display: flex; align-items: center; gap: 14px; padding: 12px; border-radius: 10px; background: #192d3b; overflow-wrap: anywhere; }
-#online-grid li::before { content: counter(grid-place, decimal-leading-zero); font-size: 22px; font-weight: 800; color: #98f1be; }
+#online-grid li::before { content: counter(grid-place, decimal-leading-zero); font-size: 22px; font-weight: 800; color: #98f1be; flex:0 0 28px; white-space:nowrap; }
+#online-grid li.challenge-result::before { content:attr(data-place); }
 @media (max-width: 700px), (max-height: 500px) and (max-width: 1000px) {
   #race-results { width: calc(100% - 16px); max-height: calc(100dvh - 16px); padding: 16px; border-radius: 14px; }
   #race-results-note { font-size: 13px; }

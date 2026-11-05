@@ -12,9 +12,11 @@ function setup() {
   return { race, car, step };
 }
 const manual = setup();
-for (let i = 0; i < 600; i++) manual.step({ accelerate: true });
+let peakRpm = 0;
+for (let i = 0; i < 600; i++) { manual.step({ accelerate: true }); peakRpm = Math.max(peakRpm, manual.car.rpm); }
 assert.equal(manual.car.gear, 1, 'Manual não deve subir sozinho no corte');
 assert(manual.car.speed * 54 < 35);
+assert(peakRpm === 8000 && manual.car.rpm <= 8000, 'Manual reaches the new rev limiter');
 for (let i = 0; i < 30; i++) manual.step({ shiftUp: true, accelerate: true });
 assert.equal(manual.car.gear, 2, 'Segurar a tecla deve trocar só uma vez');
 manual.step({});

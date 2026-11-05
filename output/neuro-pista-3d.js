@@ -25,8 +25,8 @@
     renderer.toneMappingExposure = 1.15;
 
     const scene = new THREE.Scene();
-    scene.background = new THREE.Color('#b9d5e6');
-    scene.fog = new THREE.Fog('#b9d5e6', 1700, 4200);
+    scene.background = new THREE.Color(track.theme === 'urban' ? '#879bac' : '#b9d5e6');
+    scene.fog = new THREE.Fog(scene.background, 1700, 4200);
     const camera = new THREE.PerspectiveCamera(45, 1, 0.5, 5000);
     scene.add(new THREE.HemisphereLight('#eef8ff', '#526845', 2.4));
 
@@ -90,6 +90,7 @@
     grassMap.magFilter = THREE.LinearFilter; grassMap.minFilter = THREE.LinearMipmapLinearFilter;
     grassMap.generateMipmaps = true; grassMap.needsUpdate = true; textures.push(grassMap);
     const grass = material('#b5c29a', { map: grassMap, roughness: 1 });
+    if(track.theme === 'urban'){grass.color.set('#68737d');grass.map=asphaltMap;sun.color.set('#ffdbb2');}
     const white = material('#eef3f5');
     const red = material('#d26758');
     const rubber = material('#19212c');
@@ -277,7 +278,7 @@
 
     // Vegetação instanciada: centenas de árvores com apenas duas chamadas de desenho.
     const treeSites = [];
-    for (let i = 0; i < track.points.length; i += 4) {
+    for (let i = 0; i < track.points.length; i += track.theme === 'urban' ? 24 : 4) {
       for (const side of [-1, 1]) {
         const point = track.offset(i, side * (track.halfWidth + 90 + (i * 17 % 100)));
         if (options.racePresentation && Math.hypot(point.x - track.start.x, point.y - track.start.y) < 500) continue;
@@ -300,6 +301,50 @@
       treeTransform.updateMatrix(); crowns.setMatrixAt(i, treeTransform.matrix);
     });
     scene.add(trunks, crowns);
+
+    // A small number of instanced batches: no per-window meshes or dynamic city lights.
+    let urbanBuildings = null;
+    if (track.theme === 'urban') {
+      const pixels = new Uint8Array(32*64*4);
+      for(let y=0;y<64;y++)for(let x=0;x<32;x++){
+        const lit=x%8>1&&x%8<6&&y%8>1&&y%8<6;
+        const warm=(Math.floor(x/8)+Math.floor(y/8))%3===0;
+        pixels.set(lit?(warm?[186,160,114,255]:[93,137,157,255]):[35,48,60,255],(y*32+x)*4);
+      }
+      const facade=new THREE.DataTexture(pixels,32,64);facade.needsUpdate=true;facade.magFilter=THREE.NearestFilter;textures.push(facade);
+      const sites=[];
+      for(let i=0;i<track.points.length;i+=3)for(const side of [-1,1]){
+        const p=track.offset(i,side*(track.halfWidth+220+(i%4)*55));
+        if(track.nearest(p.x,p.y).distance<track.halfWidth+170||Math.hypot(p.x-track.start.x,p.y-track.start.y)<850)continue;
+        sites.push(p);
+      }
+      urbanBuildings=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),new THREE.MeshStandardMaterial({color:'#b4c9d8',map:facade,emissive:'#659ab7',emissiveMap:facade,emissiveIntensity:.3,roughness:.85}),sites.length);
+      const transform=new THREE.Object3D();
+      sites.forEach((p,i)=>{
+        const h=90+(i*37%180);transform.position.set(p.x,track.heightAt(p.x,p.y)+h/2,p.y);
+        transform.rotation.y=-p.angle;transform.scale.set(65+i%3*15,h,70);transform.updateMatrix();urbanBuildings.setMatrixAt(i,transform.matrix);
+      });
+      urbanBuildings.userData.fullCount=sites.length;scene.add(urbanBuildings);
+      // Tunnel on the straight after the pit exit; walls stay outside the collision boundary.
+      const concrete=material('#303c49'), light=new THREE.MeshBasicMaterial({color:'#99f6e2'});
+      const tunnel=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),concrete,30);
+      const tunnelLights=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),light,20);
+      tunnel.name='urban-tunnel';tunnelLights.name='urban-tunnel-lights';urbanBuildings.name='urban-buildings';
+      let piece=0,lamp=0;
+      function tunnelPart(batch,index,p,y,z,sx,sy,sz){
+        transform.position.set(p.x-Math.sin(p.angle)*z,track.heightAt(p.x,p.y)+y,p.y+Math.cos(p.angle)*z);
+        transform.rotation.y=-p.angle;transform.scale.set(sx,sy,sz);transform.updateMatrix();batch.setMatrixAt(index,transform.matrix);
+      }
+      for(let distance=900;distance<1400;distance+=50){
+        const p=track.pointAt(distance+25);
+        tunnelPart(tunnel,piece++,p,98,0,51,7,2*(track.halfWidth+103));
+        for(const side of [-1,1]){
+          tunnelPart(tunnel,piece++,p,49,side*(track.halfWidth+100),51,98,6);
+          tunnelPart(tunnelLights,lamp++,p,93,side*(track.halfWidth+20),44,1,2);
+        }
+      }
+      scene.add(tunnel,tunnelLights);
+    }
 
     const sponsorNames = ['APEX', 'NOVA', 'PULSO', 'VERTEX'];
     const sponsorTags = ['M O T O R S', 'E N E R G Y', 'R A C I N G', 'T I R E S'];
@@ -1022,6 +1067,8 @@
     let finishCameraAt = null;
     let ceremony = null;
     let introProgress = null, introDistance = 0;
+    let motionSpeed=0, motionAt=null;
+    const reduceCameraMotion=window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
     function render() {
       const width = canvas.clientWidth;
       const height = canvas.clientHeight;
@@ -1056,16 +1103,21 @@
         Object.assign(sun.shadow.camera, { left: -extent, right: extent, top: extent, bottom: -extent });
         sun.shadow.camera.updateProjectionMatrix();
       }
-      const speedRatio = car ? Math.min(1, car.speed / (car.maxSpeed || 3.2)) : 0;
+      const motionNow=window.performance?.now?.() ?? Date.now();
+      const motionDelta=motionAt===null?1/60:Math.min(.1,Math.max(0,(motionNow-motionAt)/1000));motionAt=motionNow;
+      const motionEnabled=window.NeuroFeedbackPrefs?.camera!==false&&!reduceCameraMotion;
+      const speedTarget=motionEnabled&&car?Math.min(1,Math.max(0,car.speed)/(car.maxSpeed||3.2)):0;
+      motionSpeed+=(speedTarget-motionSpeed)*(1-Math.exp(-motionDelta/.3));
+      const speedRatio=motionSpeed;
       const raceCamera = options.speedEffects && mode === 'chase';
-      const desiredFov = cockpitView ? 78 : introProgress !== null ? 45 : raceCamera ? 56 + speedRatio * 22 : 45;
+      const desiredFov = cockpitView ? 78 : introProgress !== null ? 45 : raceCamera ? 60 + speedRatio * 16 : 45;
       // A tomada aérea não precisa enxergar objetos a centímetros da lente.
       // Um near maior preserva a precisão entre asfalto, terreno e marcações.
       const near = introProgress !== null && introProgress < .3 ? 10 : .5;
       if (camera.near !== near) {
         camera.near = near; camera.far = 5000; camera.updateProjectionMatrix();
       }
-      const fieldOfView = camera.fov + (desiredFov - camera.fov) * 0.12;
+      const fieldOfView = camera.fov + (desiredFov - camera.fov) * (1-Math.exp(-motionDelta/.14));
       if (camera.fov !== fieldOfView) {
         camera.fov = fieldOfView;
         camera.updateProjectionMatrix();
@@ -1148,7 +1200,7 @@
         camera.lookAt(car.x, track.heightAt(car.x, car.y) + 3, car.y);
       } else if (mode === 'chase' && car) {
         // Terceira pessoa: camera atras do carro, olhando adiante na pista.
-        const impactMotion = raceCamera ? (car.impact || 0) : 0;
+        const impactMotion = raceCamera && motionEnabled ? (car.impact || 0) : 0;
         const behind = (raceCamera ? 30 + speedRatio * 4 : 42) * zoom;
         const angle = car.angle + chaseOrbit;
         camera.position.set(
@@ -1226,6 +1278,7 @@
     };
 
     function setQuality(quality) {
+      if(urbanBuildings)urbanBuildings.count=quality==='performance'?Math.ceil(urbanBuildings.userData.fullCount*.55):urbanBuildings.userData.fullCount;
       options.quality = quality;
       const light = quality === 'performance';
       const ultra = quality === 'ultra';

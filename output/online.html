@@ -7,13 +7,13 @@
   <title>NeuroDrive · Online</title>
   <link rel="stylesheet" href="neuro-pista.css"><link rel="stylesheet" href="neurodrive-race.css"><link rel="stylesheet" href="online.css">
   <script src="vendor/three.min.js" defer></script><script src="neurodrive-podium.js" defer></script><link rel="stylesheet" href="neurodrive-podium.css"><script src="neuro-pista-track.js" defer></script>
-  <script src="neurodrive-race-engine.js" defer></script><script src="neurodrive-prediction.js" defer></script>
-  <script src="neuro-pista-3d.js" defer></script><script src="neurodrive-audio.js?v=engine-only-2" defer></script><link rel="stylesheet" href="neurodrive-hud.css"><script src="neurodrive-weather.js" defer></script><script src="neurodrive-fps.js" defer></script><script src="neurodrive-hud.js" defer></script><script src="neurodrive-gamepad.js" defer></script><link rel="stylesheet" href="neurodrive-gamepad.css"><script src="neurodrive-online-buffer.js" defer></script>
+  <script src="neurodrive-race-engine.js" defer></script><script src="neurodrive-vehicles.js" defer></script><script src="neurodrive-prediction.js" defer></script>
+  <script src="neuro-pista-3d.js" defer></script><script src="neurodrive-audio.js?v=engine-only-2" defer></script><script src="neurodrive-feedback.js" defer></script><script src="neurodrive-sectors.js" defer></script><link rel="stylesheet" href="neurodrive-sectors.css"><link rel="stylesheet" href="neurodrive-hud.css"><script src="neurodrive-weather.js" defer></script><script src="neurodrive-fps.js" defer></script><script src="neurodrive-hud.js" defer></script><script src="neurodrive-gamepad.js" defer></script><link rel="stylesheet" href="neurodrive-gamepad.css"><script src="neurodrive-online-buffer.js" defer></script>
   <link rel="stylesheet" href="neurodrive-menu.css?v=menus-2">
   <link rel="stylesheet" href="neurodrive-mobile.css">
   <script src="neurodrive-achievements.js" defer></script><link rel="stylesheet" href="neurodrive-achievements.css">
   <link rel="stylesheet" href="neurodrive-easter-egg.css"><script src="neurodrive-easter-egg.js" defer></script>
-<script src="neurodrive-intro.js" defer></script><script src="vendor/qrcode.js" defer></script><script src="neurodrive-online-social.js" defer></script><script src="online.js" defer></script>
+<script src="neurodrive-intro.js" defer></script><script src="vendor/qrcode.js" defer></script><script src="neurodrive-online-social.js" defer></script><script src="neurodrive-challenges.js" defer></script><script src="online.js" defer></script>
 <link rel="stylesheet" href="neurodrive-home.css">
 <link rel="stylesheet" href="neurodrive-weather.css">
 <link rel="stylesheet" href="neurodrive-i18n.css"><script src="neurodrive-i18n.js" defer></script>
@@ -33,9 +33,9 @@
         <div class="drive-dial" id="race-instruments" data-redline="false">
           <svg viewBox="0 0 268 204" aria-hidden="true">
             <path class="drive-arc-track" d="M 39 180 A 110 110 0 1 1 229 180" />
-            <path class="drive-arc-limit" pathLength="100" stroke-dasharray="20 80" stroke-dashoffset="20" d="M 39 180 A 110 110 0 1 1 229 180" />
+            <path class="drive-arc-limit" pathLength="100" stroke-dasharray="6.25 93.75" stroke-dashoffset="6.25" d="M 39 180 A 110 110 0 1 1 229 180" />
             <path id="race-rpm-fill" class="drive-arc-fill" pathLength="100" stroke-dasharray="100" stroke-dashoffset="89" d="M 39 180 A 110 110 0 1 1 229 180" />
-            <g class="drive-ticks" text-anchor="middle"><text x="26" y="192">0</text><text x="23" y="91">2</text><text x="134" y="9">4</text><text x="245" y="91">6</text><text x="242" y="192">8</text></g>
+            <path class="drive-scale-marks" d="M 48.26 174.50 L 43.07 177.50 M 32.00 125.00 L 29.00 125.00 M 48.26 75.50 L 43.07 72.50 M 83.00 36.67 L 81.50 34.07 M 134.00 26.00 L 134.00 20.00 M 185.00 36.67 L 186.50 34.07 M 219.74 75.50 L 224.93 72.50 M 236.00 125.00 L 239.00 125.00 M 219.74 174.50 L 224.93 177.50"/><g class="drive-ticks" text-anchor="middle"><text x="26" y="198">0</text><text x="16" y="76">2</text><text x="134" y="10">4</text><text x="252" y="76">6</text><text x="242" y="198">8</text></g>
           </svg>
           <div class="drive-speed"><strong id="race-speed">0</strong><span>KM/H</span></div>
           <div class="drive-gear" aria-label="Marcha"><strong id="race-gear">1</strong><span id="race-drive-mode">AUTO</span></div>
@@ -51,7 +51,7 @@
 </aside>
   <ol id="online-ranking" aria-label="Posições da corrida"></ol>
   <div class="viz-controls race-touch" aria-label="Controles de dire&#231;&#227;o">
-        <div class="touch-steering">
+        <div class="touch-steering"><button id="online-handbrake" class="btn touch-handbrake" data-drive="handbrake" aria-label="Freio de mão" hidden>Ⓟ <span>Freio de mão</span></button>
           <div class="touch-shifts"><button class="btn race-shift" data-drive="shiftDown" aria-label="Reduzir marcha" hidden>&#8722;</button><button class="btn race-shift" data-drive="shiftUp" aria-label="Subir marcha" hidden>+</button></div>
           <div class="touch-arrows"><button class="btn touch-arrow" data-drive="left" aria-label="Virar &#224; esquerda"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="M29 10 15 24l14 14"/></svg></button><button class="btn touch-arrow" data-drive="right" aria-label="Virar &#224; direita"><svg viewBox="0 0 48 48" aria-hidden="true"><path d="m19 10 14 14-14 14"/></svg></button></div>
         </div>
@@ -60,7 +60,7 @@
           <button class="btn touch-pedal touch-accelerator" data-drive="accelerate" aria-label="Acelerar"><svg viewBox="0 0 56 100" aria-hidden="true"><path class="pedal-body" d="M15 6h26l5 81q0 7-7 7H17q-7 0-7-7Z"/><path d="M21 18h14M20 30h16M19 42h18M18 54h20M18 66h20M17 78h22"/></svg></button>
         </div>
       </div>
-  <aside id="online-health" role="status" hidden></aside>
+  <aside id="online-challenge-hud" hidden><span id="online-challenge-title"></span><strong id="online-challenge-value"></strong></aside><aside id="online-health" role="status" hidden></aside>
   <aside id="online-spectator" hidden aria-label="Modo espectador"><span id="online-spectator-name"></span><div><button class="btn" type="button" id="online-spectator-prev" aria-label="Piloto anterior">←</button><button class="btn" type="button" id="online-spectator-next" aria-label="Próximo piloto">→</button></div></aside>
   <dialog id="online-lobby" class="race-results" aria-labelledby="online-title">
     <aside class="online-menu-hero">
@@ -83,10 +83,10 @@
     <p id="online-connection">Conexão ainda não medida.</p>
     <button class="btn btn-primary" id="online-connect">Entrar no multiplayer</button>
     <div id="online-options" hidden><label class="form-label">Clima<select class="form-select" id="online-weather"><option value="dry">Seco</option><option value="rain">Chuva</option><option value="changing">Variável · chuva durante a prova</option></select></label>
-      <label class="form-label">Disputa<select class="form-select" id="online-mode"><option value="race">Corrida com amigos</option><option value="championship">Campeonato · 3 etapas</option><option value="tournament">Copa Neuro · torneio de 3 voltas</option></select></label>
+      <label class="form-label">Disputa<select class="form-select" id="online-mode"><option value="race">Corrida com amigos</option><option value="sprint">Corrida curta · 1 volta</option><option value="lap-challenge">Melhor volta · 2 minutos</option><option value="drift-challenge">Duelo de Drift · 2 minutos</option><option value="championship">Campeonato · 3 etapas</option><option value="tournament">Copa Neuro · torneio de 3 voltas</option></select></label>
       <details id="online-championship-help" hidden><summary>Regras do campeonato</summary><p>Campeonato: 3 etapas, pontos por chegada (25 / 18 / 15 / 12 / 10 / 8). Sem chegada válida, sem pontos. A IA disputa posições, mas o título é entre jogadores.</p></details>
-      <details id="online-cup-help" hidden><summary>Regras da Copa Neuro</summary><p class="tournament-rules">Copa Neuro: entrada gratuita, 2–6 jogadores e três voltas. Quem terminar recebe 110 moedas; bônus de pódio: +90 / +60 / +30. Limites: 200 por prova e 500 por dia UTC. Abandono não premia. Saldo validado pelo servidor e salvo na conta.</p></details>
-      <div class="viz-controls"><label class="form-label">Circuito<select class="form-select" id="online-track"><option value="serra">Serra Verde</option><option value="veloz">Autódromo Veloz</option><option value="tecnico">Vale Técnico</option></select></label>
+      <p id="online-challenge-help" hidden>Desafios sem classificação, com pista seca e sem moedas. Melhor volta e Drift têm carros sem colisão entre si. No Drift: Espaço, A / ✕ ou o freio de mão na tela. Voltas com atalhos ou reposicionamento não contam.</p><details id="online-cup-help" hidden><summary>Regras da Copa Neuro</summary><p class="tournament-rules">Copa Neuro: entrada gratuita, 2–6 jogadores e três voltas. Quem terminar recebe 110 moedas; bônus de pódio: +90 / +60 / +30. Limites: 200 por prova e 500 por dia UTC. Abandono não premia. Saldo validado pelo servidor e salvo na conta.</p></details>
+      <div class="viz-controls"><label class="form-label">Circuito<select class="form-select" id="online-track"><option value="serra">Serra Verde</option><option value="veloz">Autódromo Veloz</option><option value="tecnico">Vale Técnico</option><option value="urbano">Distrito Neon (experimental)</option></select></label>
       <label class="form-label">Voltas<select class="form-select" id="online-laps"><option value="1">1 volta</option><option value="3" selected>3 voltas</option><option value="5">5 voltas</option><option value="10">10 voltas</option></select></label><button class="btn" id="online-create">Criar sala</button></div>
       <form id="online-join"><label class="form-label">Código da sala<input id="online-code" maxlength="6" minlength="6" pattern="[a-fA-F0-9]{6}" required autocomplete="off" placeholder="ABC123"></label><button class="btn" type="submit">Entrar na sala</button></form>
     </div>
@@ -107,9 +107,10 @@
         <p>Alterar regras cancela as confirmações. Todos precisam confirmar novamente.</p>
         <button id="online-save-rules" class="btn" type="button">Aplicar regras</button>
       </details>
+<fieldset id="online-vehicle-panel" class="vehicle-picker"><legend>Escolha seu carro</legend><input type="hidden" id="online-vehicle" value="balanced"><div class="vehicle-grid"><button type="button" class="vehicle-card" data-vehicle="balanced" aria-pressed="true"><svg width="24" height="28" viewBox="0 0 24 28" aria-hidden="true"><rect x="1" y="17" width="4" height="9" rx="1" fill="#071019"/><rect x="19" y="17" width="4" height="9" rx="1" fill="#071019"/><path d="M3 22V12L6 5H18L21 12V22Z" fill="#98efc7"/><path d="M6 11L8 7H16L18 11Z" fill="#132633"/><path d="M5 17H8M16 17H19" stroke="#fff" stroke-width="2"/></svg><strong>Equilibrado</strong><small>Controle e velocidade equilibrados</small></button><button type="button" class="vehicle-card" data-vehicle="agile" aria-pressed="false"><svg width="24" height="28" viewBox="0 0 24 28" aria-hidden="true"><rect x="1" y="17" width="4" height="9" rx="1" fill="#071019"/><rect x="19" y="17" width="4" height="9" rx="1" fill="#071019"/><path d="M3 22V12L6 5H18L21 12V22Z" fill="#98efc7"/><path d="M6 11L8 7H16L18 11Z" fill="#132633"/><path d="M5 17H8M16 17H19" stroke="#fff" stroke-width="2"/></svg><strong>Ágil</strong><small>Mais curvas e frenagem · menor velocidade final</small></button><button type="button" class="vehicle-card" data-vehicle="power" aria-pressed="false"><svg width="24" height="28" viewBox="0 0 24 28" aria-hidden="true"><rect x="1" y="17" width="4" height="9" rx="1" fill="#071019"/><rect x="19" y="17" width="4" height="9" rx="1" fill="#071019"/><path d="M3 22V12L6 5H18L21 12V22Z" fill="#98efc7"/><path d="M6 11L8 7H16L18 11Z" fill="#132633"/><path d="M5 17H8M16 17H19" stroke="#fff" stroke-width="2"/></svg><strong>Velocista</strong><small>Mais velocidade final · exige frear antes</small></button><button type="button" class="vehicle-card" data-vehicle="drift" aria-pressed="false"><svg width="24" height="28" viewBox="0 0 24 28" aria-hidden="true"><rect x="1" y="17" width="4" height="9" rx="1" fill="#071019"/><rect x="19" y="17" width="4" height="9" rx="1" fill="#071019"/><path d="M3 22V12L6 5H18L21 12V22Z" fill="#98efc7"/><path d="M6 11L8 7H16L18 11Z" fill="#132633"/><path d="M5 17H8M16 17H19" stroke="#fff" stroke-width="2"/></svg><strong>Drift</strong><small>Traseira mais solta no Drift · menos aderência</small></button></div><p>Todos gratuitos. A pintura não altera o desempenho. Escolha válida para a próxima disputa.</p></fieldset>
       <label class="form-check"><input type="checkbox" id="online-manual"> Câmbio manual (E sobe, Q reduz)</label>
       <div class="viz-controls"><button class="btn" id="online-ready">Pronto</button><button class="btn btn-primary" id="online-start">Iniciar classifica&#231;&#227;o</button><button class="btn" id="online-leave">Sair da sala</button></div>
-      <section id="online-championship" hidden aria-labelledby="online-championship-title">
+      <section id="online-session-board" hidden><h3>Placar da sessão</h3><p>10, 7, 5, 3, 2 e 1 pontos por posição. Empates recebem os mesmos pontos. Válido enquanto a sala existir.</p><ol id="online-session-scores"></ol></section><section id="online-championship" hidden aria-labelledby="online-championship-title">
         <h3 id="online-championship-title"></h3><p id="online-champion" role="status"></p><ol id="online-scores"></ol>
       </section>
       <section id="online-statistics" hidden aria-labelledby="online-statistics-title">
@@ -121,6 +122,7 @@
         <div id="online-voting">
           <h4>Vote na próxima pista</h4><p>Um voto por jogador. Você pode mudar seu voto. O dono confirma uma das mais votadas.</p>
           <div class="online-vote-grid">
+            <button class="btn" id="online-vote-urbano" type="button" aria-pressed="false">Distrito Neon (experimental)</button>
             <button class="btn" id="online-vote-serra" type="button" aria-pressed="false">Serra Verde</button>
             <button class="btn" id="online-vote-veloz" type="button" aria-pressed="false">Autódromo Veloz</button>
             <button class="btn" id="online-vote-tecnico" type="button" aria-pressed="false">Vale Técnico</button>
@@ -128,7 +130,7 @@
         </div>
         <div id="online-rematch-controls" hidden>
           <button class="btn btn-primary" id="online-rematch-same" type="button">Repetir circuito</button>
-          <label class="form-label">Próximo circuito<select class="form-select" id="online-rematch-track"><option value="serra">Serra Verde</option><option value="veloz">Autódromo Veloz</option><option value="tecnico">Vale Técnico</option></select></label>
+          <label class="form-label">Próximo circuito<select class="form-select" id="online-rematch-track"><option value="serra">Serra Verde</option><option value="veloz">Autódromo Veloz</option><option value="tecnico">Vale Técnico</option><option value="urbano">Distrito Neon (experimental)</option></select></label>
           <button class="btn" id="online-rematch-change" type="button">Preparar outra pista</button>
         </div>
       </section>
@@ -143,7 +145,7 @@
     <details open><summary>Som, câmera e controles</summary>
       <label class="form-label">Gráficos<select class="form-select" id="online-quality"><option value="performance">Leve · recomendado</option><option value="high">Mais detalhes</option><option value="ultra">Super alto · exige mais da GPU</option></select></label>
       <label class="form-check"><input type="checkbox" id="show-fps"> Mostrar FPS</label>
-      <label class="form-check"><input type="checkbox" id="online-sound" checked>Som do motor</label>
+      <fieldset class="vehicle-picker"><legend>Sensação de pilotagem</legend><label class="form-check"><input id="online-feedback-camera" type="checkbox" checked> Câmera suave com a velocidade</label><label class="form-check"><input id="online-feedback-passing" type="checkbox" checked> Som discreto de ultrapassagens</label><label class="form-check"><input id="online-feedback-vibration" type="checkbox"> Vibração do controle (quando compatível)</label></fieldset><label class="form-check"><input type="checkbox" id="online-sound" checked>Som do motor</label>
       <label class="form-check"><input id="radio-sound" type="checkbox" checked>Toque do rádio</label>
       <label class="form-check"><input id="radio-voice" type="checkbox" checked>Voz da equipe</label>
       <label class="form-label">Volume do rádio<input id="radio-volume" type="range" min="0" max="100" value="45" aria-label="Volume do rádio"></label>

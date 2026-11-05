@@ -1,6 +1,7 @@
 (() => {
   'use strict';
   const get = (id) => document.getElementById(id);
+  const challengeUI=window.createNeuroChallengesUI?.(get);
   const social = window.NeuroOnlineSocial;
   const invites = window.createNeuroInvites?.(get);
   let spectatorId=null,lastSnapshot=0,lastHealth=0,lowFpsSince=null;
@@ -48,7 +49,7 @@
   let finalRanking = [];
   const lapTime = value => Number.isFinite(value) ? `${Math.floor(value / 60)}:${(value % 60).toFixed(3).padStart(6, '0')}` : 'Sem tempo';
   const keys = new Set(), pointers = new Map();
-  const actions = { KeyW: 'accelerate', ArrowUp: 'accelerate', KeyS: 'brake', ArrowDown: 'brake', KeyA: 'left', ArrowLeft: 'left', KeyD: 'right', ArrowRight: 'right', KeyQ: 'shiftDown', KeyE: 'shiftUp' };
+  const actions = { KeyW: 'accelerate', ArrowUp: 'accelerate', KeyS: 'brake', ArrowDown: 'brake', KeyA: 'left', ArrowLeft: 'left', KeyD: 'right', ArrowRight: 'right', KeyQ: 'shiftDown', KeyE: 'shiftUp', Space:'handbrake' };
   const audio = window.createNeuroAudio?.();
   const easterEgg = window.createNeuroEasterEgg?.(get('neuro-race'), () => Boolean(latest && latest.phase === 'racing' && !latest.cars.find(car => car.id === latest.self)?.done && latest.cars.find(car => car.id === latest.self)?.pitState !== 'service' && !intro?.active && !get('online-lobby').open));
   const say = (message) => { get('online-message').textContent = message; };
@@ -56,7 +57,7 @@
   let preparation = 0, preparing = false;
   let eventKey = '';
   let statsKey = '', rulesKey = '';
-  const circuitNames = { serra:'Serra Verde', veloz:'Autódromo Veloz', tecnico:'Vale Técnico' };
+  const circuitNames = { urbano:'Distrito Neon (experimental)', serra:'Serra Verde', veloz:'Autódromo Veloz', tecnico:'Vale Técnico' };
   for (const id of Object.keys(circuitNames)) {
     const points = window.createNeuroTrack(id).points;
     const xs = points.map(p=>p.x), ys = points.map(p=>p.y);
@@ -69,14 +70,16 @@
   const translated = text => window.NeuroI18n?.t(text) || text;
   function renderRules() {
     const r=room?.rules;
-    get('online-settings').hidden = !room || room.owner !== self || Boolean(latest);
+    get('online-settings').hidden = !room || room.owner !== self || Boolean(latest) || Boolean(window.NeuroChallenges?.names[room?.mode]);
     if(!r) return;
+    if(window.NeuroChallenges?.names[room.mode]){get('online-rules-summary').textContent=translated('Desafios com regras fixas: pista seca, sem moedas e sem desgaste.');return;}
     const key=JSON.stringify([r,room.owner,room.mode]);
     if(key===rulesKey) return;
     rulesKey=key;
     get('online-rule-weather').value=r.weather;
     get('online-rule-laps').value=String(r.laps);
     get('online-rule-laps').disabled=room.mode==='tournament';
+    if(window.NeuroChallenges?.names[room.mode])get('online-settings').hidden=true;
     get('online-rule-difficulty').value=r.difficulty;
     get('online-rule-wear').value=r.tyreWear;
     const climate={dry:'Seco',rain:'Chuva',changing:'Variável'}, level={easy:'Fácil',normal:'Normal',hard:'Difícil'}, wear={reduced:'Reduzido · 60%',normal:'Normal · 100%',intense:'Intenso · 150%'};
@@ -130,6 +133,7 @@
       get('online-rematch-track').value = Object.keys(circuitNames)[counts.indexOf(best)];
   }
   function renderPlayers() {
+    challengeUI?.room(room);
     if (!room) return;
     ready = room.players.find(p => p.id === self)?.ready || false;
     get('online-ready').textContent = preparing ? 'Preparando pista…' : ready ? 'Cancelar confirmação' : 'Estou pronto';
@@ -194,6 +198,7 @@
     }
   }
   function resetRoom() {
+    challengeUI?.state(null,false); challengeUI?.room(null);
     spectatorId=null;spectatorTargets=[];positions.clear();lastSnapshot=0;lowFpsSince=null;get('online-spectator').hidden=true;get('online-health').hidden=true;invites?.update(null);
     eventKey = ''; statsKey = ''; rulesKey = ''; get('online-championship').hidden = true;
     get('online-statistics').hidden = true;get('online-settings').hidden=true;
@@ -212,7 +217,7 @@
     prediction = null; rtt = 0;
     get('online-ready').disabled = false;
     get('online-ready').hidden = get('online-start').hidden = false;
-    get('online-manual').disabled = false;
+    get('online-manual').disabled = false; get('online-vehicle-panel').disabled=false;
     get('online-recover').disabled = true;
     get('online-leave').textContent = 'Sair da sala';
     get('online-room').hidden = true; get('online-back').hidden = true;
@@ -251,6 +256,8 @@
           try { window.sessionStorage?.removeItem('neurodrive-invite'); } catch {}
           get('online-rematch-track').value = room.track;
           get('online-room-code').textContent = `${room.mode === 'tournament' ? 'Copa Neuro' : 'Sala'} ${room.code} · ${room.laps} volta(s)`;
+          if(window.NeuroChallenges?.names[room.mode])get('online-room-code').textContent=room.code+' - '+translated(window.NeuroChallenges.names[room.mode]);
+          get('online-start').textContent=translated(window.NeuroChallenges?.names[room.mode]?'Iniciar desafio':'Iniciar classifica\u00e7\u00e3o');
           ready = room.players.find((p) => p.id === self)?.ready || false;
           get('online-ready').textContent = ready ? 'Cancelar confirmação' : 'Estou pronto';
           get('online-start').disabled = room.owner !== self || room.players.length < 2 || room.players.some((p) => !p.ready);
@@ -269,7 +276,7 @@
           if (!latest) { get('online-lobby').close(); audio?.unlock(); get('online-back').hidden = false; get('online-ready').disabled = true; get('online-start').disabled = true; }
           latest = message;
           lastSnapshot=performance.now();
-          if (room && message.championship !== undefined) { room.championship = message.championship; room.votes = message.votes; room.stats=message.stats; room.rules=message.rules; }
+          if (room && message.championship !== undefined) { room.championship = message.championship; room.votes = message.votes; room.stats=message.stats; room.rules=message.rules; room.sessionStandings=message.sessionStandings; }
           if (message.recordSummary) recordSummaries[message.stage === 'waiting' ? 'qualifying' : message.stage || 'race'] = message.recordSummary;
           if (message.recordNotice) receiveRecord(message.recordNotice);
           renderImprovement();
@@ -293,20 +300,20 @@
           if (!safeIntro && intro?.active) intro.finish();
           document.querySelectorAll('.race-shift').forEach((button) => { button.hidden = !player.manual; });
           get('online-ready').hidden = get('online-start').hidden = true;
-          get('online-manual').disabled = true;
+          get('online-manual').disabled = true; get('online-vehicle-panel').disabled=true;
           get('online-recover').disabled = latest.phase !== 'racing' || player.done || Boolean(player.cooldown || player.pitState);
           get('online-leave').textContent = latest.phase === 'finished' || player.done ? 'Voltar às salas' : 'Abandonar corrida';
           prediction ||= window.createOnlinePrediction(window.createNeuroTrack(trackId));
           prediction.receive(player, latest.phase, performance.now(), rtt);
           const qualifying = latest.stage === 'qualifying' || latest.stage === 'waiting';
-          const ranking = [...latest.cars].sort((a, b) => Number(Boolean(a.disconnected)) - Number(Boolean(b.disconnected)) || (qualifying
+          const ranking = window.NeuroChallenges?.names[latest.mode] ? window.NeuroChallenges.rank(latest.cars,latest.mode) : [...latest.cars].sort((a, b) => Number(Boolean(a.disconnected)) - Number(Boolean(b.disconnected)) || (qualifying
             ? (a.bestLap ?? Infinity) - (b.bestLap ?? Infinity) || a.id - b.id
             : (a.place || 99) - (b.place || 99) || b.progress - a.progress));
-          const nextRankingKey = JSON.stringify(ranking.map((car) => [car.id, car.name, car.disconnected, car.done, car.completedLaps, car.bestLap]));
+          const nextRankingKey = JSON.stringify(ranking.map((car) => [car.id, car.name, car.disconnected, car.done, car.completedLaps, car.bestLap,car.challengeScore,car.challengeBest]));
           if (rankingKey !== nextRankingKey) {
           rankingKey = nextRankingKey;
           get('online-ranking').replaceChildren();
-          for (const car of ranking) { const li = document.createElement('li'); li.dataset.self = String(car.id === latest.self); li.textContent = `${car.name} · ${car.disconnected ? 'desconectado' : qualifying ? lapTime(car.bestLap) : car.done ? 'chegou' : `volta ${Math.min(latest.laps, car.completedLaps + 1)}/${latest.laps}`}`; get('online-ranking').append(li); }
+          for (const car of ranking) { const li = document.createElement('li'); li.dataset.self = String(car.id === latest.self); li.textContent = `${car.name} · ${window.NeuroChallenges?.names[latest.mode] ? window.NeuroChallenges.value(car,latest.mode) : car.disconnected ? 'desconectado' : qualifying ? lapTime(car.bestLap) : car.done ? 'chegou' : `volta ${Math.min(latest.laps, car.completedLaps + 1)}/${latest.laps}`}`; get('online-ranking').append(li); }
           }
           get('online-hud').hidden = false;
           playerPosition = ranking.indexOf(player) + 1;
@@ -345,6 +352,9 @@
           get('online-reward').textContent = player.rewardPending ? 'Salvando recompensa…' : player.reward !== undefined ? `Recompensa: ${player.reward} moedas. Seu saldo foi salvo na conta.` : latest.phase === 'finished' && !player.done ? 'Prova encerrada pelo limite de tempo. Sem recompensa.' : '';
           if (qualifying) get('online-reward').textContent = 'A classificação define o grid e não concede moedas.';
           else if (player.done && player.place && !player.disconnected) get('online-reward').textContent = `🏁 Bandeirada · ${player.place}º lugar. ${get('online-reward').textContent}`;
+          if(window.NeuroChallenges?.names[latest.mode] && latest.phase==='finished' && ceremonyElapsed!==null && !latest.cars.some(c=>c.place>0&&!c.disconnected)){ceremonyElapsed=null;renderer?.setCeremony?.(null);get('neuro-race').setAttribute('data-ceremony','false');menu();}
+          challengeUI?.room(room);
+          challengeUI?.state(latest,!get('online-lobby').open&&!intro?.active);
           updateRematch();
         }
       };
@@ -357,7 +367,11 @@
     const tournament = get('online-mode').value === 'tournament';
     get('online-cup-help').hidden = !tournament;
     get('online-championship-help').hidden = get('online-mode').value !== 'championship';
-    get('online-laps').disabled = tournament;
+    const challenge=Boolean(window.NeuroChallenges?.names[get('online-mode').value]);
+    get('online-challenge-help').hidden=!challenge;
+    get('online-weather').disabled=challenge;
+    get('online-laps').disabled = tournament||challenge;
+    if(challenge){get('online-laps').value='1';get('online-weather').value='dry';}
     if (tournament) get('online-laps').value = '3';
   };
   get('online-mode').onchange();
@@ -377,7 +391,7 @@
     if (ticket !== preparation || !room) return;
     try {
       prepareRenderer(id);
-      send({ type: 'ready', ready: true, manual: get('online-manual').checked });
+      send({ type: 'ready', ready: true, manual: get('online-manual').checked, vehicle:get('online-vehicle').value });
     } catch { send({ type: 'preparing', loading: false }); say('Não foi possível preparar a pista. Tente o modo Desempenho.'); }
     finally { preparing = false; renderPlayers(); }
   };
@@ -386,7 +400,8 @@
   for (const id of Object.keys(circuitNames)) get('online-vote-' + id).onclick = () => send({ type:'vote', track:id });
   window.addEventListener('neurodrive:language', () => { eventKey = ''; rulesKey='';statsKey=''; renderEvent(); });
   get('online-save-rules').onclick=()=>send({type:'settings', weather:get('online-rule-weather').value,laps:Number(get('online-rule-laps').value),difficulty:get('online-rule-difficulty').value,tyreWear:get('online-rule-wear').value});
-  get('online-manual').onchange = () => { if (room) send({ type: 'ready', ready: false, manual: get('online-manual').checked }); };
+  window.createNeuroVehiclePicker?.('online',()=>{ if(room && !latest) send({type:'ready',ready:false,vehicle:get('online-vehicle').value}); });
+  get('online-manual').onchange = () => { if (room) send({ type: 'ready', ready: false, manual: get('online-manual').checked, vehicle:get('online-vehicle').value }); };
   get('online-start').onclick = () => send({ type: 'start' });
   get('online-leave').onclick = () => send({ type: 'leave' });
   get('race-pit-request').onclick = () => send({ type: 'pit', compound: get('race-pit-compound').value });
@@ -436,9 +451,14 @@
   }, 16);
   setInterval(() => { if (socket?.readyState === WebSocket.OPEN && self) send({ type: 'ping', time: performance.now() }); }, 1000);
   let lastHudUpdate = -Infinity, lastRender = -Infinity;
+  const sectorHUD=window.createNeuroSectorHUD?.(get('neuro-race'));
+  const feedback=window.createNeuroDrivingFeedback?.('online',audio,()=>gamepad?.pad());
   function draw() {
     recordNotice?.update();
     const now = performance.now();
+    sectorHUD?.(latest?.cars.find(c=>c.id===latest.self),latest?.cars||[],latest?.phase==='racing'&&latest.mode!=='drift-challenge'&&latest.mode!=='lap-challenge'&&!latest?.cars.find(c=>c.id===latest.self)?.done&&!get('online-lobby').open&&!intro?.active,now);
+    feedback?.update(latest?.cars.find(c=>c.id===latest.self),latest?.cars||[],latest?.phase==='racing'&&!get('online-lobby').open&&!intro?.active,now);
+    if(get('online-lobby').open || intro?.active)get('online-challenge-hud').hidden=true;
     if(now-lastHealth>=1000){
       lastHealth=now;
       const active=Boolean(latest&&latest.phase==='racing'&&!document.hidden&&!get('online-lobby').open&&!intro?.active);
@@ -473,7 +493,7 @@
         updateHUD(spectator, positions.get(spectator.id)||playerPosition, cars.length, latest.laps, latest.elapsed, latest.phase);
         lastHudUpdate = now;
       }
-      teamRadio?.update(player, { key:`${latest.raceId}:${latest.stage}`, phase:latest.phase, laps:latest.laps, qualifying:latest.stage !== 'race', elapsed:latest.elapsed }, !get('online-lobby').open && !intro?.active && !document.hidden);
+      teamRadio?.update(player, { key:`${latest.raceId}:${latest.stage}`, phase:latest.phase, laps:latest.laps, qualifying:latest.stage !== 'race', drift:latest.mode==='drift-challenge'||latest.mode==='lap-challenge', elapsed:latest.elapsed }, !get('online-lobby').open && !intro?.active && !document.hidden);
       get('online-spectator').hidden=!targets.length||get('online-lobby').open||Boolean(intro?.active)||ceremonyElapsed!==null;
       get('online-spectator-name').textContent=`${translated('Acompanhando')}: ${spectator.name}`;
       get('online-spectator-prev').disabled=get('online-spectator-next').disabled=targets.length<2;

@@ -140,10 +140,12 @@
     }
     const rpm = Math.max(0, Math.min(8000, Number(car.rpm) || 0));
     get('race-rpm-fill').setAttribute('stroke-dashoffset', String(100 - rpm / 80));
-    get('race-instruments').setAttribute('data-redline', String(rpm >= 6300));
+    get('race-instruments').setAttribute('data-redline', String(rpm >= 7500));
     get('race-rpm').textContent = `${Math.round(rpm / 100) * 100} rpm`;
     get('race-gear').textContent = car.gear === 0 ? 'R' : String(car.gear || 1);
-    get('race-drive-mode').textContent = car.manual ? 'MANUAL' : 'AUTO';
+    const drafting=phase==='racing' && !car.done && !car.pitState && !car.pitExit && !car.offRoad && car.slipstream>.2;
+    get('race-instruments').setAttribute('data-drafting',String(drafting));
+    get('race-drive-mode').textContent = drafting ? (window.NeuroI18n?.t('Vácuo') || 'Vácuo') : car.manual ? 'MANUAL' : 'AUTO';
     get('race-speed').textContent = String(Math.round(Math.abs(car.speed) * 54));
     get('race-position').textContent = `${position} / ${total}`;
     get('race-lap').textContent = `${Math.max(1, Math.min(laps, car.completedLaps + 1))} / ${laps}`;

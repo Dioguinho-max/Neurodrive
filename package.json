@@ -19,7 +19,7 @@
     "test:accounts": "node output/tests/accounts.cjs && node output/tests/pilot.cjs",
     "test:cloud": "node output/tests/cloud.cjs",
     "test:records": "node output/tests/record-laps.cjs && node output/tests/records.cjs",
-    "test:online": "node output/tests/online-social.cjs && node output/tests/prediction.cjs && node output/tests/online-ui.cjs && node output/tests/online-buffer.cjs && node output/tests/online-stages.cjs && node output/tests/online-championship.cjs",
+    "test:online": "node output/tests/challenges.cjs && node output/tests/online-challenges.cjs && node output/tests/online-social.cjs && node output/tests/prediction.cjs && node output/tests/online-ui.cjs && node output/tests/online-buffer.cjs && node output/tests/online-stages.cjs && node output/tests/online-championship.cjs",
     "test:weather": "node output/tests/weather.cjs",
     "test:language": "node output/tests/language.cjs",
     "test:drift": "node output/tests/drift.cjs && node output/tests/drift-records.cjs && node output/tests/drift-online.cjs",

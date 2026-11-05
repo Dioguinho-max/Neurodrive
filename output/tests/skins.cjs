@@ -2,7 +2,7 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 const THREE = require('../vendor/three.min.js');
-let scene, camera;
+let scene, camera, clock=0;
 class Renderer {
   constructor() { this.shadowMap = {}; }
   setPixelRatio() {}
@@ -10,7 +10,7 @@ class Renderer {
   render(value, view) { scene = value; camera = view; }
   dispose() {}
 }
-const host = { THREE: { ...THREE, WebGLRenderer: Renderer }, devicePixelRatio: 1 };
+const host = { THREE: { ...THREE, WebGLRenderer: Renderer }, devicePixelRatio: 1, performance:{now:()=>clock} };
 const document = { createElement: () => ({ getContext: () => null }) };
 for (const file of ['neuro-pista-track.js', 'neurodrive-race-engine.js', 'neuro-pista-3d.js']) {
   new Function('window', 'document', fs.readFileSync(path.join(__dirname, '..', file), 'utf8'))(host, document);
@@ -48,7 +48,7 @@ assert.equal(models[0].children[0].material.color.getHexString(), '48e6a4');
 assert.equal(models[0].children[3].visible, false);
 const lowSpeedFov = camera.fov;
 player.speed = player.maxSpeed;
-for (let i = 0; i < 60; i++) renderer.update(race.cars, player, false);
+for (let i = 0; i < 60; i++) { clock+=1000/60; renderer.update(race.cars, player, false); }
 assert(camera.fov > lowSpeedFov + 15, 'Campo de visão deve aumentar em alta velocidade');
 assert(camera.position.y > host.NeuroTrack.heightAt(camera.position.x, camera.position.z), 'Câmera deve permanecer acima do terreno');
 const beforeBrake = camera.position.clone();

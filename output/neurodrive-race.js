@@ -20,6 +20,8 @@
   };
   get('race-volume').oninput = () => audio?.setVolume(Number(get('race-volume').value) / 100);
   let track = window.NeuroTrack;
+  window.createNeuroVehiclePicker?.('race');
+  let sessionVehicle='balanced';
   let race = window.createNeuroRace(track, 'normal', { session: 'qualifying' });
   let qualifyingGrid = null;
   let sessionDifficulty = 'normal';
@@ -545,16 +547,18 @@
       sessionDifficulty = get('race-difficulty').value;
       qualifyingGrid = null;
     }
+    if(qualifying || drift) sessionVehicle=window.neuroVehicleId(get('race-vehicle').value);
     race = window.createNeuroRace(track, sessionDifficulty, {
+      vehicle:sessionVehicle,
       mode: drift ? 'drift' : 'race',
       driftSetup: get('drift-setup').value === 'loose' ? 'loose' : 'stable',
       session: qualifying ? 'qualifying' : 'race', grid: qualifyingGrid, laps: Number(get('race-laps').value),
       transmission: get('race-transmission').value, pitStart: qualifying, weather: get('menu-weather').value,
     });
-    if (drift) driftOnline = window.NeuroDriftOnline?.start(race, track.id, race.cars[0].driftSetup);
+    if (drift && !track.experimental) driftOnline = window.NeuroDriftOnline?.start(race, track.id, race.cars[0].driftSetup);
     get('race-reward').textContent = qualifying ? 'A classificação define o grid. As moedas são concedidas na corrida.' : '';
     get('race-reward-retry').hidden = true;
-    window.NeuroGarage?.beginRace(qualifying || drift ? null : { track: track.id, laps: race.laps });
+    window.NeuroGarage?.beginRace(qualifying || drift || track.experimental ? null : { track: track.id, laps: race.laps });
     get('race-pit-compound').value = race.cars[0].tyreCompound;
     started = true;
     paused = false;
@@ -689,6 +693,8 @@
     recover: () => get('menu-recover').click(),
     disconnect: () => { if (started) openMenu(); },
   });
+  const sectorHUD=window.createNeuroSectorHUD?.(get('neuro-race'));
+  const feedback=window.createNeuroDrivingFeedback?.('race',audio,()=>gamepad?.pad());
   function frame(time) {
     const delta = previousTime === null ? 0 : Math.min(time - previousTime, 100);
     previousTime = time;
@@ -710,6 +716,8 @@
         accumulator -= 1000 / 60;
       }
     }
+    sectorHUD?.(race.cars[0],race.cars,started&&!paused&&!presenting&&!race.drift&&race.phase==='racing'&&!race.cars[0].done,time);
+    feedback?.update(race.cars[0],race.cars,started&&!paused&&!presenting&&race.phase==='racing',time);
     refresh();
     fpsDisplay?.tick(time, started && !paused);
     requestAnimationFrame(frame);

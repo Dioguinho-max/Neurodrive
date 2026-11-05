@@ -17,7 +17,7 @@
   .game-toolbar .beta-badge { font-size: 8px; padding: 3px; }
   .game-toolbar .btn { min-height: 44px; padding: 8px 10px; font-size: 11px; }
   #race-session { top: calc(env(safe-area-inset-top, 0px) + 49px); left: max(10px, env(safe-area-inset-left)); right: calc(max(10px, env(safe-area-inset-right)) + 154px); margin: 0; font-size: 9px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .drive-hud { top: calc(env(safe-area-inset-top, 0px) + 6px); bottom: auto; right: max(10px, env(safe-area-inset-right)); width: 144px; }
+  .drive-hud { top: calc(env(safe-area-inset-top, 0px) + 10px); bottom: auto; right: max(10px, env(safe-area-inset-right)); width: 144px; }
   .drive-dial { height: 110px; }
   .drive-speed { top: 34px; left: 13px; width: 76px; }
   .drive-speed strong { font-size: 34px; letter-spacing: -1px; }
@@ -25,7 +25,8 @@
   .drive-gear { top: 36px; right: 17px; min-width: 28px; padding-left: 5px; }
   .drive-gear strong { font-size: 25px; }
   .drive-gear span { font-size: 7px; margin-top: 3px; }
-  .drive-rpm { top: 84px; font-size: 8px; }
+  .drive-rpm { top: 84px; font-size: 11px; }
+  .drive-ticks { font-size:20px; stroke-width:2.5px; }
   .drive-session { padding: 6px; gap: 4px; margin-top: 4px; }
   .drive-session span { font-size: 8px; letter-spacing: 0; }
   .drive-session strong { font-size: 10px; margin-left: 4px; }

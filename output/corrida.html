@@ -11,8 +11,8 @@
     <script src="vendor/three.min.js" defer></script><script src="neurodrive-podium.js" defer></script><link rel="stylesheet" href="neurodrive-podium.css">
     <script src="neuro-pista-track.js" defer></script>
     <script src="neuro-pista-3d.js" defer></script>
-    <script src="neurodrive-race-engine.js" defer></script>
-    <script src="neurodrive-audio.js?v=engine-only-2" defer></script>
+    <script src="neurodrive-race-engine.js" defer></script><script src="neurodrive-vehicles.js" defer></script>
+    <script src="neurodrive-audio.js?v=engine-only-2" defer></script><script src="neurodrive-feedback.js" defer></script><script src="neurodrive-sectors.js" defer></script><link rel="stylesheet" href="neurodrive-sectors.css">
     <script src="neurodrive-profile.js" defer></script>
     <script src="neurodrive-achievements.js" defer></script><link rel="stylesheet" href="neurodrive-achievements.css">
     <script src="neurodrive-records.js" defer></script>
@@ -49,9 +49,9 @@
         <div class="drive-dial" id="race-instruments" data-redline="false">
           <svg viewBox="0 0 268 204" aria-hidden="true">
             <path class="drive-arc-track" d="M 39 180 A 110 110 0 1 1 229 180" />
-            <path class="drive-arc-limit" pathLength="100" stroke-dasharray="20 80" stroke-dashoffset="20" d="M 39 180 A 110 110 0 1 1 229 180" />
+            <path class="drive-arc-limit" pathLength="100" stroke-dasharray="6.25 93.75" stroke-dashoffset="6.25" d="M 39 180 A 110 110 0 1 1 229 180" />
             <path id="race-rpm-fill" class="drive-arc-fill" pathLength="100" stroke-dasharray="100" stroke-dashoffset="89" d="M 39 180 A 110 110 0 1 1 229 180" />
-            <g class="drive-ticks" text-anchor="middle"><text x="26" y="192">0</text><text x="23" y="91">2</text><text x="134" y="9">4</text><text x="245" y="91">6</text><text x="242" y="192">8</text></g>
+            <path class="drive-scale-marks" d="M 48.26 174.50 L 43.07 177.50 M 32.00 125.00 L 29.00 125.00 M 48.26 75.50 L 43.07 72.50 M 83.00 36.67 L 81.50 34.07 M 134.00 26.00 L 134.00 20.00 M 185.00 36.67 L 186.50 34.07 M 219.74 75.50 L 224.93 72.50 M 236.00 125.00 L 239.00 125.00 M 219.74 174.50 L 224.93 177.50"/><g class="drive-ticks" text-anchor="middle"><text x="26" y="198">0</text><text x="16" y="76">2</text><text x="134" y="10">4</text><text x="252" y="76">6</text><text x="242" y="198">8</text></g>
           </svg>
           <div class="drive-speed"><strong id="race-speed">0</strong><span>KM/H</span></div>
           <div class="drive-gear" aria-label="Marcha"><strong id="race-gear">1</strong><span id="race-drive-mode">AUTO</span></div>
@@ -171,6 +171,7 @@
           <input type="hidden" id="menu-mode" value="single">
           <p id="drift-help" hidden>Drift solo: use Espaço ou A / ✕ para um toque de freio de mão ao virar. No celular, use o botão acima das setas. Solte e dose acelerador e contravolante para sustentar a derrapagem. Encadeie derrapagens acima de 30 km/h para chegar a ×8. Endireite por 1,2 s para guardar os pontos. Batidas, rodadas e saídas da pista perdem o combo. Pista seca, sem desgaste de pneus; pontos separados das moedas e dos recordes de volta.</p>
           <section id="drift-menu-goals" hidden aria-label="Metas e recorde de Drift"><strong>Medalhas do circuito</strong><p id="drift-menu-targets"></p><p id="drift-menu-record"></p><small>Recorde local deste navegador, separado das moedas e das medalhas da conta.</small></section>
+<fieldset id="race-vehicle-panel" class="vehicle-picker"><legend>Escolha seu carro</legend><input type="hidden" id="race-vehicle" value="balanced"><div class="vehicle-grid"><button type="button" class="vehicle-card" data-vehicle="balanced" aria-pressed="true"><svg width="24" height="28" viewBox="0 0 24 28" aria-hidden="true"><rect x="1" y="17" width="4" height="9" rx="1" fill="#071019"/><rect x="19" y="17" width="4" height="9" rx="1" fill="#071019"/><path d="M3 22V12L6 5H18L21 12V22Z" fill="#98efc7"/><path d="M6 11L8 7H16L18 11Z" fill="#132633"/><path d="M5 17H8M16 17H19" stroke="#fff" stroke-width="2"/></svg><strong>Equilibrado</strong><small>Controle e velocidade equilibrados</small></button><button type="button" class="vehicle-card" data-vehicle="agile" aria-pressed="false"><svg width="24" height="28" viewBox="0 0 24 28" aria-hidden="true"><rect x="1" y="17" width="4" height="9" rx="1" fill="#071019"/><rect x="19" y="17" width="4" height="9" rx="1" fill="#071019"/><path d="M3 22V12L6 5H18L21 12V22Z" fill="#98efc7"/><path d="M6 11L8 7H16L18 11Z" fill="#132633"/><path d="M5 17H8M16 17H19" stroke="#fff" stroke-width="2"/></svg><strong>Ágil</strong><small>Mais curvas e frenagem · menor velocidade final</small></button><button type="button" class="vehicle-card" data-vehicle="power" aria-pressed="false"><svg width="24" height="28" viewBox="0 0 24 28" aria-hidden="true"><rect x="1" y="17" width="4" height="9" rx="1" fill="#071019"/><rect x="19" y="17" width="4" height="9" rx="1" fill="#071019"/><path d="M3 22V12L6 5H18L21 12V22Z" fill="#98efc7"/><path d="M6 11L8 7H16L18 11Z" fill="#132633"/><path d="M5 17H8M16 17H19" stroke="#fff" stroke-width="2"/></svg><strong>Velocista</strong><small>Mais velocidade final · exige frear antes</small></button><button type="button" class="vehicle-card" data-vehicle="drift" aria-pressed="false"><svg width="24" height="28" viewBox="0 0 24 28" aria-hidden="true"><rect x="1" y="17" width="4" height="9" rx="1" fill="#071019"/><rect x="19" y="17" width="4" height="9" rx="1" fill="#071019"/><path d="M3 22V12L6 5H18L21 12V22Z" fill="#98efc7"/><path d="M6 11L8 7H16L18 11Z" fill="#132633"/><path d="M5 17H8M16 17H19" stroke="#fff" stroke-width="2"/></svg><strong>Drift</strong><small>Traseira mais solta no Drift · menos aderência</small></button></div><p>Todos gratuitos. A pintura não altera o desempenho. Escolha válida para a próxima disputa.</p></fieldset>
           <section id="drift-setup-panel" hidden>
             <label class="form-label">Acerto de Drift<select id="drift-setup" class="form-select"><option value="stable">Estável · mais controle</option><option value="loose">Solto · mais derrapagem</option></select></label>
             <p>Estável recupera a aderência mais rápido. Solto exige mais contravolante. Os dois disputam o mesmo ranking.</p>
@@ -180,7 +181,7 @@
           <details class="menu-help"><summary>Meus tempos neste dispositivo</summary><p class="text-small" id="menu-records"></p></details>
           <div class="menu-settings"><label class="form-label">Clima<select class="form-select" id="menu-weather"><option value="dry">Seco</option><option value="rain">Chuva</option><option value="changing">Variável · chuva durante a prova</option></select></label>
             <label class="form-label">Circuito
-              <select class="form-select" id="menu-track"><option value="serra">Serra Verde</option><option value="veloz">Autódromo Veloz</option><option value="tecnico">Vale Técnico</option><option id="drift-arena-option" value="arena" hidden disabled>Arena Drift</option></select>
+              <select class="form-select" id="menu-track"><option value="serra">Serra Verde</option><option value="veloz">Autódromo Veloz</option><option value="tecnico">Vale Técnico</option><option id="drift-arena-option" value="arena" hidden disabled>Arena Drift</option><option value="urbano">Distrito Neon (experimental)</option></select>
             </label>
             <label class="form-label">Dificuldade
               <select class="form-select" id="menu-difficulty"><option value="easy">Fácil</option><option value="normal" selected>Normal</option><option value="hard">Difícil</option></select>
@@ -215,7 +216,7 @@
           <p class="text-small">No manual, cada toque troca uma marcha. Reduções acima do corte são bloqueadas.</p>
         <label class="form-label">Qualidade gráfica <select class="form-select" id="race-quality"><option value="performance">Desempenho · recomendado</option><option value="high">Mais detalhes</option><option value="ultra">Super alto · exige mais da GPU</option></select></label>
       <label class="form-check"><input type="checkbox" id="show-fps"> Mostrar FPS</label>
-        <label class="form-check"><input id="race-sound" type="checkbox" checked> Som do motor</label>
+        <fieldset class="vehicle-picker"><legend>Sensação de pilotagem</legend><label class="form-check"><input id="race-feedback-camera" type="checkbox" checked> Câmera suave com a velocidade</label><label class="form-check"><input id="race-feedback-passing" type="checkbox" checked> Som discreto de ultrapassagens</label><label class="form-check"><input id="race-feedback-vibration" type="checkbox"> Vibração do controle (quando compatível)</label></fieldset><label class="form-check"><input id="race-sound" type="checkbox" checked> Som do motor</label>
         <label class="form-check"><input id="radio-sound" type="checkbox" checked> Toque do rádio</label>
         <label class="form-check"><input id="radio-voice" type="checkbox" checked> Voz da equipe</label>
         <label class="form-label">Volume do rádio<input id="radio-volume" type="range" min="0" max="100" value="45" aria-label="Volume do rádio"></label>
@@ -353,7 +354,7 @@
             <option value="veloz">Autódromo Veloz</option>
             <option value="tecnico">Vale Técnico</option>
             <option value="arena">Arena Drift</option>
-          </select>
+          <option value="urbano">Distrito Neon (experimental)</option></select>
         </label>
         <label class="form-label">Dificuldade na próxima largada
           <select class="form-select" id="race-difficulty"><option value="easy">Fácil</option><option value="normal" selected>Normal</option><option value="hard">Difícil</option></select>

@@ -270,7 +270,44 @@ A licença MIT do Three.js está preservada em [output/vendor/THREE-LICENSE.txt]
 ### Convites e acompanhamento online
 
 - Convide por link ou QR Code gerado offline. O link preenche a sala; no pendrive, utiliza o IP da rede em vez de localhost.
-- Avisos durante a prova distinguem ping alto, falta de atualiza??es e FPS baixo persistente.
+- Avisos durante a prova distinguem ping alto, falta de atualizações e FPS baixo persistente.
 - Depois de terminar, acompanhe os pilotos ainda na pista pelas setas do painel ou pelas teclas `[` e `]`, com instrumentos do carro acompanhado.
 
-O gerador de QR Code usa [qrcode-generator, de Kazuhiko Arase](https://github.com/kazuhikoarase/qrcode-generator), inclu?do em `output/vendor/qrcode.js`, sob licen?a MIT (`output/vendor/QRCODE-LICENSE.txt`).
+O gerador de QR Code usa [qrcode-generator, de Kazuhiko Arase](https://github.com/kazuhikoarase/qrcode-generator), incluído em `output/vendor/qrcode.js`, sob licença MIT (`output/vendor/QRCODE-LICENSE.txt`).
+
+### Carros e vácuo
+
+Antes da disputa, escolha um carro gratuito nos cartões do menu solo ou da sala online. A escolha fica salva neste navegador e vale para a próxima disputa; no online, mudar o carro exige confirmar **Pronto** novamente. O carro é mantido da classificação para a corrida. As pinturas continuam apenas visuais.
+
+| Carro | Velocidade final sem vácuo | Característica |
+| --- | --- | --- |
+| Equilibrado | 205 km/h | Referência de controle e velocidade |
+| Ágil | 195 km/h | Melhor aceleração, aderência e frenagem |
+| Velocista | 215 km/h | Mais velocidade final, menor aderência e frenagem |
+| Drift | 200 km/h | Traseira mais solta no modo Drift, menor aderência |
+
+Esses limites são para jogadores, com pneus saudáveis e condições favoráveis. A dificuldade continua ajustando o ritmo dos adversários. O acerto Estável/Solto do Drift se combina com o carro escolhido; a validação de pontos no servidor reproduz essa mesma escolha.
+
+Nas corridas, seguir outro carro alinhado acima de 80 km/h reduz gradualmente o arrasto aerodinâmico. O indicador **Vácuo** aparece no painel; o ganho desaparece progressivamente ao sair da trajetória. A velocidade máxima pode aumentar em até 6 km/h no vácuo completo. Não funciona no Drift, em boxes, fora da pista, atrás de carros parados ou no sentido contrário. A IA pode se aproximar pelo vácuo antes de sair para ultrapassar e mantém a defesa antecipada, sem fechar sobre um carro ao lado.
+
+A física é compartilhada entre solo, servidor online e previsão local. Os recordes existentes são preservados; nesta versão, os rankings ainda são gerais por circuito, sem separação por carro.
+
+### Desafios entre amigos e feedback de pilotagem
+
+Na seleção de disputa da sala online há três desafios, para 2–6 jogadores:
+
+- **Corrida curta:** uma volta, sem classificação ou adversários de IA.
+- **Melhor volta:** dois minutos para registrar a melhor volta completa válida. A primeira passagem prepara a volta lançada; atalhos, saídas da pista e reposicionamento invalidam a tentativa.
+- **Duelo de Drift:** dois minutos, pontuação e combos calculados no servidor. O combo restante é guardado ao acabar o tempo. Freio de mão: Espaço, A / ✕ ou botão na tela.
+
+Os desafios usam pista seca, sem desgaste e sem moedas. Melhor volta e Drift usam simulações individuais: os amigos aparecem juntos, mas não colidem. Resultados dos desafios não alimentam os rankings globais. Sem volta válida, sem pontos de Drift ou abandono não há vitória. Marcas iguais empatam e recebem os mesmos pontos.
+
+O **placar da sessão** soma 10 / 7 / 5 / 3 / 2 / 1 pontos por posição, também nas corridas normais. O dono prepara a revanche mantendo sala e placar; todos confirmam novamente. O placar não fica salvo no banco: termina quando a sala encerra ou o servidor reinicia.
+
+Em **Ajustes → Sensação de pilotagem**, tanto no solo quanto no online:
+
+- Câmera com resposta gradual à velocidade, independente da taxa de quadros; respeita a preferência do sistema por movimento reduzido.
+- Som curto e discreto ao cruzar perto de outro carro, com intervalo entre efeitos e respeitando o volume/mudo.
+- Vibração opcional, desligada por padrão, com pulsos curtos nas trocas, frenagens fortes e impactos. Depende do controle, navegador e conexão; falhas de suporte não impedem jogar. Desativada ao pausar, abrir menus ou perder foco.
+
+Essas preferências ficam salvas no navegador. A implementação usa detecção de suporte à [API de vibração do controle](https://developer.mozilla.org/en-US/docs/Web/API/GamepadHapticActuator).

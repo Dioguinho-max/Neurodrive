@@ -12,7 +12,8 @@ function createDriftService(store, clock = Date.now) {
       if (!tracks.includes(data.track) || !['stable', 'loose'].includes(data.setup)) throw fail(400, 'Configuração de Drift inválida.');
       for (const [key, value] of sessions) if (clock() - value.at > 1800000) sessions.delete(key);
       if (!sessions.has(String(id)) && sessions.size >= 512) throw fail(503, 'Tente novamente mais tarde.');
-      const attempt = { token: crypto.randomBytes(24).toString('hex'), at: clock(), track: data.track, setup: data.setup };
+      if(data.vehicle !== undefined && !['balanced','agile','power','drift'].includes(data.vehicle)) throw fail(400,'Carro inválido.');
+      const attempt = { vehicle:data.vehicle || 'balanced', token: crypto.randomBytes(24).toString('hex'), at: clock(), track: data.track, setup: data.setup };
       sessions.set(String(id), attempt);
       return { token: attempt.token };
     },
