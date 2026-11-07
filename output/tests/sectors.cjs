@@ -1,6 +1,6 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
 const api={};for(const name of ['neuro-pista-track.js','neurodrive-race-engine.js'])new Function('window',fs.readFileSync(path.join(__dirname,'..',name),'utf8'))(api);
-for(const id of ['serra','urbano']){
+for(const {id} of api.NeuroTracks.filter(track=>!track.driftOnly)){
  const track=api.createNeuroTrack(id), race=api.createNeuroRace(track,'normal',{session:'qualifying',laps:3});race.cars[0].done=true;
  let sawDelta=false,reference=null;
  for(let tick=0;tick<18000&&race.phase!=='finished';tick++){
@@ -17,4 +17,4 @@ for(const id of ['serra','urbano']){
 }
 const urban=api.createNeuroTrack('urbano');assert.equal(urban.theme,'urban');assert(urban.experimental);assert(urban.length*.25>1700);
 for(let d=900;d<1400;d+=10){const p=urban.pointAt(d);assert(urban.contains(p.x,p.y));assert(Math.abs(p.angle)<.04,'Tunnel stays on straight');}
-console.log('OK: valid sector references, live delta, invalid laps excluded, urban AI completion and straight tunnel clearance.');
+console.log('OK: sectors on every racing circuit, valid references, live delta, invalid laps excluded and straight tunnel clearance.');

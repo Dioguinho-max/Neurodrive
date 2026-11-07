@@ -112,7 +112,9 @@
     if (car.player) car.activations = [car.inputs, [], [steering, pedal]];
     // Menos curso em alta velocidade, entrada gradual e retorno mais rápido.
     const requestedSteering = car.player ? steering * (0.78 - 0.34 * Math.abs(car.speed) / MAX_RACE_SPEED) : steering;
-    const steeringRate = car.player ? (steering === 0 ? 0.055 : car.driftMode ? 0.04 : 0.025) : 0.06;
+    const counterSteering = steering * car.steering < 0;
+    const steeringRate = car.player ? (steering === 0 ? 0.055 : car.driftMode ? 0.04 :
+      counterSteering ? 0.045 : 0.034 - 0.01 * clamp(Math.abs(car.speed) / MAX_RACE_SPEED, 0, 1)) : 0.06;
     car.steering += clamp(requestedSteering - car.steering, -steeringRate, steeringRate);
     updatePowertrain(car, pedal, maximumSpeed, allowReverse);
     if (car.driftMode && car.handbrake > 0) car.speed = Math.sign(car.speed) * Math.max(0, Math.abs(car.speed) - .024 * car.handbrake);
@@ -306,7 +308,7 @@
         driftMode: drift, driftSetup: options.driftSetup, driftHeading: point.angle, id: id + 1, name: human ? 'Você' : driver.name, player: human,
         driver: human ? null : driver,
         // Explicit arcade difficulty bonus; human cars always retain the original drivetrain.
-        aiPower: human ? 1 : ({ easy: 1.05, normal: 1.12, hard: 1.4 }[difficulty] || 1.12),
+        aiPower: human ? 1 : ({ easy: 1.05, normal: 1.12, hard: 1.4 }[difficulty] || 1.12) * (track.theme === 'urban' ? 1.18 : 1),
         skin: human ? null : { color: driver.color, accent: '#172333' },
         ...point, speed: 0, maxSpeed: MAX_RACE_SPEED, steering: 0, gear: 1, rpm: 900, shiftTicks: 0, alive: true, done: false,
         pitExit: pitStart, pitWait: id * 120, pitNode: 1,
@@ -360,7 +362,7 @@
         const slower = nearby.filter(({ other, ahead, side }) => ahead > 4 && ahead < 130 && Math.abs(side) < 22
           && (car.speed > other.speed + 0.03 || other.speed < .8))
           .sort((a, b) => a.ahead - b.ahead)[0];
-        const laneWidth = Math.min(26, track.halfWidth - 18);
+        const laneWidth = Math.min(track.theme === 'urban' ? 22 : 26, track.halfWidth - 18);
         const tow=nearby.filter(({other,ahead,side})=>ahead>70&&ahead<150&&Math.abs(side)<25&&other.speed>1.5&&Math.abs(wrap(other.angle-car.angle))<.2).sort((a,b)=>a.ahead-b.ahead)[0];
         if (previewBend < .15 && tow && (!slower || slower.ahead>70) && car.speed<vehicle(car).speed/54) {
           const candidate=clamp(currentLane+tow.side,-laneWidth,laneWidth);
@@ -375,7 +377,7 @@
           if (clearLane(candidate)) { lane = candidate; car.tacticTicks = 100; }
         }
       }
-      if (previewBend > .65 + aggression * .1) { lane *= 0.9; car.tacticTicks = 0; }
+      if (previewBend > (track.theme === 'urban' ? .48 : .65 + aggression * .1)) { lane *= 0.9; car.tacticTicks = 0; }
       if (lane && !clearLane(lane)) { lane = currentLane; car.tacticTicks = 0; }
       // Preserva espaço lateral durante uma disputa, inclusive quando volta ao centro.
       for (const { ahead, side } of nearby) {
@@ -709,6 +711,7 @@
           }
         }
         const timing = car.sectorTiming;
+        timing.warmup = qualifying && car.completedLaps === 0;
         timing.invalid = !!(car.recordLapInvalid || car.invalidLap || qualifying && car.completedLaps === 0);
         const portion = Math.max(0, car.progress / checkpointLength - car.completedLaps * 12);
         const part = Math.min(11, Math.floor(portion)), fraction = Math.min(1, portion - part);
@@ -726,6 +729,8 @@
         const completed = Math.min(laps, Math.floor(car.progress / track.length));
         if (completed > car.completedLaps && car.checkpoint >= completed * 12) {
           const lapTime = elapsed - car.lapStart;
+          timing.lastInvalid = timing.invalid;
+          timing.lastBest = timing.best.slice();
           if (!timing.invalid && timing.checkpoints.length === 12 && timing.current.every(v => Number.isFinite(v) && v > 0)) {
             timing.best = timing.best.map((v,i) => v === null ? timing.current[i] : Math.min(v, timing.current[i]));
             if (!timing.reference || timing.checkpoints[11] < timing.reference[11]) timing.reference = timing.checkpoints.slice();

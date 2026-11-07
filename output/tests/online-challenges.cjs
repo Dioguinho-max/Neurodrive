@@ -16,10 +16,11 @@ const create=mod.exports.engine.createNeuroRace;mod.exports.engine.createNeuroRa
   const a=await connect('a'),b=await connect('b');
   async function advance(n){for(let i=0;i<n;i++){timer();if(i%50===0)await new Promise(r=>setImmediate(r));}}
   for(const mode of ['sprint','lap-challenge','drift-challenge']){
-   a.send({type:'create',mode,track:'serra',laps:3,weather:'rain'});const lobby=await a.next(m=>m.type==='lobby'&&m.mode===mode&&!m.reset);assert.equal(lobby.mode,mode);assert.equal(lobby.weather,'dry');
+   const track=mode==='sprint'?'urbano':'serra';
+   a.send({type:'create',mode,track,laps:3,weather:'rain'});const lobby=await a.next(m=>m.type==='lobby'&&m.mode===mode&&!m.reset);assert.equal(lobby.mode,mode);assert.equal(lobby.weather,'dry');assert.equal(lobby.track,track);
    b.send({type:'join',code:lobby.code});await a.next(m=>m.type==='lobby'&&m.mode===mode&&m.code===lobby.code&&m.players.length===2);
    a.send({type:'ready',ready:true,vehicle:'drift'});b.send({type:'ready',ready:true});await a.next(m=>m.type==='lobby'&&m.mode===mode&&m.code===lobby.code&&m.players.every(p=>p.ready));
-   a.send({type:'start'});const initial=await a.next(m=>m.type==='state'&&m.mode===mode&&m.stage==='race');assert.equal(initial.cars.length,2);
+   a.send({type:'start'});const initial=await a.next(m=>m.type==='state'&&m.mode===mode&&m.stage==='race');assert.equal(initial.cars.length,2);assert(initial.cars.every(c=>c.sectorTiming),'Authoritative sector timing included in snapshots');
    a.send({type:'input',score:99999999,handbrake:true});await new Promise(r=>setImmediate(r));
    if(mode==='sprint'){await advance(185);current.cars.filter(c=>c.player).forEach((c,i)=>Object.assign(c,{done:true,finishTime:50+i,place:i+1}));await advance(6);}
    else await advance(7390);
@@ -29,6 +30,14 @@ const create=mod.exports.engine.createNeuroRace;mod.exports.engine.createNeuroRa
    a.send({type:'rematch',track:'serra'});const rematch=await a.next(m=>m.type==='lobby'&&m.mode===mode&&m.reset);assert.equal(rematch.code,lobby.code);assert.deepEqual(rematch.sessionStandings,result.sessionStandings);assert(rematch.players.every(p=>!p.ready));
    a.send({type:'leave'});b.send({type:'leave'});await a.next(m=>m.type==='left');await b.next(m=>m.type==='left');
   }
+  a.send({type:'create',mode:'race',track:'urbano',laps:1});const urban=await a.next(m=>m.type==='lobby'&&m.mode==='race'&&m.track==='urbano');
+  b.send({type:'join',code:urban.code});await a.next(m=>m.type==='lobby'&&m.code===urban.code&&m.players.length===2);
+  a.send({type:'ready',ready:true});b.send({type:'ready',ready:true});await a.next(m=>m.type==='lobby'&&m.code===urban.code&&m.players.every(p=>p.ready));
+  a.send({type:'start'});await a.next(m=>m.type==='state'&&m.stage==='qualifying');
+  current.endQualifying();await advance(610);await a.next(m=>m.type==='state'&&m.stage==='race'&&m.mode==='race');
+  current.cars.forEach((c,i)=>Object.assign(c,{done:true,finishTime:50+i,place:i+1}));await advance(185);
+  const finished=await a.next(m=>m.type==='state'&&m.mode==='race'&&m.phase==='finished');assert(finished.cars.filter(c=>c.player).every(c=>!c.rewardPending));
+  a.send({type:'rematch',track:'urbano'});await a.next(m=>m.type==='lobby'&&m.mode==='race'&&m.reset&&m.track==='urbano');
   assert.equal(awards,0);assert.equal(records,0);
   console.log('OK: real WebSocket challenges, two players, fixed rules, server scores, no coin/record farming and owner-only rematch retaining standings.');
  }finally{clients.forEach(ws=>ws.terminate());online.close();await new Promise(r=>server.close(r));}

@@ -292,7 +292,19 @@ Nas corridas, seguir outro carro alinhado acima de 80 km/h reduz gradualmente o 
 
 A física é compartilhada entre solo, servidor online e previsão local. Os recordes existentes são preservados; nesta versão, os rankings ainda são gerais por circuito, sem separação por carro.
 
-### Desafios entre amigos e feedback de pilotagem
+### Setores e circuito urbano experimental
+
+Classificação e corrida usam três setores (S1, S2 e S3), no solo e no online. Ao completar um setor válido, uma faixa compacta aparece acima do carro por 3,5 segundos, com o tempo e a diferença para sua melhor marca válida naquele setor. Verde indica ganho, vermelho indica perda e roxo destaca a melhor marca disponível da sessão. Voltas de aquecimento, atalhos, saídas da pista e reposicionamentos não criam referências. Os dados do online são calculados pelo servidor. A notificação não aparece durante apresentações, menus e Drift, nem reaparece ao receber o mesmo resultado pela rede.
+
+Selecione **Distrito Neon (experimental)** na lista de circuitos, no solo ou na sala online. O traçado tem uma reta longa, curvas fechadas, túnel iluminado e prédios com fachadas texturizadas. O cenário inclui calçadas, guias, postes, bancos, canteiros, marcações de rua, placas do circuito, bases comerciais e equipamentos nos telhados. O túnel tem portais reforçados, faixas de sinalização e detalhes luminosos nas paredes. As fachadas variam de cor e usam filtragem de textura para reduzir a cintilação à distância.
+
+Prédios, túnel e detalhes repetidos usam lotes instanciados, sem luzes dinâmicas adicionais. Desempenho reduz os prédios de maneira distribuída pelo circuito, acompanha essa redução nos telhados e lojas e omite os canteiros decorativos. Os detalhes não alteram a física, o traçado nem os tempos de referência.
+
+Durante o teste, o circuito urbano não concede moedas nem envia marcas aos rankings competitivos. Os campeonatos existentes continuam com suas três pistas. Ainda é necessário avaliar o desempenho em computadores fracos reais; a verificação visual automatizada não substitui esse teste.
+
+### Disputas rápidas e sensação de pilotagem
+
+A direção responde mais rapidamente em baixa velocidade e ao corrigir para o lado oposto, mantendo entrada gradual em alta. Com a vibração ativada, um pulso leve sinaliza curvas próximas do limite de aderência (não é force feedback de volante). O Drift mantém sua resposta própria. No Distrito Neon, os adversários usam um bônus arcade de aceleração de 18% e corredores de ultrapassagem mais estreitos, com retorno antecipado à trajetória nas curvas fechadas. A mesma física é usada no solo e no servidor online.
 
 Na seleção de disputa da sala online há três desafios, para 2–6 jogadores:
 

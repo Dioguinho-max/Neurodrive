@@ -355,6 +355,7 @@
           if(window.NeuroChallenges?.names[latest.mode] && latest.phase==='finished' && ceremonyElapsed!==null && !latest.cars.some(c=>c.place>0&&!c.disconnected)){ceremonyElapsed=null;renderer?.setCeremony?.(null);get('neuro-race').setAttribute('data-ceremony','false');menu();}
           challengeUI?.room(room);
           challengeUI?.state(latest,!get('online-lobby').open&&!intro?.active);
+          if(latest.track==='urbano')get('online-reward').textContent=translated('Distrito Neon é experimental: sem moedas e sem ranking competitivo.');
           updateRematch();
         }
       };

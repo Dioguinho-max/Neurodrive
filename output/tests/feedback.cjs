@@ -13,4 +13,10 @@ nodes['race-feedback-vibration'].checked=true;nodes['race-feedback-vibration'].o
 car.impact=0;feedback.update(car,[car,other],true,600);car.impact=.8;feedback.update(car,[car,other],true,900);assert.equal(pulses,1);
 feedback.update(car,[car,other],true,950);assert.equal(pulses,1);events.blur();assert.equal(resets,1);
 feedback.update(car,[car,other],false,2000);other.x=-10;feedback.update(car,[car,other],true,2100);assert.equal(passes,1,'Resume cannot invent a passing event');
-console.log('OK: passing cooldown, no phantom resume, optional bounded rumble and blur reset.');
+car.impact=0;car.steering=.3;car.gripUsage=1.1;car.offRoad=false;
+const beforeCorner=pulses;feedback.update(car,[car,other],true,3000);assert.equal(pulses,beforeCorner+1,'Grip limit gives optional steering feedback');
+feedback.update(car,[car,other],true,3300);assert.equal(pulses,beforeCorner+1,'Corner feedback is not constant');
+car.offRoad=true;feedback.update(car,[car,other],true,3700);assert.equal(pulses,beforeCorner+1,'No corner cue on grass');
+nodes['race-feedback-vibration'].checked=false;nodes['race-feedback-vibration'].onchange();car.offRoad=false;
+feedback.update(car,[car,other],true,4300);assert.equal(pulses,beforeCorner+1,'Preference still disables steering feedback');
+console.log('OK: passing cooldown, optional steering cues, rumble limits, pause and blur reset.');

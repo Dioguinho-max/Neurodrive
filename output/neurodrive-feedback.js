@@ -29,7 +29,10 @@
       if(prefs.vibration&&next&&now-lastRumble>220){
         const impact=Math.max(0,(car.impact||0)-lastImpact);
         const shift=lastGear!==null&&lastGear!==car.gear;
-        const magnitude=impact>.12?Math.min(.38,impact*.4):shift?.10:car.brake>.7&&car.speed>1.3?.07:0;
+        // A light pulse at the grip limit gives steering feedback without constant rumble.
+        const corner=car.speed>1.2&&!car.offRoad&&Math.abs(car.steering||0)>.12&&car.gripUsage>.88;
+        const magnitude=impact>.12?Math.min(.38,impact*.4):shift?.10:car.brake>.7&&car.speed>1.3?.07:
+          corner&&now-lastRumble>480?Math.min(.12,.045+(car.gripUsage-.88)*.10):0;
         if(magnitude){
           actuator=next;lastRumble=now;
           try{const promise=next.playEffect?next.playEffect('dual-rumble',{duration:80,startDelay:0,strongMagnitude:magnitude,weakMagnitude:magnitude*.5}):next.pulse?.(magnitude,80);promise?.catch?.(()=>{});}catch{}

@@ -2,6 +2,9 @@
 (() => {
   'use strict';
   const dictionary = {
+    'Primeira marca':'First time',
+    'Volta de aquecimento':'Warm-up lap',
+    'Distrito Neon é experimental: sem moedas e sem ranking competitivo.':'Neon District is experimental: no coins or competitive rankings.',
     'Volta inválida':'Invalid lap', 'Melhor volta pessoal':'Personal best lap', 'Criando referência':'Setting a reference',
     'Distrito Neon (experimental)':'Neon District (experimental)', 'Experimental':'Experimental',
     'Circuito urbano com túnel, curvas fechadas e uma reta longa. Sem ranking ou moedas durante o teste.':'Urban circuit with a tunnel, tight corners and a long straight. No rankings or coins during testing.',

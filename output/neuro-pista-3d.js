@@ -26,7 +26,7 @@
 
     const scene = new THREE.Scene();
     scene.background = new THREE.Color(track.theme === 'urban' ? '#879bac' : '#b9d5e6');
-    scene.fog = new THREE.Fog(scene.background, 1700, 4200);
+    scene.fog = new THREE.Fog(scene.background, track.theme === 'urban' ? 3200 : 1700, track.theme === 'urban' ? 7200 : 4200);
     const camera = new THREE.PerspectiveCamera(45, 1, 0.5, 5000);
     scene.add(new THREE.HemisphereLight('#eef8ff', '#526845', 2.4));
 
@@ -304,6 +304,7 @@
 
     // A small number of instanced batches: no per-window meshes or dynamic city lights.
     let urbanBuildings = null;
+    const urbanDetails = [];
     if (track.theme === 'urban') {
       const pixels = new Uint8Array(32*64*4);
       for(let y=0;y<64;y++)for(let x=0;x<32;x++){
@@ -311,18 +312,22 @@
         const warm=(Math.floor(x/8)+Math.floor(y/8))%3===0;
         pixels.set(lit?(warm?[186,160,114,255]:[93,137,157,255]):[35,48,60,255],(y*32+x)*4);
       }
-      const facade=new THREE.DataTexture(pixels,32,64);facade.needsUpdate=true;facade.magFilter=THREE.NearestFilter;textures.push(facade);
+      const facade=new THREE.DataTexture(pixels,32,64);facade.needsUpdate=true;facade.magFilter=THREE.LinearFilter;facade.minFilter=THREE.LinearMipmapLinearFilter;facade.generateMipmaps=true;textures.push(facade);
       const sites=[];
       for(let i=0;i<track.points.length;i+=3)for(const side of [-1,1]){
         const p=track.offset(i,side*(track.halfWidth+220+(i%4)*55));
         if(track.nearest(p.x,p.y).distance<track.halfWidth+170||Math.hypot(p.x-track.start.x,p.y-track.start.y)<850)continue;
         sites.push(p);
       }
+      // Distribute the reduced-quality subset around the entire lap, not just its first half.
+      const spread=sites.map((p,i)=>({p,order:(i*.61803398875)%1})).sort((a,b)=>a.order-b.order).map(item=>item.p);
+      sites.splice(0,sites.length,...spread);
       urbanBuildings=new THREE.InstancedMesh(new THREE.BoxGeometry(1,1,1),new THREE.MeshStandardMaterial({color:'#b4c9d8',map:facade,emissive:'#659ab7',emissiveMap:facade,emissiveIntensity:.3,roughness:.85}),sites.length);
       const transform=new THREE.Object3D();
       sites.forEach((p,i)=>{
         const h=90+(i*37%180);transform.position.set(p.x,track.heightAt(p.x,p.y)+h/2,p.y);
         transform.rotation.y=-p.angle;transform.scale.set(65+i%3*15,h,70);transform.updateMatrix();urbanBuildings.setMatrixAt(i,transform.matrix);
+        urbanBuildings.setColorAt(i,new THREE.Color(['#d4deeb','#aac8cf','#c8b8a6','#a4b2cc','#bed3d0'][i%5]));
       });
       urbanBuildings.userData.fullCount=sites.length;scene.add(urbanBuildings);
       // Tunnel on the straight after the pit exit; walls stay outside the collision boundary.
@@ -337,13 +342,114 @@
       }
       for(let distance=900;distance<1400;distance+=50){
         const p=track.pointAt(distance+25);
-        tunnelPart(tunnel,piece++,p,98,0,51,7,2*(track.halfWidth+103));
+        tunnelPart(tunnel,piece++,p,38,0,51,5,2*(track.halfWidth+47));
         for(const side of [-1,1]){
-          tunnelPart(tunnel,piece++,p,49,side*(track.halfWidth+100),51,98,6);
-          tunnelPart(tunnelLights,lamp++,p,93,side*(track.halfWidth+20),44,1,2);
+          tunnelPart(tunnel,piece++,p,19,side*(track.halfWidth+44),51,38,6);
+          tunnelPart(tunnelLights,lamp++,p,34,side*(track.halfWidth+12),44,1,2);
         }
       }
       scene.add(tunnel,tunnelLights);
+
+      // Urban detail batches share one box geometry. No per-frame animation or extra lights.
+      const cityBox=new THREE.BoxGeometry(1,1,1), batches=new Map();
+      function cityPart(kind,p,height,lane,sx,sy,sz,color){
+        if(!batches.has(kind))batches.set(kind,[]);
+        const x=p.x-Math.sin(p.angle)*lane,z=p.y+Math.cos(p.angle)*lane;
+        batches.get(kind).push({x,y:track.heightAt(x,z)+height,z,angle:p.angle,sx,sy,sz,color});
+      }
+      sites.forEach((p,i)=>{
+        const h=90+(i*37%180),w=65+i%3*15;
+        cityPart('roof',p,h+1.5,0,w+3,3,73,'#3e5262');
+        cityPart('roof',p,h+6,0,w*.35,8,26,'#6e808d');
+        cityPart('plinth',p,9,0,w+8,18,78,['#263a49','#3c464f','#4d4a48'][i%3]);
+        cityPart('shop-light',p,15,40,w*.8,1.2,1,['#97ebd3','#efbf87','#a3c8ef'][i%3]);
+      });
+      for(let d=860;d<track.length-100;d+=24){
+        const p=track.pointAt(d);
+        // Street lane paint follows the same centerline and height as the physics.
+        if(d<900||d>1400)cityPart('paint',p,.26,0,9,.035,.65,'#c4c9c5');
+        for(const side of [-1,1]){
+          const lane=side*(track.halfWidth+54),q=track.pointAt(d,lane);
+          if(track.nearest(q.x,q.y).distance<track.halfWidth+47)continue;
+          if(d>=880&&d<=1430)continue;
+          if(Math.floor(d/24)%5===0){
+            const poleLane=side*(track.halfWidth+57);
+            cityPart('street-metal',p,18,poleLane,1.1,36,1.1,'#344955');
+            cityPart('street-metal',p,35,poleLane-side*6,1.1,1.1,13,'#344955');
+            cityPart('street-light',p,34.2,poleLane-side*11,4,.6,5,'#ffe3b0');
+          }
+          if(Math.floor(d/24)%11===0){
+            cityPart('street-metal',p,3,lane+side*4,11,1,3,'#4e666e');
+            cityPart('street-metal',p,2,lane+side*4,1,4,3,'#4e666e');
+            cityPart('planters',p,2,lane-side*3,6,4,6,'#536474');
+            cityPart('greenery',p,4.6,lane-side*3,5,2,5,'#517b68');
+          }
+        }
+      }
+      // Continuous swept surfaces: neighboring sections reuse identical edge positions.
+      // Unlike rotated boxes, these strips cannot leave wedge-shaped gaps on bends.
+      function sidewalkStrip(name,inner,outer,height,color){
+        const vertices=[];
+        const vertex=(d,lane,lift)=>{const p=track.pointAt(d,lane);return [p.x,track.heightAt(p.x,p.y)+lift,p.y];};
+        const quad=(a,b,c,d)=>vertices.push(...a,...b,...c,...c,...b,...d);
+        for(const side of [-1,1])for(let d=860;d<track.length-100;d+=8){
+          const end=Math.min(d+8,track.length-100);
+          if(d<1430&&end>880)continue;
+          const lane=side*(track.halfWidth+(inner+outer)/2);
+          const a=track.pointAt(d,lane),b=track.pointAt(end,lane);
+          if([a,b].some(p=>track.nearest(p.x,p.y).distance<track.halfWidth+40))continue;
+          const lo=side*(track.halfWidth+inner),hi=side*(track.halfWidth+outer);
+          quad(vertex(d,lo,height),vertex(d,hi,height),vertex(end,lo,height),vertex(end,hi,height));
+          for(const edge of [lo,hi])quad(vertex(d,edge,0),vertex(d,edge,height),vertex(end,edge,0),vertex(end,edge,height));
+        }
+        const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));geometry.computeVertexNormals();
+        const mesh=addMesh(geometry,material(color,{roughness:.95,side:THREE.DoubleSide}),scene);mesh.name=name;mesh.receiveShadow=true;
+      }
+      sidewalkStrip('urban-pavement',43,65,1.3,'#939b9f');
+      sidewalkStrip('urban-curb',42.2,43.8,2.4,'#c4cbd0');
+      // Reinforced tunnel portals, hazard strips and colored wall bands.
+      for(const d of [900,1400]){
+        const p=track.pointAt(d);
+        cityPart('portal',p,39,0,8,7,2*(track.halfWidth+49),'#637681');
+        for(const side of [-1,1]){
+          cityPart('portal',p,19,side*(track.halfWidth+44),8,38,9,'#637681');
+          for(let h=3;h<28;h+=6)cityPart('hazard',p,h,side*(track.halfWidth+39),8,2,1,'#eac174');
+        }
+      }
+      for(let d=910;d<1400;d+=24){
+        const p=track.pointAt(d);
+        for(const side of [-1,1])cityPart('wall-band',p,9,side*(track.halfWidth+40.8),24,1.3,.3,'#7dc5c7');
+      }
+      for(const [kind,parts] of batches){
+        const luminous=['shop-light','street-light','wall-band'].includes(kind);
+        const surface=luminous?new THREE.MeshBasicMaterial({color:'#ffffff'}):material('#ffffff',{roughness:.9});
+        const mesh=new THREE.InstancedMesh(cityBox,surface,parts.length);mesh.name='urban-'+kind;
+        parts.forEach((p,i)=>{transform.position.set(p.x,p.y,p.z);transform.rotation.y=-p.angle;transform.scale.set(p.sx,p.sy,p.sz);transform.updateMatrix();mesh.setMatrixAt(i,transform.matrix);mesh.setColorAt(i,new THREE.Color(p.color));});
+        mesh.userData.cityKind=kind;mesh.userData.fullCount=parts.length;scene.add(mesh);urbanDetails.push(mesh);
+      }
+
+      // Two reusable signs, with readable front faces (never mirrored back-side text).
+      for(const [distance,title,subtitle] of [[900,'DISTRITO NEON','TUNEL  /  MANTENHA A LINHA'],[2050,'NEON GRAND PRIX','SETOR URBANO']]){
+        const signCanvas=document.createElement('canvas');signCanvas.width=512;signCanvas.height=128;
+        const ctx=signCanvas.getContext?.('2d');if(!ctx)continue;
+        ctx.fillStyle='#142934';ctx.fillRect(0,0,512,128);ctx.fillStyle='#8fe5d0';ctx.fillRect(0,0,512,6);
+        ctx.font='bold 40px sans-serif';ctx.textAlign='center';ctx.fillStyle='#ecf5f5';ctx.fillText(title,256,60);
+        ctx.font='20px sans-serif';ctx.fillStyle='#a3c6d1';ctx.fillText(subtitle,256,100);
+        const map=new THREE.CanvasTexture(signCanvas);textures.push(map);
+        const p=track.pointAt(distance),sign=addMesh(new THREE.PlaneGeometry(72,18),new THREE.MeshBasicMaterial({map}),scene);
+        const lane=distance===900?0:-(track.halfWidth+65);
+        sign.position.set(p.x-Math.sin(p.angle)*lane,track.heightAt(p.x,p.y)+(distance===900?42:18),p.y+Math.cos(p.angle)*lane);
+        sign.position.x-=Math.cos(p.angle)*4.5;sign.position.z-=Math.sin(p.angle)*4.5;
+        sign.rotation.y=-p.angle-Math.PI/2;
+        for(const offset of [-35,35]){
+          const postLane=lane+offset;
+          // The entrance sign hangs from the portal; roadside boards have their own legs.
+          if(distance===900)continue;
+          const x=p.x-Math.sin(p.angle)*postLane,z=p.y+Math.cos(p.angle)*postLane;
+          const post=addMesh(new THREE.BoxGeometry(1,20,1),concrete,scene);
+          post.position.set(x,track.heightAt(x,z)+10,z);
+        }
+      }
     }
 
     const sponsorNames = ['APEX', 'NOVA', 'PULSO', 'VERTEX'];
@@ -1279,6 +1385,12 @@
 
     function setQuality(quality) {
       if(urbanBuildings)urbanBuildings.count=quality==='performance'?Math.ceil(urbanBuildings.userData.fullCount*.55):urbanBuildings.userData.fullCount;
+      for(const mesh of urbanDetails){
+        const kind=mesh.userData.cityKind;
+        const buildingParts={roof:2,plinth:1,'shop-light':1}[kind];
+        mesh.count=buildingParts?urbanBuildings.count*buildingParts:mesh.userData.fullCount;
+        mesh.visible=quality!=='performance'||!['planters','greenery'].includes(kind);
+      }
       options.quality = quality;
       const light = quality === 'performance';
       const ultra = quality === 'ultra';

@@ -1,0 +1,14 @@
+const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
+const node=()=>({hidden:false,dataset:{},children:[],setAttribute(){},append(...items){this.children.push(...items);}});
+const root=node(),api={};new Function('window','document',fs.readFileSync(path.join(__dirname,'../neurodrive-sectors.js'),'utf8'))(api,{createElement:node});
+const update=api.createNeuroSectorHUD(root),panel=root.children[0];
+const car={completedLaps:0,sectorTiming:{current:[null,null,null],best:[16,18,20],invalid:false,warmup:true}};
+update(car,[car],true,0);assert(panel.hidden);
+car.sectorTiming.current[0]=15;car.sectorTiming.invalid=true;update(car,[car],true,10);assert(panel.hidden,'No warm-up notice');
+car.completedLaps=1;Object.assign(car.sectorTiming,{current:[null,null,null],last:[15,18,20],lastInvalid:true,warmup:false,invalid:false});update(car,[car],true,20);assert(panel.hidden,'Warm-up S3 must not leak into timed lap');
+car.sectorTiming.current[0]=15.5;update(car,[car],true,100);assert(!panel.hidden);assert.equal(panel.children[1].textContent,'-0.50 s');
+update(structuredClone(car),[car],true,3700);assert(panel.hidden,'Same online snapshot cannot restart the notification');
+car.sectorTiming.current[1]=17;update(car,[car],true,3800);assert(!panel.hidden);
+update(car,[car],false,3900);update(car,[car],true,4000);assert(panel.hidden,'No replay after pause');
+car.completedLaps=2;Object.assign(car.sectorTiming,{current:[null,null,null],last:[15.5,17,19],lastInvalid:false,lastBest:[16,18,20]});update(car,[car],true,4100);assert(!panel.hidden);assert.equal(panel.children[0].textContent,'S3 | 19.00 s');assert.equal(panel.children[1].textContent,'-1.00 s');
+console.log('OK: brief sector notices, qualifying warm-up, final sector, expiration, pause and repeated snapshots.');

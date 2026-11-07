@@ -6,8 +6,9 @@
 .drive-arc-track { stroke: #dbe7f329; }
 .drive-arc-fill { stroke: var(--dial-color); transition: stroke-dashoffset 90ms linear, stroke 160ms linear; }
 .drive-arc-limit { stroke: #ff6268; stroke-width: 3; }
-.drive-ticks { fill: #ecf4fa; font: 700 16px system-ui, sans-serif; paint-order: stroke; stroke: #0b1720; stroke-width: 2px; stroke-linejoin: round; }
-.drive-ticks text:last-child { fill: #ff9296; }
+.drive-ticks { fill: #b7cbd5; font: 600 16px system-ui, sans-serif; paint-order: stroke; stroke: #15232bdd; stroke-width: 1px; stroke-linejoin: round; }
+.drive-ticks text:last-child { fill: #e9ac9c; }
+.drive-dial[data-redline="true"] .drive-ticks text:last-child { fill: #ff787f; }
 .drive-scale-marks { fill: none; stroke: #dce8f0a6; stroke-width: 1.5; }
 .drive-speed { position: absolute; top: 64px; left: 26px; width: 142px; text-align: center; }
 .drive-speed strong { display: block; font-size: 62px; line-height: 1; font-weight: 750; letter-spacing: -3px; }
@@ -15,7 +16,8 @@
 .drive-gear { position: absolute; top: 66px; right: 37px; min-width: 48px; text-align: center; border-left: 1px solid #ffffff29; padding-left: 12px; }
 .drive-gear strong { display: block; color: var(--dial-color); font-size: 44px; line-height: 1.15; font-weight: 650; }
 .drive-gear span { display: block; font-size: 9px; color: #b7c9d7; letter-spacing: .08em; margin-top: 6px; }
-.drive-rpm { position: absolute; top: 153px; width: 100%; text-align: center; color: #edf5fc; font-size: 16px; font-weight: 650; line-height: 1.3; letter-spacing: .025em; text-shadow: 0 1px 3px #000; }
+.drive-rpm { position: absolute; top: 153px; width: 100%; text-align: center; color: #b9d8d2; font-size: 16px; font-weight: 500; line-height: 1.3; letter-spacing: .025em; text-shadow: 0 1px 3px #08131d; }
+.drive-dial[data-redline="true"] .drive-rpm { color:#ffaaa4; }
 .drive-session { display: grid; grid-template-columns: 1fr 1fr; background: #0b1720dc; border-top: 1px solid #bfd2df38; border-radius: 0 0 10px 10px; padding: 10px 16px; gap: 8px; margin-top: 6px; position: relative; }
 .drive-session span { color: #94aabd; font-size: 9px; letter-spacing: .12em; }
 .drive-session strong { color: #f4f8fc; font-size: 13px; font-weight: 600; letter-spacing: 0; margin-left: 7px; }

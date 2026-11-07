@@ -26,7 +26,7 @@
   .drive-gear strong { font-size: 25px; }
   .drive-gear span { font-size: 7px; margin-top: 3px; }
   .drive-rpm { top: 84px; font-size: 11px; }
-  .drive-ticks { font-size:20px; stroke-width:2.5px; }
+  .drive-ticks { font-size:20px; stroke-width:1px; }
   .drive-session { padding: 6px; gap: 4px; margin-top: 4px; }
   .drive-session span { font-size: 8px; letter-spacing: 0; }
   .drive-session strong { font-size: 10px; margin-left: 4px; }
