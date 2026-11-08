@@ -70,6 +70,8 @@ Pressione **B** ou use **Chamar boxes** para solicitar a parada. Na próxima ent
 
 A troca dura **8 segundos**: o carro é levantado, quatro mecânicos trabalham nas rodas e quatro auxiliares entregam pneus novos e recolhem os usados. O tempo da corrida continua contando. Após sair dos boxes, o jogador retoma o controle. A IA também faz paradas quando precisa.
 
+A câmera acompanha a entrada, o atendimento e a saída pelo lado aberto dos boxes, com transições suaves. As rodas dos mecânicos usam o mesmo modelo das rodas do carro. O composto escolhido aparece visualmente quando a roda nova é montada, ainda durante o serviço; os auxiliares recolhem o pneu com a faixa do composto antigo. A liberação do carro e a renovação física dos pneus continuam ao final dos oito segundos, no solo e no online.
+
 O acesso tem uma curva gradual, piso asfaltado até o fundo das garagens e marcações de circulação. As rodas possuem aros detalhados, caixas de roda fechadas e freios visíveis durante a troca. No online, o servidor controla desgaste e troca.
 
 ## Executar localmente

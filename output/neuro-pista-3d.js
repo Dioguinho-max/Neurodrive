@@ -906,7 +906,23 @@
       }
     }
 
-    function updatePitCrew(model, active, time, lift) {
+    function createRaceWheel(parent, side = 0) {
+      const wheel=addMesh(options.quality === 'ultra' ? ultraWheelGeometry : wheelGeometry,tireRubber,parent);
+      wheel.userData.raceWheel=true;
+      addMesh(hubGeometry,rubber,wheel).userData.performanceDetail=true;
+      for(let spoke=0;spoke<3;spoke++)addMesh(spokeGeometry,alloy,wheel).rotation.z=spoke*Math.PI/3;
+      for(const face of [-1,1]){
+        addMesh(rimGeometry,alloy,wheel,[0,0,face*.64]).userData.performanceDetail=!!side&&face!==side;
+        addMesh(sidewallGeometry,tireRubber,wheel,[0,0,face*.56]).userData.performanceDetail=true;
+        const band=addMesh(wetBandGeometry,dryBandMaterial,wheel,[0,0,face*.65]);
+        band.userData.tyreBand=true;band.userData.performanceDetail=!!side&&face!==side;
+      }
+      return wheel;
+    }
+    function wheelCompound(wheel,compound){
+      for(const part of wheel.children)if(part.userData.tyreBand)part.material=compound==='wet'?wetBandMaterial:dryBandMaterial;
+    }
+    function updatePitCrew(model, active, time, lift, car) {
       if (!active) { if (model.crew) model.crew.visible = false; return; }
       if (!model.crew) {
         const crew = new THREE.Object3D(); crew.userData.pitCrew = true; model.group.add(crew);
@@ -952,10 +968,8 @@
             new THREE.Vector3(1.25, .7, -side * .3), new THREE.Vector3(1.2, .15, side * 1),
             new THREE.Vector3(-.3, .12, side * 1.7)]);
           addMesh(new THREE.TubeGeometry(hose, 16, .055, 6, false), rubber, person);
-          const spare = addMesh(wheelGeometry, tireRubber, person, [-0.8, 1.3, -side * 0.8]);
-          addMesh(hubGeometry, rubber, spare);
-          for (let spoke = 0; spoke < 3; spoke++) addMesh(spokeGeometry, alloy, spare).rotation.z = spoke * Math.PI / 3;
-          for (const face of [-1, 1]) addMesh(rimGeometry, alloy, spare, [0, 0, face * .64]);
+          const spare = createRaceWheel(person);
+          spare.position.set(-.8,1.3,-side*.8);
           const delivery = spare.clone(true); crew.add(delivery);
           delivery.userData.deliveryWheel = true;
           model.mechanics.push({ person, arms, tool, socket, spare, helper, delivery, x, side });
@@ -970,6 +984,8 @@
       model.jack.scale.y = 0.7 + lift; model.jack.position.y = 0.6 + lift / 2;
       const arrival = Math.min(1, time / 0.8, Math.max(0, 8 - time));
       for (const mechanic of model.mechanics) {
+        mechanic.delivery.geometry=options.quality==='ultra'?ultraWheelGeometry:wheelGeometry;
+        wheelCompound(mechanic.delivery,time>=4.5?car.tyreCompound:(car.pitCompound||car.tyreCompound));
         mechanic.person.position.set(mechanic.x, 0, mechanic.side * (9 - arrival * 2.4));
         const working = time > 1.5 && time < 6.5;
         mechanic.arms.rotation.x = mechanic.side * Math.sin(time * 24) * (working ? .015 : 0);
@@ -1061,16 +1077,7 @@
           hub.rotation.x = Math.PI / 2;
           const pivot = new THREE.Group();
           pivot.position.set(x, wheelRadius, z); pivot.userData.wheelPivot = true; group.add(pivot);
-          const wheel = addMesh(options.quality === 'ultra' ? ultraWheelGeometry : wheelGeometry, tireRubber, pivot);
-          addMesh(hubGeometry, rubber, wheel).userData.performanceDetail = true;
-          for (let spoke = 0; spoke < 3; spoke++) addMesh(spokeGeometry, alloy, wheel).rotation.z = spoke * Math.PI / 3;
-          for (const face of [-1, 1]) {
-            addMesh(rimGeometry, alloy, wheel, [0, 0, face * 0.64]).userData.performanceDetail = face !== side;
-            addMesh(sidewallGeometry, tireRubber, wheel, [0, 0, face * 0.56]).userData.performanceDetail = true;
-            const band = addMesh(wetBandGeometry, dryBandMaterial, wheel, [0, 0, face * .65]);
-            band.userData.tyreBand = true;
-            band.userData.performanceDetail = face !== side;
-          }
+          const wheel = createRaceWheel(pivot,side);
           // Freio e cubo acompanham a roda, não a inclinação da carroceria.
           for (const part of [disc, caliper, hub]) {
             part.userData.performanceDetail = true;
@@ -1165,6 +1172,8 @@
     let elevation = 0.85;
     let zoom = 1;
     let snapshot = null, cockpit = false;
+    const previousCameraPosition=new THREE.Vector3(),previousCameraAnchor=new THREE.Vector3(),cameraAnchor=new THREE.Vector3();
+    let cameraReady=false,cameraCar=null,cameraWasCockpit=false,pitCameraUntil=0;
     let dragging = null;
     let viewportWidth = 0;
     let viewportHeight = 0;
@@ -1190,6 +1199,7 @@
         viewportHeight = height;
       }
 
+      previousCameraPosition.copy(camera.position);
       const mode = finishCameraAt !== null ? 'finish' : element('camera').value;
       const car = snapshot?.target;
       const cockpitView = cockpit && car && !car.done && car.pitState !== 'service' && introProgress === null && !ceremony && finishCameraAt === null;
@@ -1285,24 +1295,22 @@
         camera.position.set(x, track.heightAt(x, z) + 5.5, z);
         const aheadX = x + forwardX * 70, aheadZ = z + forwardZ * 70;
         camera.lookAt(aheadX, track.heightAt(aheadX, aheadZ) + 5.5, aheadZ);
-      } else if (car?.pitState === 'service') {
-        const x = car.x + Math.cos(car.angle) * 15 + Math.sin(car.angle) * 24;
-        const z = car.y + Math.sin(car.angle) * 15 - Math.cos(car.angle) * 24;
-        camera.position.set(x, Math.max(track.heightAt(x, z) + 5, track.heightAt(car.x, car.y) + 8), z);
-        camera.lookAt(car.x, track.heightAt(car.x, car.y) + 3, car.y);
+      } else if (car && (car.pitState || car.pitExit) && (mode === 'chase' || mode === 'finish')) {
+        // Track-aligned view from the open side, throughout entry, service and departure.
+        // Vehicle heading turns quickly while parking and must not swing the camera into walls.
+        const along=Number.isFinite(car.pitTrackProgress)?car.pitTrackProgress:
+          Math.max(track.pit.garage(Math.max(0,(car.id||1)-1)).distance,car.progress||0);
+        const tangent=track.pointAt(along).angle;
+        const side=car.pitState==='service'?26:40;
+        const x=car.x+Math.cos(tangent)*12+Math.sin(tangent)*side;
+        const z=car.y+Math.sin(tangent)*12-Math.cos(tangent)*side;
+        camera.position.set(x,Math.max(track.heightAt(x,z)+5,track.heightAt(car.x,car.y)+8),z);
+        camera.lookAt(car.x,track.heightAt(car.x,car.y)+3,car.y);
       } else if (mode === 'finish' && car && !car.pitExit) {
         const elapsed = Math.min(6, Math.max(0, (Date.now() - finishCameraAt) / 1000));
         const orbit = car.angle + 0.7 + (options.speedEffects === false ? 0 : elapsed * 0.09);
         const x = car.x + Math.cos(orbit) * 32, z = car.y + Math.sin(orbit) * 32;
         camera.position.set(x, Math.max(track.heightAt(x, z) + 9, track.heightAt(car.x, car.y) + 14), z);
-        camera.lookAt(car.x, track.heightAt(car.x, car.y) + 3, car.y);
-      } else if ((mode === 'chase' || mode === 'finish') && car?.pitExit) {
-        // Enquadra o carro pela frente aberta da garagem, não por trás da parede.
-        const nearest = track.nearest(car.x, car.y);
-        const tangent = Math.atan2(nearest.ty, nearest.tx);
-        const x = car.x + Math.cos(tangent) * 12 + Math.sin(tangent) * 40;
-        const z = car.y + Math.sin(tangent) * 12 - Math.cos(tangent) * 40;
-        camera.position.set(x, Math.max(track.heightAt(x, z) + 5, track.heightAt(car.x, car.y) + 8), z);
         camera.lookAt(car.x, track.heightAt(car.x, car.y) + 3, car.y);
       } else if (mode === 'chase' && car) {
         // Terceira pessoa: camera atras do carro, olhando adiante na pista.
@@ -1337,6 +1345,21 @@
         );
         camera.lookAt(target);
       }
+      const pitCamera=!!(car&&(car.pitState||car.pitExit));
+      if(car)cameraAnchor.set(car.x,track.heightAt(car.x,car.y),car.y);
+      if(pitCamera)pitCameraUntil=motionNow+800;
+      if(cameraReady&&cameraCar===car?.id&&!cameraWasCockpit&&!cockpitView&&introProgress===null&&!ceremony&&mode==='chase'&&motionNow<pitCameraUntil){
+        const blend=1-Math.exp(-motionDelta/.16);
+        // Smooth the camera offset, not the car's motion: otherwise fixed physics ticks
+        // and uneven render frames make the car oscillate against the delayed camera.
+        previousCameraPosition.add(cameraAnchor).sub(previousCameraAnchor);
+        camera.position.lerpVectors(previousCameraPosition,camera.position,blend);
+        const exitBlend=pitCamera?0:clamp((motionNow-(pitCameraUntil-800))/800,0,1);
+        const ahead=32*exitBlend*exitBlend*(3-2*exitBlend);
+        camera.lookAt(car.x+Math.cos(car.angle)*ahead,cameraAnchor.y+3+exitBlend,car.y+Math.sin(car.angle)*ahead);
+      }
+      previousCameraAnchor.copy(cameraAnchor);
+      cameraReady=true;cameraCar=car?.id;cameraWasCockpit=!!cockpitView;
       const ownModel = cockpitView ? models[snapshot.targetIndex]?.group : null;
       const ownVisible = ownModel?.visible;
       if (ownModel) ownModel.visible = false;
@@ -1436,6 +1459,8 @@
       setFinishCamera(active) { finishCameraAt = active ? Date.now() : null; },
       setIntro(progress) {
         if (progress !== null && introProgress === null) introDistance = track.length * (.2 + Math.random() * .6);
+        // Never blend gameplay from a distant aerial shot (including skipping the intro).
+        if(progress === null && introProgress !== null){cameraReady=false;pitCameraUntil=0;}
         introProgress = progress;
       },
       setCeremony(ranking, milliseconds = 0) {
@@ -1645,7 +1670,7 @@
           const serviceTime = service ? (480 - car.pitTimer) / 60 : 0;
           const lift = service ? Math.min(1, Math.max(0, serviceTime - 0.7), Math.max(0, 7.7 - serviceTime)) * 0.9 : 0;
           model.group.position.set(car.x, track.heightAt(car.x, car.y) + 0.15 + lift, car.y);
-          updatePitCrew(model, service, serviceTime, lift);
+          updatePitCrew(model, service, serviceTime, lift, car);
           const forwardX = Math.cos(car.angle), forwardY = Math.sin(car.angle);
           const pitch = Math.atan2(track.heightAt(car.x + forwardX * 8, car.y + forwardY * 8)
             - track.heightAt(car.x - forwardX * 8, car.y - forwardY * 8), 16);
@@ -1736,10 +1761,11 @@
             pivot.position.z = z + Math.sign(z) * removal * 1.5;
             wheel.visible = !(service && serviceTime > 3.2 && serviceTime < 4.2);
             wheel.rotation.z = model.spin;
-            const flat = car.tyreBurst && car.burstWheel === wheelIndex;
+            const installed = service && serviceTime >= 4.2;
+            const flat = !installed && car.tyreBurst && car.burstWheel === wheelIndex;
             wheel.scale.set(flat ? .8 : 1, flat ? .65 : 1, 1);
             wheel.children.filter(part => part.userData.tyreBand).forEach(part => {
-              part.material = car.tyreCompound === 'wet' ? wetBandMaterial : dryBandMaterial;
+              part.material = (installed ? car.pitCompound || car.tyreCompound : car.tyreCompound) === 'wet' ? wetBandMaterial : dryBandMaterial;
             });
             pivot.rotation.y = x > 0 ? -car.steering * .4 : 0;
             // Confere toda a banda de rodagem, inclusive as bordas e pneus furados.
