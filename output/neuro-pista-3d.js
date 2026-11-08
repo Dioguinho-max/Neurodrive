@@ -1636,7 +1636,10 @@
           if (ceremony) {
             const place = ceremony.ids.indexOf(car.id);
             if (place < 0) { model.group.visible = false; return; }
-            const t = clamp((ceremony.time - place * .4) / 4, 0, 1);
+            // Front parking slot arrives first. Ranking order would send third
+            // place through the winner's already parked car on this shared lane.
+            const arrivalDelay = [.4, .8, 0][place];
+            const t = clamp((ceremony.time - arrivalDelay) / 4, 0, 1);
             const remaining = 100 * (1 - t) ** 3;
             const p = circuitPoint(ceremony.distance + [0, -25, 25][place] - remaining, 24);
             car = { ...car, ...p, speed: 1.25 * (1 - t) ** 2, steering: 0, pitState: null, pitExit: false, bodyRoll: 0 };
