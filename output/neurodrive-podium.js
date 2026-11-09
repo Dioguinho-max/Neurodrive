@@ -112,6 +112,7 @@
               return { arm, upper, forearm, elbow, hand, side };
             });
             const cup = new THREE.Object3D(); cup.position.z = .6; body.add(cup);
+            cup.scale.setScalar(.82);
             cup.userData.podiumTrophy = true;
             mesh(new THREE.CylinderGeometry(.8, .35, 1, 24, 1, true), medal, cup, 0, .55);
             mesh(new THREE.CylinderGeometry(.13, .16, .5, 16), medal, cup, 0, -.15);
@@ -143,12 +144,12 @@
           // the elbow instead of rotating rigid arms beside a floating trophy.
           for (const arm of pilot.arms) {
             wrist.copy(pilot.cup.position).sub(arm.arm.position);
-            wrist.x += arm.side * 1.03; wrist.y += .5;
+            wrist.x += arm.side * 1.03 * pilot.cup.scale.x; wrist.y += .5 * pilot.cup.scale.y;
             // Elbows point outward/down, then project the pole perpendicular
             // to the shoulder-to-hand axis for a stable anatomical bend.
             bend.set(arm.side, -.55, .12);
             bend.addScaledVector(wrist, -bend.dot(wrist) / wrist.lengthSq()).normalize();
-            joint.copy(wrist).multiplyScalar(.5).addScaledVector(bend, Math.sqrt(Math.max(0, 1.25 ** 2 - wrist.lengthSq() / 4)));
+            joint.copy(wrist).multiplyScalar(.5).addScaledVector(bend, Math.sqrt(Math.max(0, 1.1 ** 2 - wrist.lengthSq() / 4)));
             bone(arm.upper, zero, joint);
             bone(arm.forearm, joint, wrist);
             arm.elbow.position.copy(joint);

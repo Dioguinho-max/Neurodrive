@@ -57,4 +57,41 @@ Não é necessária narração: frases curtas e sons do jogo deixam o vídeo mai
 
 ## Estado da produção
 
-Roteiro e lista de tomadas preparados. As cenas ainda precisam ser gravadas e montadas; este documento não é o vídeo final.
+Primeira montagem exportada em `.portable-cache/trailer/NeuroDrive-Trailer-v1.mp4`:
+
+- 50 segundos, 1280 × 720, 24 quadros por segundo; vídeo H.264 e áudio AAC.
+- Garagem, panorama de Serra Verde, corrida contra IA, Distrito Neon, chuva, boxes e pódio.
+- Cenas de demonstração capturadas com o renderizador e a simulação reais do projeto; caixas de texto e cortes preparados para o trailer. O atendimento nos boxes e a cerimônia foram encenados com as animações do jogo.
+- Música original da garagem e motor original sintetizado pelo módulo de áudio do jogo, sincronizado com o RPM das tomadas. Não usa as gravações experimentais de motores.
+- Esta montagem não inclui drift nem uma partida multiplayer real. Esses trechos do roteiro acima ficam para uma próxima edição.
+- Arquivo decodificado integralmente sem erros; quadros dos oito blocos conferidos visualmente. Áudio normalizado para apresentação.
+
+Prévia dos enquadramentos: `.portable-cache/trailer/contact-sheet.png`.
+Os arquivos de vídeo ficam fora da publicação do site e não foram enviados ao GitHub.
+
+### Segunda montagem — pistas, carros e chegada
+
+Exportada em `.portable-cache/trailer-v2/NeuroDrive-Trailer-v2.mp4`: 52 segundos, 1280 × 720, 24 FPS, H.264/AAC, aproximadamente 16 MB.
+
+- Cortes entre garagem, Serra Verde, Vale Técnico, Distrito Neon e Autódromo Veloz, incluindo chuva e atendimento nos boxes.
+- Velocímetro e conta-giros oficiais do jogo durante as tomadas de pilotagem.
+- Final cinematográfico encenado com dois carros disputando a chegada; a câmera acompanha a passagem e sobe para o céu, revelando NEURO / DRIVE, “Jogue agora” e o endereço do jogo.
+- Motor original e música da garagem sincronizados com a montagem; nenhuma imagem ou música da referência foi reutilizada.
+- Decodificação integral do MP4 validada e enquadramentos conferidos em imagens da exportação, incluindo a sequência final.
+
+Prévia: `.portable-cache/trailer-v2/contact-sheet.jpg`. Esta versão também permanece local, sem publicação no GitHub.
+
+### Terceira montagem — todos os circuitos, Full HD
+
+Exportado em `.portable-cache/trailer-v3/NeuroDrive-Trailer-1080p60.mp4` (aproximadamente 42 MB).
+
+- 62 segundos, 1920 × 1080, 60 quadros por segundo, H.264 e áudio AAC estéreo.
+- Serra Verde, Vale Técnico, Distrito Neon (experimental), Arena Drift e Autódromo Veloz: cada circuito recebe uma panorâmica identificada e uma tomada com carros.
+- Captura quadro a quadro com tempo determinístico; trajetórias cinematográficas contínuas eliminam as correções de direção da IA nas tomadas. Essas trajetórias são encenadas para o trailer, sem alterar a física do jogo.
+- Câmera aérea com movimento contínuo e planos de profundidade ajustados para reduzir a cintilação das superfícies distantes. Velocímetro e RPM oficiais nas cenas de pilotagem.
+- Mesma composição e andamento da música do primeiro trailer. Dois motores na chegada, com volume conforme a distância, passagem estéreo e redução gradual de altura do som após a passagem.
+- Tela final redesenhada: marca em duas linhas, endereço grande, “Jogue agora” e QR code para `https://neurodrive-chi.vercel.app/`.
+- QR code conferido por decodificação independente em Full HD e em imagens reduzidas. O relatório da exportação fica em `.portable-cache/trailer-v3/validation.json`.
+- MP4 decodificado integralmente: 3.720 quadros, duração de 62 segundos. As cenas de pilotagem e panorâmicas não apresentaram quadros integralmente repetidos; a tomada fixa da chegada e a tela final têm momentos intencionalmente estáticos.
+
+Os ajustes desta montagem ficam nos scripts de captura; não alteram o jogo publicado.

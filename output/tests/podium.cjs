@@ -66,12 +66,14 @@ for (let frame = 0; frame <= 420; frame++) {
     if (!part.userData.podiumHand) return;
     const body = part.parent.parent;
     const cup = body.children.find(child => child.userData.podiumTrophy);
-    const expected = cup.position.clone().add(new THREE.Vector3(part.userData.podiumHand * 1.03, .5, 0));
+    const expected = cup.position.clone().add(new THREE.Vector3(part.userData.podiumHand * 1.03, .5, 0).multiply(cup.scale));
     assert(part.position.clone().add(part.parent.position).distanceTo(expected) < 1e-6, 'Gloves stay on trophy handles');
     const previous = lastHeights.get(part);
     if (previous !== undefined) assert(Math.abs(cup.position.y - previous) < .04, 'Trophy lift has no jumps');
     lastHeights.set(part, cup.position.y);
-    for (const bone of part.parent.children.slice(0, 2)) assert(Math.abs(bone.scale.y - 1.25) < 1e-6, 'Arms retain their length');
+    for (const bone of part.parent.children.slice(0, 2)) assert(Math.abs(bone.scale.y - 1.1) < 1e-6, 'Arms retain their length');
+    const elbow = part.parent.children[2];
+    assert(elbow.position.x * part.userData.podiumHand > 0, 'Elbows bend outward instead of crossing the chest');
   });
 }
 brandedPodium.dispose();

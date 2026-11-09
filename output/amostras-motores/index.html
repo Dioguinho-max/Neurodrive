@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="pt-BR">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>NeuroDrive · Amostras de motores</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#09131c;color:#ecf5fa;font:17px/1.6 system-ui,sans-serif}main{max-width:980px;margin:auto;padding:40px 20px}h1{font-size:clamp(28px,6vw,46px);line-height:1.15}h1 span{color:#a0efcc}.intro{max-width:700px;color:#b7cbd6}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:18px;margin:30px 0}article{background:#142632;border:1px solid #31505c;border-top:3px solid #91ebc3;border-radius:16px;padding:22px}h2{margin:0}article p{min-height:80px;color:#bacdd5}audio{width:100%;margin:12px 0}a{color:#a0efcc}small{color:#b7cbd6}.tag{color:#a0efcc;letter-spacing:.12em;font-size:12px}footer{border-top:1px solid #31505c;padding-top:20px}
+</style>
+<main>
+<div class="tag">LABORATÓRIO DE ÁUDIO · TURBO ANTERIOR RESTAURADO</div>
+<h1>Qual é a voz do <span>NeuroDrive?</span></h1>
+<p class="intro">Três propostas sintetizadas, com volumes aproximados para comparar. Cada amostra dura 14 segundos: marcha lenta, aceleração, duas trocas de marcha e desaceleração. Comece com volume baixo.</p>
+<div class="grid">
+<article><h2>01 · Turbo</h2><p>Quatro cilindros, sopro discreto da turbina e alívio de pressão nas trocas.</p><audio controls preload="none" src="turbo.wav?v=5" aria-label="Ouvir motor turbo"></audio><a href="turbo.wav?v=5" download>Baixar Turbo · WAV</a></article>
+<article><h2>02 · V6</h2><p>Som mais agudo, giro alto e presença dos harmônicos na aceleração.</p><audio controls preload="none" src="v6.wav?v=2" aria-label="Ouvir motor V6"></audio><a href="v6.wav" download>Baixar V6 · WAV</a></article>
+<article><h2>03 · V8 escolhido</h2><p>Nova proposta inspirada na referência: graves e médios reforçados, pulsos de escapamento e aceleração encorpada.</p><audio controls preload="none" src="v8.wav?v=3" aria-label="Ouvir novo motor V8"></audio><a href="v8.wav?v=3" download>Baixar novo V8 · WAV</a><details><summary>Comparar com o V8 anterior</summary><audio controls preload="none" src="v8-anterior.wav" aria-label="Ouvir V8 anterior"></audio></details></article>
+</div>
+<footer><small>Estudos sonoros originais e procedurais, não gravações de carros reais. Ainda não substituem o áudio do jogo. A integração deverá acompanhar RPM, carga e marchas em tempo real.</small></footer>
+</main>
+<script>document.querySelectorAll('audio').forEach(player=>{player.volume=.5;player.addEventListener('play',()=>document.querySelectorAll('audio').forEach(other=>{if(other!==player)other.pause()}))});</script>
+</html>
