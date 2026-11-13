@@ -110,7 +110,9 @@ function createCloudServer({ store, frontendOrigin, backendOrigin, avatarStorage
       if (url.pathname === '/api/logout') {
         await store.logout(hash(token)); online.disconnect(id); res.setHeader('Set-Cookie', cookie('', 0)); return json(200, { ok: true });
       }
-      if (url.pathname === '/api/profile') {
+      if (url.pathname === '/api/tutorial/complete') {
+        await store.completeTutorial(id);
+      } else if (url.pathname === '/api/profile') {
         await store.limit(hash('profile:' + id));
         await store.updatePilot(id, pilot.details(data));
       } else if (url.pathname === '/api/avatar') {

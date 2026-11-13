@@ -29,7 +29,7 @@ function createApp({ database = path.join(__dirname, 'data', 'neurodrive.sqlite'
     CREATE TABLE IF NOT EXISTS sessions (
       token_hash TEXT PRIMARY KEY, player_id INTEGER NOT NULL REFERENCES players(id), expires INTEGER NOT NULL
     );`);
-  for (const [name, type] of [['nickname', 'TEXT'], ['driver_number', 'INTEGER NOT NULL DEFAULT 0'], ['avatar', 'TEXT']]) {
+  for (const [name, type] of [['nickname', 'TEXT'], ['driver_number', 'INTEGER NOT NULL DEFAULT 0'], ['avatar', 'TEXT'], ['tutorial_complete', 'INTEGER NOT NULL DEFAULT 0']]) {
     if (!db.prepare('PRAGMA table_info(players)').all().some(column => column.name === name)) db.exec(`ALTER TABLE players ADD COLUMN ${name} ${type}`);
   }
   const rewards = require('./rewards.cjs')(db, clock);
@@ -54,10 +54,10 @@ function createApp({ database = path.join(__dirname, 'data', 'neurodrive.sqlite'
     catch (error) { db.exec('ROLLBACK'); throw error; }
   }
   function profile(id) {
-    const player = statement('SELECT id, username, nickname, driver_number, avatar, coins, equipped, last_bonus FROM players WHERE id=?', id);
+    const player = statement('SELECT id, username, nickname, driver_number, avatar, coins, equipped, last_bonus, tutorial_complete FROM players WHERE id=?', id);
     const owned = db.prepare('SELECT skin FROM inventory WHERE player_id=?').all(id).map((row) => row.skin);
     return { username: player.username, nickname: player.nickname || player.username, number: player.driver_number, avatar: player.avatar, bestLaps: [], coins: player.coins, equipped: player.equipped, owned, stats: rewards.stats(id), achievements: rewards.achievements(id),
-      progression: progression.profile(id), nextBonusAt: player.last_bonus ? player.last_bonus + DAY : 0 };
+      tutorialComplete: Boolean(player.tutorial_complete), progression: progression.profile(id), nextBonusAt: player.last_bonus ? player.last_bonus + DAY : 0 };
   }
   function token(req) {
     return /(?:^|;\s*)nd_session=([a-f0-9]{64})(?:;|$)/.exec(req.headers.cookie || '')?.[1] || '';
@@ -181,7 +181,9 @@ function createApp({ database = path.join(__dirname, 'data', 'neurodrive.sqlite'
           const reward = rewards.finish(id, data);
           return json(200, { reward, player: profile(id) });
         }
-        if (url.pathname === '/api/profile') {
+        if (url.pathname === '/api/tutorial/complete') {
+          run('UPDATE players SET tutorial_complete=1 WHERE id=?', id);
+        } else if (url.pathname === '/api/profile') {
           const dataPilot = pilot.details(data);
           run('UPDATE players SET nickname=?,driver_number=? WHERE id=?', dataPilot.nickname, dataPilot.number, id);
         } else if (url.pathname === '/api/avatar') {

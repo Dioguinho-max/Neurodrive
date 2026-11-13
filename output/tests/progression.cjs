@@ -20,6 +20,9 @@ class TestPool {
  try {
  await store.init();await store.init();
  const {id}=await store.create('challenge_driver','hash','salt');
+ assert.equal((await store.profile(id)).tutorialComplete,false);
+ await store.completeTutorial(id);await store.completeTutorial(id);
+ assert.equal((await store.profile(id)).tutorialComplete,true);
  await assert.rejects(store.buy(id,'storm-exclusive',true),e=>e.status===403);
  await store.award(id,'legacy',1,1);
  assert((await store.profile(id)).progression.every(g=>g.progress===0));

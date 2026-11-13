@@ -41,6 +41,10 @@ async function api(route, data, cookie = '', extra = {}) {
     assert.match(registration.cookie, /HttpOnly/);
     assert.match(registration.cookie, /SameSite=Strict/);
     let cookie = registration.cookie.split(';')[0];
+    assert.equal(registration.data.player.tutorialComplete,false);
+    assert.equal((await api('tutorial/complete',{})).status,401);
+    assert.equal((await api('tutorial/complete',{},cookie)).data.player.tutorialComplete,true);
+    assert.equal((await api('tutorial/complete',{},cookie)).data.player.coins,500);
     assert.equal(registration.data.player.progression.length, 3);
     assert.equal((await api('buy', { skin: 'storm-exclusive' }, cookie)).status, 403);
     assert.equal((await api('equip', { skin: 'podium-exclusive' }, cookie)).status, 403);

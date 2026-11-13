@@ -2,6 +2,11 @@
 (() => {
   'use strict';
   const dictionary = {
+    'Experimente o NeuroDrive':'Try NeuroDrive',
+    'Uma volta · Autódromo Veloz · Câmbio automático':'One lap · Autódromo Veloz · Automatic gears',
+    'Jogar agora':'Play now',
+    'Rever controles':'Review controls',
+    'Entre na conta e volte em Jogar agora. Suas instruções ficarão salvas.':'Sign in and return to Play now. Your tutorial completion will be saved.',
     'Desafios de progressão':'Progression challenges',
     'Corridas online, incluindo rede local. Recompensas automáticas, uma vez por conta.':'Online races, including LAN. Automatic rewards, once per account.',
     'Corrida limpa':'Clean race',

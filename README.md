@@ -64,6 +64,8 @@ O Distrito Neon ainda está em avaliação: não concede moedas nem envia marcas
 
 ## Dentro e fora da pista
 
+- **Modo apresentação:** em Jogar, use “Jogar agora” para uma volta no Autódromo Veloz, no seco, com dificuldade fácil e câmbio automático. O atalho pede login e mostra instruções curtas apenas enquanto essa conta ainda não as concluiu; “Rever controles” permite consultá-las novamente. Esta demonstração não concede recompensas de corrida. Atualize também o backend para salvar a conclusão das instruções (PostgreSQL público ou SQLite do pendrive).
+
 - **Abertura e menu mobile:** tela de carregamento até o menu estar pronto, navegação por toque e layout para celular em pé ou deitado. No celular, toque em “Entrar no jogo” para solicitar tela cheia já no menu; navegadores sem suporte oferecem a opção de continuar normalmente.
 
 - **[Desafios de progressão](PROGRESSAO.md):** corrida limpa, três pódios e vitória na chuva, com moedas e pinturas exclusivas. Progresso salvo na conta, disponível em Piloto → Conquistas, para corridas online e LAN validadas pelo servidor.

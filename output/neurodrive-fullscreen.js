@@ -2,7 +2,7 @@
 (() => {
   const touch = window.matchMedia('(pointer: coarse)');
   const root = document.documentElement;
-  const actions = new Set(['race-menu-play', 'race-menu-resume', 'race-start', 'race-next', 'online-ready', 'online-start', 'online-back']);
+  const actions = new Set(['presentation-play', 'race-menu-play', 'race-menu-resume', 'race-start', 'race-next', 'online-ready', 'online-start', 'online-back']);
   let replaying = false, busy = false, wasFullscreen = Boolean(document.fullscreenElement);
   const gate = document.createElement('dialog');
   gate.className = 'mobile-screen-gate';

@@ -417,6 +417,23 @@
     if (renderer) startSession(true);
     else openMenu();
   };
+  if(get('presentation-play'))get('presentation-play').onclick=async()=>{
+    const button=get('presentation-play');
+    if(!renderer||button.disabled)return;
+    button.disabled=true;
+    try{
+      if(!await window.NeuroPresentation?.instructions())return;
+      get('menu-mode').value='single';get('menu-mode').onchange();
+      for(const [name,value]of [['track','veloz'],['difficulty','easy'],['laps','1']]){
+        get(`menu-${name}`).value=value;get(`race-${name}`).value=value;
+      }
+      get('menu-weather').value='dry';get('race-transmission').value='automatic';
+      championship=null;qualifyingGrid=null;sessionDifficulty='easy';sessionVehicle='balanced';
+      get('race-track').onchange();
+      if(renderer){startSession(false,true);get('race-transmission').onchange();}
+    }finally{button.disabled=!renderer;}
+  };
+  if(get('presentation-help'))get('presentation-help').onclick=()=>window.NeuroPresentation?.instructions(true);
 
   function refresh() {
     const player = race.cars[0];
@@ -524,7 +541,7 @@
     updateFinale(ranking);
   }
 
-  function startSession(qualifying) {
+  function startSession(qualifying, presentation = false) {
     driftOnline = null;
     driftOnlineSubmitted = false;
     get('drift-online-status').textContent = '';
@@ -561,7 +578,7 @@
     if (drift && !track.experimental) driftOnline = window.NeuroDriftOnline?.start(race, track.id, race.cars[0].driftSetup);
     get('race-reward').textContent = qualifying ? 'A classificação define o grid. As moedas são concedidas na corrida.' : '';
     get('race-reward-retry').hidden = true;
-    window.NeuroGarage?.beginRace(qualifying || drift || track.experimental ? null : { track: track.id, laps: race.laps });
+    window.NeuroGarage?.beginRace(presentation || qualifying || drift || track.experimental ? null : { track: track.id, laps: race.laps });
     get('race-pit-compound').value = race.cars[0].tyreCompound;
     started = true;
     paused = false;

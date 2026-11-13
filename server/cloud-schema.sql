@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS neurodrive.drift_records (
 ALTER TABLE neurodrive.players ADD COLUMN IF NOT EXISTS nickname TEXT;
 ALTER TABLE neurodrive.players ADD COLUMN IF NOT EXISTS driver_number INTEGER NOT NULL DEFAULT 0 CHECK(driver_number BETWEEN 0 AND 99);
 ALTER TABLE neurodrive.players ADD COLUMN IF NOT EXISTS avatar TEXT;
+ALTER TABLE neurodrive.players ADD COLUMN IF NOT EXISTS tutorial_complete BOOLEAN NOT NULL DEFAULT FALSE;
 CREATE TABLE IF NOT EXISTS neurodrive.inventory (
   player_id BIGINT REFERENCES neurodrive.players(id) ON DELETE CASCADE,
   skin TEXT NOT NULL, PRIMARY KEY(player_id, skin)

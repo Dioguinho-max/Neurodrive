@@ -241,3 +241,14 @@ assert.equal(nodes['drift-menu-goals'].hidden, true);
 assert.equal(nodes['drift-setup-panel'].hidden, true);
 assert.equal(nodes['drift-result-medal'].hidden, true);
 console.log('OK: drift menu, timer, dedicated results and return to normal racing.');
+(async()=>{
+  const create=host.createNeuroRace;let config,receipt='not-called';
+  host.createNeuroRace=(track,difficulty,options)=>{config={track:track.id,difficulty,...options};return create(track,difficulty,options)};
+  host.NeuroPresentation={instructions:async()=>true};
+  host.NeuroGarage={getSkin:()=>null,beginRace:value=>{receipt=value}};
+  await nodes['presentation-play'].onclick();
+  assert.equal(config.track,'veloz');assert.equal(config.difficulty,'easy');assert.equal(config.laps,1);
+  assert.equal(config.session,'race');assert.equal(config.weather,'dry');assert.equal(config.vehicle,'balanced');assert.equal(config.transmission,'automatic');
+  assert.equal(receipt,null);assert.equal(nodes['race-menu'].open,false);
+  console.log('OK: presentation starts a dry one-lap easy automatic race directly, without reward ticket.');
+})().catch(error=>{console.error(error);process.exitCode=1});

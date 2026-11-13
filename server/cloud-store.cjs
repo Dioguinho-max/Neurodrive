@@ -49,18 +49,19 @@ class CloudStore {
     } catch (err) { if (err.code === '23505') throw fail(409, 'Esse nome já está em uso.'); throw err; }
   }
   async profile(id) {
-    const player = (await this.pool.query('SELECT username, nickname, driver_number, avatar, coins, equipped, last_bonus FROM neurodrive.players WHERE id=$1', [id])).rows[0];
+    const player = (await this.pool.query('SELECT username, nickname, driver_number, avatar, coins, equipped, last_bonus, tutorial_complete FROM neurodrive.players WHERE id=$1', [id])).rows[0];
     if (!player) throw fail(401, 'Conta não encontrada.');
     const owned = (await this.pool.query('SELECT skin FROM neurodrive.inventory WHERE player_id=$1', [id])).rows.map((row) => row.skin);
     const stats = (await this.pool.query('SELECT count(*)::int AS races, count(*) FILTER(WHERE place=1)::int AS wins, count(*) FILTER(WHERE place<=3)::int AS podiums, count(*) FILTER(WHERE pole)::int AS poles FROM neurodrive.results WHERE player_id=$1', [id])).rows[0];
     const bestLaps = (await this.pool.query('SELECT track, min(best_lap) AS time FROM neurodrive.results WHERE player_id=$1 AND best_lap>0 AND track IS NOT NULL GROUP BY track', [id])).rows;
     const achievements = (await this.pool.query('SELECT code,achieved,track,season FROM neurodrive.achievements WHERE player_id=$1 ORDER BY achieved,code', [id])).rows.map(row => ({ ...row, achieved: Number(row.achieved) }));
-    return { username: player.username, nickname: player.nickname || player.username, number: player.driver_number, avatar: player.avatar, coins: player.coins, equipped: player.equipped, owned, stats, bestLaps,
+    return { tutorialComplete: player.tutorial_complete === true, username: player.username, nickname: player.nickname || player.username, number: player.driver_number, avatar: player.avatar, coins: player.coins, equipped: player.equipped, owned, stats, bestLaps,
       achievements, progression: progression.list((await this.pool.query('SELECT code,progress,achieved FROM neurodrive.progression WHERE player_id=$1', [id])).rows), nextBonusAt: Number(player.last_bonus) ? Number(player.last_bonus) + 86400000 : 0 };
   }
   async updatePilot(id, data) {
     await this.pool.query('UPDATE neurodrive.players SET nickname=$1,driver_number=$2 WHERE id=$3', [data.nickname, data.number, id]);
   }
+  async completeTutorial(id) { await this.pool.query('UPDATE neurodrive.players SET tutorial_complete=TRUE WHERE id=$1', [id]); }
   async updateAvatar(id, url) { await this.pool.query('UPDATE neurodrive.players SET avatar=$1 WHERE id=$2', [url, id]); }
   async session(tokenHash) { return (await this.pool.query('SELECT player_id FROM neurodrive.sessions WHERE token_hash=$1 AND expires>$2', [tokenHash, Date.now()])).rows[0]?.player_id; }
   async newSession(tokenHash, id, oldHash) {

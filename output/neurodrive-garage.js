@@ -129,7 +129,13 @@
     preview.append(art, palette, controls);
     return preview;
   }
-  window.NeuroGarage = { getCatalog: () => skins, getSkin: () => skins.find((skin) => skin.id === player?.equipped) || null, beginRace, finishRace, setPreviewFactory, showPage };
+  window.NeuroGarage = { getPlayer: () => player, completeTutorial: async () => {
+    const username=player?.username;
+    if(!username)throw new Error('Entre na conta para salvar as instruções.');
+    const result=await request('tutorial/complete',{});
+    if(player?.username!==username)throw new Error('A conta mudou. Entre novamente.');
+    player=result.player;render();
+  }, getCatalog: () => skins, getSkin: () => skins.find((skin) => skin.id === player?.equipped) || null, beginRace, finishRace, setPreviewFactory, showPage };
 
   function showPage(value) {
     page = value;
