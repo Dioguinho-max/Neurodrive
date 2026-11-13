@@ -1,0 +1,21 @@
+html.game-booting body{overflow:hidden}
+.game-booting #neuro-race{visibility:hidden}
+.game-booting dialog:not(#game-boot)::backdrop{background:transparent}
+#game-boot{position:fixed;inset:0;margin:0;width:100%;height:100%;height:100dvh;max-width:none;max-height:none;box-sizing:border-box;border:0;padding:24px;color:#ecf7fa;background:radial-gradient(ellipse at 50% 75%,#1b514644,transparent 65%),#08131d;font-family:system-ui,sans-serif;text-align:center;overflow:auto}
+#game-boot[open]{display:grid;place-items:center}
+#game-boot::backdrop{background:#08131d}
+.boot-content{width:min(480px,100%);margin:auto}
+.boot-logo{font-size:clamp(48px,10vw,84px);font-weight:950;font-style:italic;letter-spacing:-.07em;line-height:.9;margin:24px 0}
+.boot-logo span{display:block;color:#99efc6}
+.boot-caption{text-transform:uppercase;letter-spacing:.25em;font-size:11px;color:#b6ced4}
+.boot-line{height:3px;margin:32px auto 20px;width:min(280px,75%);background:#263a45;overflow:hidden;border-radius:3px}
+.boot-line::after{content:'';display:block;width:45%;height:100%;background:#99efc6;animation:boot-slide 1.4s ease-in-out infinite}
+#game-boot[data-ready=true] .boot-line::after{animation:none;width:100%}
+#boot-status{font-size:14px;line-height:1.6;color:#c2d6dc;min-height:44px}
+#game-boot button{display:block;min-height:48px;width:min(320px,100%);margin:12px auto;padding:12px 20px;border-radius:12px;border:1px solid #94dabc55;background:#9af0c6;color:#10241d;font:700 15px system-ui;cursor:pointer;touch-action:manipulation}
+#game-boot button[hidden]{display:none}
+#game-boot #boot-browser{background:transparent;color:#c8dcdf;border:0;font-size:13px}
+#game-boot button:focus-visible{outline:3px solid white;outline-offset:4px}
+@keyframes boot-slide{from{transform:translateX(-110%)}to{transform:translateX(330%)}}
+@media(max-height:450px){.boot-logo{font-size:48px;margin:10px 0}.boot-line{margin:16px auto 8px}#boot-status{min-height:24px;margin:8px}#game-boot button{margin:6px auto}.boot-caption{margin:6px}}
+@media(prefers-reduced-motion:reduce){.boot-line::after{animation:none;width:70%}}

@@ -1,0 +1,15 @@
+.race-minimap{position:absolute;left:18px;bottom:22px;width:210px;padding:10px 8px 8px;border:1px solid #bce7d623;border-radius:16px;background:linear-gradient(145deg,#0b1c2770,#0b1c2720);z-index:2;pointer-events:none;user-select:none;box-sizing:border-box}
+.race-minimap[hidden]{display:none}
+.race-minimap canvas{display:block;width:100%;height:auto}
+.race-minimap small{display:block;margin-top:4px;color:#e2eeef;font:10px/1.5 system-ui,sans-serif;text-align:center;text-shadow:0 1px 3px #000}
+.rival-guide{font-size:13px;line-height:1.6;margin:10px 0;color:#c7d9df}
+.rival-guide summary{cursor:pointer;color:#a2edc8}
+.rival-guide ul{padding-left:20px}
+@media(pointer:coarse),(max-width:900px){
+ .race-minimap{left:max(12px,env(safe-area-inset-left));top:calc(env(safe-area-inset-top,0px) + 118px);bottom:auto;width:120px;padding:3px;border:0;border-radius:0;background:none}
+ .race-minimap small{display:none}
+ #neuro-race:has(#mobile-pit-options:not([hidden])) .race-minimap{visibility:hidden}
+}
+@media(max-height:380px) and (pointer:coarse){.race-minimap{width:96px}}
+/* Extremely short viewports must preserve steering and the pit controls. */
+@media(max-height:300px) and (pointer:coarse){.race-minimap{display:none}}

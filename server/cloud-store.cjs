@@ -2,6 +2,7 @@ const fs = require('node:fs');
 const path = require('node:path');
 const { Pool } = require('pg');
 const catalog = require('./catalog.cjs');
+const progression = require('./progression.cjs');
 const { databaseUrl } = require('./startup-config.cjs');
 const fail = (status, message) => Object.assign(new Error(message), { status });
 function createPool(env = process.env) {
@@ -55,7 +56,7 @@ class CloudStore {
     const bestLaps = (await this.pool.query('SELECT track, min(best_lap) AS time FROM neurodrive.results WHERE player_id=$1 AND best_lap>0 AND track IS NOT NULL GROUP BY track', [id])).rows;
     const achievements = (await this.pool.query('SELECT code,achieved,track,season FROM neurodrive.achievements WHERE player_id=$1 ORDER BY achieved,code', [id])).rows.map(row => ({ ...row, achieved: Number(row.achieved) }));
     return { username: player.username, nickname: player.nickname || player.username, number: player.driver_number, avatar: player.avatar, coins: player.coins, equipped: player.equipped, owned, stats, bestLaps,
-      achievements, nextBonusAt: Number(player.last_bonus) ? Number(player.last_bonus) + 86400000 : 0 };
+      achievements, progression: progression.list((await this.pool.query('SELECT code,progress,achieved FROM neurodrive.progression WHERE player_id=$1', [id])).rows), nextBonusAt: Number(player.last_bonus) ? Number(player.last_bonus) + 86400000 : 0 };
   }
   async updatePilot(id, data) {
     await this.pool.query('UPDATE neurodrive.players SET nickname=$1,driver_number=$2 WHERE id=$3', [data.nickname, data.number, id]);
@@ -90,6 +91,7 @@ class CloudStore {
       const player = (await db.query('SELECT coins FROM neurodrive.players WHERE id=$1 FOR UPDATE', [id])).rows[0];
       const owned = (await db.query('SELECT skin FROM neurodrive.inventory WHERE player_id=$1 AND skin=$2', [id, skin.id])).rowCount;
       if (!owned) {
+        if (skin.exclusive) throw fail(403, 'Desbloqueie essa pintura nos desafios de progressão.');
         if (!purchase) throw fail(403, 'Compre essa skin antes de equipar.');
         if (player.coins < skin.price) throw fail(409, 'Moedas insuficientes.');
         await db.query('UPDATE neurodrive.players SET coins=coins-$1 WHERE id=$2', [skin.price, id]);
@@ -116,7 +118,19 @@ class CloudStore {
       for (const code of [place === 1 && 'first_win', place >= 1 && place <= 3 && 'first_podium'].filter(Boolean)) {
         await db.query('INSERT INTO neurodrive.achievements(player_id,code,achieved,track) VALUES($1,$2,$3,$4) ON CONFLICT DO NOTHING', [id,code,now,performance.track||null]);
       }
-      return reward;
+      let bonus = 0;
+      const goals = progression.advance((await db.query('SELECT code,progress,achieved FROM neurodrive.progression WHERE player_id=$1', [id])).rows, place, performance, now);
+      for (const goal of goals) {
+        await db.query('INSERT INTO neurodrive.progression VALUES($1,$2,$3,$4) ON CONFLICT(player_id,code) DO UPDATE SET progress=EXCLUDED.progress,achieved=EXCLUDED.achieved', [id,goal.code,goal.progress,goal.achieved]);
+        if (!goal.unlocked) continue;
+        bonus += goal.coins;
+        if (goal.skin) await db.query('INSERT INTO neurodrive.inventory VALUES($1,$2) ON CONFLICT DO NOTHING', [id,goal.skin]);
+      }
+      if (bonus) {
+        await db.query('UPDATE neurodrive.players SET coins=coins+$1 WHERE id=$2', [bonus,id]);
+        await db.query('UPDATE neurodrive.results SET reward=reward+$1 WHERE id=$2 AND player_id=$3', [bonus,raceId,id]);
+      }
+      return reward + bonus;
     });
   }
 }

@@ -29,7 +29,9 @@ async function api(route, data, cookie = '', extra = {}) {
     await start();
     assert.equal((await fetch(base)).status, 200);
     assert.equal((await fetch(base + '/server/data/neurodrive.sqlite')).status, 404);
-    assert.equal((await api('catalog')).data.skins.length, 14);
+    const catalog = (await api('catalog')).data.skins;
+    assert.equal(catalog.filter(skin => !skin.exclusive).length, 14);
+    assert.equal(catalog.filter(skin => skin.exclusive).length, 2);
     assert.equal((await api('me')).status, 401);
     assert.equal((await api('register', { username: 'piloto', password: 'curta' })).status, 400);
     const credentials = { username: 'piloto', password: 'SenhaTeste_12345' };
@@ -39,6 +41,9 @@ async function api(route, data, cookie = '', extra = {}) {
     assert.match(registration.cookie, /HttpOnly/);
     assert.match(registration.cookie, /SameSite=Strict/);
     let cookie = registration.cookie.split(';')[0];
+    assert.equal(registration.data.player.progression.length, 3);
+    assert.equal((await api('buy', { skin: 'storm-exclusive' }, cookie)).status, 403);
+    assert.equal((await api('equip', { skin: 'podium-exclusive' }, cookie)).status, 403);
     assert.equal((await api('drift/board?track=arena')).status,401);
     assert.equal((await api('drift/board?track=invalid',undefined,cookie)).status,400);
     assert.deepEqual((await api('drift/board?track=arena',undefined,cookie)).data.rows,[]);

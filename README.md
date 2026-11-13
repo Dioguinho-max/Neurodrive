@@ -46,6 +46,10 @@ A pilotagem tem estilo **arcade**, com câmbio, aderência, desgaste de pneus e 
 
 Os bots da corrida usam um controlador próprio para curvas, ultrapassagens e paradas. Eles são independentes das redes que aprendem no laboratório.
 
+Os rivais têm estilos distintos: Luna se destaca na chuva, Rafa busca ultrapassagens, Bia preserva pneus, Caio prioriza velocidade, Nico mantém mais margem e Dani equilibra ritmo e estratégia. Esses comportamentos também valem para os bots das salas online.
+
+Em **Ajustes → Mostrar minimapa**, acompanhe o traçado, sua posição, os adversários e a entrada dos boxes. A preferência fica salva neste dispositivo. No celular, o mapa usa uma versão compacta e transparente acima das setas, sem capturar toques. Ele se esconde ao abrir as opções dos boxes e em telas muito baixas. Começa ligado para novos jogadores; preferências já salvas são respeitadas.
+
 ## Cinco circuitos, diferentes desafios
 
 | Circuito | Identidade |
@@ -59,6 +63,10 @@ Os bots da corrida usam um controlador próprio para curvas, ultrapassagens e pa
 O Distrito Neon ainda está em avaliação: não concede moedas nem envia marcas aos rankings competitivos. Os campeonatos existentes usam os três circuitos principais.
 
 ## Dentro e fora da pista
+
+- **Abertura e menu mobile:** tela de carregamento até o menu estar pronto, navegação por toque e layout para celular em pé ou deitado. No celular, toque em “Entrar no jogo” para solicitar tela cheia já no menu; navegadores sem suporte oferecem a opção de continuar normalmente.
+
+- **[Desafios de progressão](PROGRESSAO.md):** corrida limpa, três pódios e vitória na chuva, com moedas e pinturas exclusivas. Progresso salvo na conta, disponível em Piloto → Conquistas, para corridas online e LAN validadas pelo servidor.
 
 - **Pilotagem:** quatro opções de carro com características diferentes, seis marchas, marcha ré, câmbio automático/manual, freio progressivo e vácuo nas corridas.
 - **Clima e estratégia:** tempo seco, chuva ou clima variável; pista molhando gradualmente, pneus de seco e de chuva, desgaste e risco de furo.

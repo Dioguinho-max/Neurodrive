@@ -33,6 +33,7 @@ function createApp({ database = path.join(__dirname, 'data', 'neurodrive.sqlite'
     if (!db.prepare('PRAGMA table_info(players)').all().some(column => column.name === name)) db.exec(`ALTER TABLE players ADD COLUMN ${name} ${type}`);
   }
   const rewards = require('./rewards.cjs')(db, clock);
+  const progression = require('./progression.cjs').local(db);
   const publicRoot = fs.realpathSync(path.join(__dirname, '..', 'output'));
   const attempts = new Map();
   const statement = (sql, ...params) => db.prepare(sql).get(...params);
@@ -56,7 +57,7 @@ function createApp({ database = path.join(__dirname, 'data', 'neurodrive.sqlite'
     const player = statement('SELECT id, username, nickname, driver_number, avatar, coins, equipped, last_bonus FROM players WHERE id=?', id);
     const owned = db.prepare('SELECT skin FROM inventory WHERE player_id=?').all(id).map((row) => row.skin);
     return { username: player.username, nickname: player.nickname || player.username, number: player.driver_number, avatar: player.avatar, bestLaps: [], coins: player.coins, equipped: player.equipped, owned, stats: rewards.stats(id), achievements: rewards.achievements(id),
-      nextBonusAt: player.last_bonus ? player.last_bonus + DAY : 0 };
+      progression: progression.profile(id), nextBonusAt: player.last_bonus ? player.last_bonus + DAY : 0 };
   }
   function token(req) {
     return /(?:^|;\s*)nd_session=([a-f0-9]{64})(?:;|$)/.exec(req.headers.cookie || '')?.[1] || '';
@@ -195,6 +196,7 @@ function createApp({ database = path.join(__dirname, 'data', 'neurodrive.sqlite'
           transaction(() => {
             const owned = statement('SELECT skin FROM inventory WHERE player_id=? AND skin=?', id, skin.id);
             if (url.pathname === '/api/buy' && !owned) {
+              if (skin.exclusive) throw fail(403, 'Desbloqueie essa pintura nos desafios de progressão.');
               const payment = run('UPDATE players SET coins=coins-? WHERE id=? AND coins>=?', skin.price, id, skin.price);
               if (!payment.changes) throw fail(409, 'Moedas insuficientes.');
               run('INSERT INTO inventory VALUES (?, ?)', id, skin.id);
@@ -243,7 +245,9 @@ function createApp({ database = path.join(__dirname, 'data', 'neurodrive.sqlite'
         run('INSERT INTO races(id,player_id,track,laps,started,claimed,reward,place) VALUES(?,?,?,?,?,?,?,?)',
           ticket, id, performance.track, laps, clock(), clock(), reward, place);
         run('UPDATE players SET coins=coins+? WHERE id=?', reward, id);
-        return reward;
+        const bonus = progression.award(id, place, performance, clock());
+        if (bonus) run('UPDATE races SET reward=reward+? WHERE id=?', bonus, ticket);
+        return reward + bonus;
       }),
     },
   }) : null;

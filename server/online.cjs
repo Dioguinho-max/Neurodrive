@@ -214,7 +214,7 @@ function attachOnline(server, { origin, store, tickMs = 1000 / 60 }) {
         if (status.saved || status.pending || Date.now() < (status.retry || 0)) continue;
         status.pending = true;
         room.rewards.set(car.id, status);
-        store.award(car.accountId, room.raceId, room.laps, car.place, room.mode, { track: room.track, bestLap: car.bestLap, pole: room.grid?.[0]?.id === car.id && room.grid[0].bestLap > 0 }).then((amount) => {
+        store.award(car.accountId, room.raceId, room.laps, car.place, room.mode, { progression: true, clean: car.progressionTicks > 0 && !car.progressionIncident, rain: car.progressionTicks > 0 && (car.progressionRainTicks || 0) / car.progressionTicks >= .25, track: room.track, bestLap: car.bestLap, pole: room.grid?.[0]?.id === car.id && room.grid[0].bestLap > 0 }).then((amount) => {
           Object.assign(status, { amount, saved: true });
         }).catch(() => { status.retry = Date.now() + 5000; }).finally(() => { status.pending = false; });
       }

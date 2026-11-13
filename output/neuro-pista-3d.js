@@ -857,18 +857,33 @@
     const models = [];
     // Pools fixos: efeitos não criam objetos ou texturas a cada quadro.
     const fxTransform = new THREE.Object3D();
-    const skidPool = [], smokePool = [], sprayPool = [];
-    let skidIndex = 0, smokeIndex = 0, sprayIndex = 0;
+    const skidPool = [], smokePool = [], sprayPool = [], exhaustPool = [];
+    let skidIndex = 0, smokeIndex = 0, sprayIndex = 0, exhaustIndex = 0;
     const skids = options.racePresentation ? new THREE.InstancedMesh(new THREE.BoxGeometry(1, 0.025, 1),
       new THREE.MeshBasicMaterial({ color: '#181b1e', transparent: true, opacity: 0.5, depthWrite: false }), 256) : null;
     const smoke = options.racePresentation ? new THREE.InstancedMesh(new THREE.IcosahedronGeometry(1, 0),
       new THREE.MeshBasicMaterial({ color: '#d2d4d4', transparent: true, opacity: 0.16, depthWrite: false }), 48) : null;
     const spray = options.racePresentation ? new THREE.InstancedMesh(new THREE.SphereGeometry(1, 6, 4),
       new THREE.MeshBasicMaterial({ color: '#bdd5dd', transparent: true, opacity: 0.24, depthWrite: false }), 192) : null;
+    // Uma textura pequena e um único lote para todos os escapamentos próximos.
+    let exhaust = null;
+    if (options.racePresentation) {
+      const pixels = new Uint8Array(32 * 32 * 4);
+      for (let y = 0; y < 32; y++) for (let x = 0; x < 32; x++) {
+        const radius = Math.hypot((x - 15.5) / 15.5, (y - 15.5) / 15.5);
+        pixels.set([255, 255, 255, Math.round(255 * Math.max(0, 1 - radius) ** 2)], (y * 32 + x) * 4);
+      }
+      const map = new THREE.DataTexture(pixels, 32, 32);
+      map.magFilter = map.minFilter = THREE.LinearFilter;
+      map.needsUpdate = true; textures.push(map);
+      exhaust = new THREE.InstancedMesh(new THREE.PlaneGeometry(1, 1),
+        new THREE.MeshBasicMaterial({ color: '#c5cbd0', map, transparent: true, opacity: .20, depthWrite: false }), 48);
+      exhaust.name = 'engine-exhaust-smoke';
+    }
     if (spray) spray.name = 'tire-water-spray';
     if (smoke) smoke.name = 'tire-dry-smoke';
     if (skids) skids.name = 'tire-dry-marks';
-    for (const pool of [skids, smoke, spray]) {
+    for (const pool of [skids, smoke, spray, exhaust]) {
       if (!pool) continue;
       fxTransform.scale.setScalar(0); fxTransform.updateMatrix();
       for (let i = 0; i < pool.count; i++) pool.setMatrixAt(i, fxTransform.matrix);
@@ -877,7 +892,7 @@
     }
     function updateTireEffects() {
       const now = Date.now();
-      for (const [mesh, pool, lifetime] of [[skids, skidPool, 12000], [smoke, smokePool, 1300], [spray, sprayPool, 450]]) {
+      for (const [mesh, pool, lifetime] of [[skids, skidPool, 12000], [smoke, smokePool, 1300], [spray, sprayPool, 450], [exhaust, exhaustPool, 650]]) {
         if (!mesh) continue;
         const expired = mesh.userData.expiredEffects ||= new WeakSet();
         let changed = false, active = false;
@@ -889,7 +904,15 @@
           changed = true;
           fxTransform.position.set(effect.x, effect.y + (mesh === smoke ? age * 4 : 0), effect.z);
           fxTransform.rotation.set(effect.bank, -effect.angle, effect.pitch, 'YZX');
-          if (mesh === spray) {
+          if (mesh === exhaust) {
+            const travel = age * effect.drift;
+            fxTransform.position.x += Math.cos(effect.angle) * travel;
+            fxTransform.position.z += Math.sin(effect.angle) * travel;
+            fxTransform.position.y += age * .9;
+            fxTransform.quaternion.copy(camera.quaternion);
+            const size = (1 + age * 2.2) * (1 - age) * effect.size;
+            fxTransform.scale.setScalar(size);
+          } else if (mesh === spray) {
             const trail = age * (effect.burst ? 6 : 3.5);
             const spread = age * (effect.spread || 0);
             fxTransform.position.x -= Math.cos(effect.angle) * trail + Math.sin(effect.angle) * spread;
@@ -901,7 +924,7 @@
           else fxTransform.scale.set(effect.length, 1, 0.95 * (1 - age));
           fxTransform.updateMatrix(); mesh.setMatrixAt(i, fxTransform.matrix);
         });
-        mesh.visible = active;
+        mesh.visible = active && (mesh !== exhaust || options.speedEffects !== false);
         if (changed) mesh.instanceMatrix.needsUpdate = true;
       }
     }
@@ -1705,6 +1728,21 @@
             clearance = Math.max(clearance, track.heightAt(underside.x, underside.z) + .25 - underside.y);
           }
           if (clearance > 0) { model.group.position.y += clearance; model.group.updateMatrixWorld(true); }
+          // Origem no bocal real: acompanha relevo e suspensão sem colar a fumaça ao carro.
+          // No modo Desempenho, somente o carro acompanhado emite, com menor frequência.
+          if (exhaust && options.speedEffects !== false && car.alive !== false && !car.done
+            && !car.cooldown && car.rpm > 0 && !service && !ceremony
+            && (!lightweight || original === target)
+            && (original === target || camera.position.distanceToSquared(model.group.position) < 160 * 160)
+            && suspensionTime - (model.lastExhaustAt ?? -Infinity) >= (lightweight ? 340 : 190)) {
+            model.lastExhaustAt = suspensionTime;
+            for (const side of [-1, 1]) {
+              const outlet = contactPoint.set(-8.9, 1.9, side * 2.5).applyMatrix4(model.group.matrixWorld);
+              exhaustPool[exhaustIndex++ % 48] = { at: suspensionTime, x: outlet.x, y: outlet.y, z: outlet.z,
+                angle: car.angle, bank: 0, pitch: 0, size: 1.1 + Math.min(1, Math.max(0, car.throttle || 0)) * .3,
+                drift: (car.speed || 0) * 6 - 1.8 };
+            }
+          }
           const distance = model.lastX === null ? 0 : Math.hypot(car.x - model.lastX, car.y - model.lastY);
           // Water fans outward under braking/sliding; ordinary driving leaves a low trail.
           const water = clamp(car.wetness || 0, 0, 1);

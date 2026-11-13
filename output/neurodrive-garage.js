@@ -20,8 +20,8 @@
     const owned = player?.owned.includes(skin?.id);
     const equipped = player?.equipped === skin?.id;
     const button = get('garage-preview-equip');
-    button.textContent = equipped ? 'Equipada' : !player ? 'Entre para usar' : owned ? 'Equipar seleção' : `Comprar · ${skin?.price || 0} moedas`;
-    button.disabled = busy || !skin || !player || equipped || (!owned && player.coins < skin.price);
+    button.textContent = equipped ? 'Equipada' : !player ? 'Entre para usar' : owned ? 'Equipar seleção' : skin?.exclusive ? 'Exclusiva dos desafios' : `Comprar · ${skin?.price || 0} moedas`;
+    button.disabled = busy || !skin || !player || equipped || (!owned && (skin.exclusive || player.coins < skin.price));
     get('garage-compare').disabled = !player || !skin || equipped;
     get('garage-compare').setAttribute('aria-pressed', String(comparing));
     get('garage-compare').textContent = comparing ? 'Voltar à seleção' : 'Comparar com equipada';
@@ -248,13 +248,13 @@
       name.textContent = skin.name;
       name.title = skin.finish === 'matte' ? 'Pintura fosca' : skin.finish === 'metallic' ? 'Pintura metálica' : 'Pintura brilhante';
       const price = document.createElement('span');
-      price.textContent = owned ? 'Na sua garagem' : `${skin.price} moedas`;
+      price.textContent = owned ? 'Na sua garagem' : skin.exclusive ? 'Exclusiva dos desafios' : `${skin.price} moedas`;
       price.textContent += ` · ${skin.finish === 'matte' ? 'Fosca' : skin.finish === 'metallic' ? 'Metálica' : 'Brilhante'}`;
       const button = document.createElement('button');
       button.className = 'btn';
       button.type = 'button';
-      button.textContent = equipped ? 'Equipada' : !player ? 'Entre para usar' : owned ? 'Equipar' : player.coins < skin.price ? `Faltam ${skin.price - player.coins} moedas` : 'Comprar e equipar';
-      button.disabled = busy || !player || equipped || (!owned && player.coins < skin.price);
+      button.textContent = equipped ? 'Equipada' : !player ? 'Entre para usar' : owned ? 'Equipar' : skin.exclusive ? 'Exclusiva dos desafios' : player.coins < skin.price ? `Faltam ${skin.price - player.coins} moedas` : 'Comprar e equipar';
+      button.disabled = busy || !player || equipped || (!owned && (skin.exclusive || player.coins < skin.price));
       button.onclick = () => act(owned ? 'equip' : 'buy', { skin: skin.id }, `${skin.name} equipada!`);
       card.append(preview, name, price, button);
       get('garage-skins').append(card);

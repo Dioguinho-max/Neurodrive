@@ -48,12 +48,12 @@
   const gearForce = [0.010, 0.009, 0.008, 0.006, 0.0045, 0.0041];
   const REV_LIMIT = 8000;
   const drivers = [
-    { name: 'Luna Costa', style: 'Técnica', pace: 0.98, corner: 1.02, gap: 1, color: '#e45d89' },
-    { name: 'Rafa Torres', style: 'Ousado', pace: 1.02, corner: 1.06, gap: 0.94, color: '#f0a43c' },
-    { name: 'Bia Rocha', style: 'Constante', pace: 0.97, corner: 0.98, gap: 1.08, color: '#976de0' },
-    { name: 'Caio Lima', style: 'Velocista', pace: 1.04, corner: 0.96, gap: 1, color: '#48aadd' },
-    { name: 'Nico Alves', style: 'Cauteloso', pace: 0.94, corner: 0.94, gap: 1.15, color: '#d95948' },
-    { name: 'Dani Reis', style: 'Equilibrado', pace: 1, corner: 1, gap: 1.04, color: '#5aba89' },
+    { name: 'Luna Costa', style: 'Especialista em chuva', pace: 0.98, corner: 1.02, gap: 1, attack: .85, wetSkill: .08, conserve: .25, wetSwitch: .36, reserve: .09, color: '#e45d89' },
+    { name: 'Rafa Torres', style: 'Agressivo', pace: 1.02, corner: 1.06, gap: 0.94, attack: 1.2, wetSkill: -.02, conserve: 0, wetSwitch: .48, reserve: .07, color: '#f0a43c' },
+    { name: 'Bia Rocha', style: 'Estrategista', pace: 0.97, corner: 0.98, gap: 1.08, attack: .7, wetSkill: .02, conserve: 1, wetSwitch: .4, reserve: .12, color: '#976de0' },
+    { name: 'Caio Lima', style: 'Velocista', pace: 1.04, corner: 0.96, gap: 1, attack: 1.05, wetSkill: -.04, conserve: .15, wetSwitch: .45, reserve: .08, color: '#48aadd' },
+    { name: 'Nico Alves', style: 'Cauteloso', pace: 0.94, corner: 0.94, gap: 1.15, attack: .55, wetSkill: -.01, conserve: .65, wetSwitch: .38, reserve: .14, color: '#d95948' },
+    { name: 'Dani Reis', style: 'Equilibrado', pace: 1, corner: 1, gap: 1.04, attack: 1, wetSkill: 0, conserve: .3, wetSwitch: .43, reserve: .09, color: '#5aba89' },
   ];
   function updatePowertrain(car, pedal, maximumSpeed, allowReverse) {
     const spec=vehicle(car);
@@ -337,6 +337,11 @@
     }
 
     function aiDecision(car) {
+      const personality = car.driver;
+      const attack = aggression * (personality.attack ?? 1);
+      const care = (personality.conserve || 0) * (car.tyreWearEnabled ? 1 - (car.tyreLife ?? 1) : 0);
+      // Ajusta decisões, nunca a aderência física nem a taxa de desgaste do piloto.
+      const wetConfidence = 1 + (personality.wetSkill || 0) * (car.wetness || 0);
       // Mesma política neural inicial informada do laboratório: 6 → 6 → 2.
       // Na corrida os pesos são fixos; não se troca a geração no meio da prova.
       car.inputs = [...sensors(car), Math.min(1, car.speed / 3.2)];
@@ -367,10 +372,10 @@
         if (previewBend < .15 && tow && (!slower || slower.ahead>70) && car.speed<vehicle(car).speed/54) {
           const candidate=clamp(currentLane+tow.side,-laneWidth,laneWidth);
           if(clearLane(candidate)) lane=candidate;
-        } else if (previewBend < .5 + aggression * .15 && slower) {
+        } else if (previewBend < .44 + attack * .21 - care * .08 && slower) {
           const choices = [-laneWidth, laneWidth].sort((a, b) => Math.abs(a - currentLane) - Math.abs(b - currentLane));
           lane = choices.find(clearLane) ?? 0;
-          if (lane) car.tacticTicks = 140;
+          if (lane) car.tacticTicks = Math.round(100 + attack * 40);
         } else if (previewBend < 0.2 && nearby.some(({ other, ahead, side }) => ahead < -30 && ahead > -85 && Math.abs(side) < 18 && other.speed > car.speed + 0.12)) {
           // Uma defesa antecipada; nunca fecha a porta com outro carro ao lado.
           const candidate = Math.min(14, laneWidth);
@@ -395,18 +400,18 @@
       steering = steering * (1 - pathWeight) + pathSteering * pathWeight;
       const laterPoint = pointAt(car.progress + 115 + car.speed * 18);
       const bend = Math.abs(wrap(laterPoint.angle - aheadPoint.angle));
-      const driverPace = car.driver.pace;
+      const driverPace = personality.pace * wetConfidence * (1 - care * .06);
       // Limita a velocidade pela curvatura prevista, usando a mesma escala da física.
       const curvature = bend / Math.max(20, Math.hypot(laterPoint.x - aheadPoint.x, laterPoint.y - aheadPoint.y));
       // Mais próximo da aderência de 2.6 g, com margem para tráfego e correções.
-      const cornerGrip = ({ easy: 2.1, normal: 2.5, hard: 2.85 }[difficulty] || 2.5) * car.driver.corner
+      const cornerGrip = ({ easy: 2.1, normal: 2.5, hard: 2.85 }[difficulty] || 2.5) * car.driver.corner * wetConfidence * (1 - care * .16)
         * tyreGripFactor(car) * vehicle(car).grip * (1 - .26 * clamp((previewBend - .45) / .75, 0, 1))
         * (1 - .12 * clamp(Math.abs(car.racingLane) / 26, 0, 1));
       const safeSpeed = Math.sqrt(9.81 * cornerGrip * 0.25 / Math.max(curvature, 0.0001)) / 15;
       const targetCornerSpeed = Math.min(aiSpeed * driverPace * vehicle(car).speed/205 + (car.slipstream||0)*6/54, Math.max(0.7, safeSpeed));
       pedal = Math.max(pedal, clamp((targetCornerSpeed - car.speed) * 1.8, -1, 1));
       // Coast through small overspeed instead of repeatedly stabbing the brakes.
-      if (car.speed > targetCornerSpeed + .2) pedal = -clamp((car.speed - targetCornerSpeed - .1) * 1.8, 0.08, 1);
+      if (car.speed > targetCornerSpeed + .2) pedal = -clamp((car.speed - targetCornerSpeed - .1) * (1.8 - care * .3), 0.08, 1);
       else if (car.speed > targetCornerSpeed) pedal = 0;
       // A rede lê a pista; esta assistência de tráfego mantém distância dos carros.
       for (const other of cars) {
@@ -550,6 +555,7 @@
     }
 
     function recover(car) {
+      car.progressionIncident = true;
       if (drift) { driftScore.combo = 0; driftScore.chain = 0; driftScore.multiplier = 1; car.driftYaw = 0; car.handbrake = 0; car.driftRearGrip = .05; }
       if (car.done || car.pitExit || car.pitState || phase !== 'racing') return;
       car.invalidLap = true;
@@ -623,11 +629,12 @@
         if (car.wallCooldown > 0) car.wallCooldown--;
         if (car.cooldown > 0) { car.cooldown--; continue; }
         if (!car.player && !car.pitState && car.tyreWearEnabled) {
-          const compound = wetness > .45 ? 'wet' : wetness < .12 && rainIntensity < .1 ? 'dry' : car.tyreCompound;
+          const compound = wetness > (car.driver.wetSwitch ?? .45) ? 'wet' : wetness < .12 && rainIntensity < .1 ? 'dry' : car.tyreCompound;
           const remainingLaps = Math.max(0, laps - car.progress / track.length);
           const wearPerLap = car.tyreDistance > track.length * .25
             ? (1 - car.tyreLife) / (car.tyreDistance / track.length) : tyreWearRate * 1.08;
-          const needsFreshTyres = car.tyreLife < .35 && remainingLaps * wearPerLap > car.tyreLife - .08;
+          const reserve = car.driver.reserve ?? .08;
+          const needsFreshTyres = car.tyreLife < .27 + reserve && remainingLaps * wearPerLap > car.tyreLife - reserve;
           if (compound !== car.tyreCompound || car.tyreBurst || needsFreshTyres) {
             car.pitRequested = true; car.pitCompound = compound;
           }
@@ -672,6 +679,7 @@
           const dx = b.x - a.x, dy = b.y - a.y;
           const distance = Math.hypot(dx, dy);
           if (distance >= 17) continue;
+          a.progressionIncident = b.progressionIncident = true;
           const nx = distance > 0.001 ? dx / distance : Math.cos(a.angle + Math.PI / 2);
           const ny = distance > 0.001 ? dy / distance : Math.sin(a.angle + Math.PI / 2);
           const push = (17 - distance) / 2 + 0.01;
@@ -691,11 +699,17 @@
       }
 
       for (const [index, car] of cars.entries()) {
+        if (!car.done && !qualifying && !drift) {
+          car.progressionTicks = (car.progressionTicks || 0) + 1;
+          if (car.wetness >= .55 && car.rainIntensity >= .3) car.progressionRainTicks = (car.progressionRainTicks || 0) + 1;
+          if (!car.pitState && !car.pitExit && (car.wallContact || car.impact > .1 || car.offRoad || car.invalidLap)) car.progressionIncident = true;
+        }
         if (car.done || car.cooldown || before[index].pit) continue;
         let delta = (car.pitState ? car.pitTrackProgress : track.nearest(car.x, car.y).progress) - before[index].s;
         if (delta > track.length / 2) delta -= track.length;
         if (delta < -track.length / 2) delta += track.length;
         if (Math.abs(delta) >= 25 || delta < -.5 || !track.contains(car.x, car.y) || car.pitState) car.recordLapInvalid = true;
+        if (!car.pitState && Math.abs(delta) >= 25) car.progressionIncident = true;
         // Rejeita saltos entre partes do circuito: só movimento local conta.
         if (Math.abs(delta) < 25) car.progress += delta;
         if (car.progress >= (car.checkpoint + 1) * checkpointLength) {

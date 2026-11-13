@@ -77,3 +77,10 @@ ALTER TABLE neurodrive.auth_limits ENABLE ROW LEVEL SECURITY;
 -- Sem políticas públicas: acesso somente pelo backend via conexão PostgreSQL.
 REVOKE ALL ON ALL TABLES IN SCHEMA neurodrive FROM PUBLIC;
 REVOKE ALL ON ALL SEQUENCES IN SCHEMA neurodrive FROM PUBLIC;
+CREATE TABLE IF NOT EXISTS neurodrive.progression (
+  player_id BIGINT NOT NULL REFERENCES neurodrive.players(id) ON DELETE CASCADE,
+  code TEXT NOT NULL, progress INTEGER NOT NULL DEFAULT 0, achieved BIGINT,
+  PRIMARY KEY(player_id,code)
+);
+ALTER TABLE neurodrive.progression ENABLE ROW LEVEL SECURITY;
+REVOKE ALL ON neurodrive.progression FROM PUBLIC;

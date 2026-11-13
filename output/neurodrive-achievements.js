@@ -24,7 +24,25 @@
     }
     if(!history.children.length)history.append(node('li','Suas conquistas aparecerão aqui com a data em que foram alcançadas.'));
   }
-  window.NeuroAchievements={improvement,render};
+  function renderProgression(host, goals) {
+    if (!host) return;
+    host.replaceChildren();
+    const t = value => window.NeuroI18n?.t(value) || value;
+    const names = {clean:['Corrida limpa','Termine sem colisões, saídas de pista ou reposicionamentos.'],podiums:['Presença no pódio','Conquiste três pódios em corridas.'],rain:['Rei da chuva','Vença com chuva e pista molhada em pelo menos 25% da prova.']};
+    if (!goals?.length) { host.append(node('p',t('Os desafios estarão disponíveis após a atualização do servidor.'))); return; }
+    for (const goal of goals) {
+      if (!names[goal.code]) continue;
+      const card = node('article',''); card.className='progression-card';card.dataset.earned=String(!!goal.achieved);
+      card.append(node('strong',t(names[goal.code][0])),node('p',t(names[goal.code][1])));
+      const progress=node('progress','');progress.max=goal.target;progress.value=goal.progress;progress.setAttribute('aria-label',t(names[goal.code][0]));
+      card.append(progress,node('small',`${goal.progress} / ${goal.target}`));
+      card.append(node('b',`${goal.coins} ${t('moedas')}${goal.skin?' · '+t(goal.skin==='storm-exclusive'?'Tempestade':'Glória do Pódio'):''}`));
+      card.append(node('span',t(goal.achieved?'Recompensa recebida':'Em progresso')));
+      if(goal.achieved){const date=node('time',new Date(goal.achieved).toLocaleDateString(document.documentElement.lang==='en'?'en-US':'pt-BR'));date.dateTime=new Date(goal.achieved).toISOString();card.append(date);}
+      host.append(card);
+    }
+  }
+  window.NeuroAchievements={improvement,render,renderProgression};
   window.createNeuroRecordNotice=get=>{
     const seen=new Set();let until=0;
     return {

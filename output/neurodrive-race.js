@@ -4,6 +4,7 @@
   const get = (id) => document.getElementById(id);
   const fpsDisplay = window.createNeuroFPS?.(get('show-fps'), get('game-fps'));
   const updateHUD = window.createRaceHUD(get);
+  const minimap = window.createNeuroMinimap?.(get('neuro-race'), get('show-minimap'));
   const teamRadio = window.createNeuroRadio?.(get('neuro-race'));
   const updateSignals = window.createRaceSignals(get);
   // Ferramentas de inspeção são opt-in e não aparecem para o jogador.
@@ -333,6 +334,7 @@
   }
 
   function openMenu() {
+    minimap?.hide();
     intro?.finish();
     resultsReturnRemaining = null;
     get('race-results-return').hidden = true;
@@ -429,6 +431,7 @@
     renderer?.update(race.cars, player, false, spectator, race.phase === 'finished');
     const ranking = race.standings();
     updateHUD(player, ranking.indexOf(player) + 1, ranking.length, race.laps, race.elapsed, race.phase);
+    minimap?.update(track, race.cars, player.id, started && !paused && !intro?.active && !finale && !get('race-menu').open && !get('race-results').open && race.phase !== 'finished');
     teamRadio?.update(player, { key:race, phase:race.phase, laps:race.laps, qualifying:race.qualifying, drift:race.drift, elapsed:race.elapsed }, started && !paused && !intro?.active && !document.hidden);
     get('race-laps').disabled = started && !race.qualifying && race.phase !== 'finished';
     audio?.update(player, race, started && !paused);
@@ -725,5 +728,6 @@
 
   refresh();
   openMenu();
+  window.NeuroBoot?.ready();
   requestAnimationFrame(frame);
 })();

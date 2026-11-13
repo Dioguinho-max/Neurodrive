@@ -21,6 +21,7 @@
   get('online-tab-settings').onclick=()=>menuPage(true);
   const fpsDisplay = window.createNeuroFPS?.(get('show-fps'), get('game-fps'));
   const updateHUD = window.createRaceHUD(get);
+  const minimap = window.createNeuroMinimap?.(get('neuro-race'), get('show-minimap'));
   const teamRadio = window.createNeuroRadio?.(get('neuro-race'));
   const updateSignals = window.createRaceSignals(get);
   const recordNotice = window.createNeuroRecordNotice?.(get);
@@ -188,6 +189,7 @@
   }
   function clear() { keys.clear(); pointers.clear(); document.querySelectorAll('[data-drive]').forEach((button) => button.setAttribute('aria-pressed', 'false')); prediction?.input({ brake: true, noReverse: true }, performance.now()); send({ type: 'input', brake: true, noReverse: true }); }
   function menu() {
+    minimap?.hide();
     menuPage(false);
     intro?.finish();
     clear();
@@ -198,6 +200,7 @@
     }
   }
   function resetRoom() {
+    minimap?.hide();
     challengeUI?.state(null,false); challengeUI?.room(null);
     spectatorId=null;spectatorTargets=[];positions.clear();lastSnapshot=0;lowFpsSince=null;get('online-spectator').hidden=true;get('online-health').hidden=true;invites?.update(null);
     eventKey = ''; statsKey = ''; rulesKey = ''; get('online-championship').hidden = true;
@@ -499,10 +502,11 @@
       get('online-spectator-name').textContent=`${translated('Acompanhando')}: ${spectator.name}`;
       get('online-spectator-prev').disabled=get('online-spectator-next').disabled=targets.length<2;
       easterEgg?.update(renderer);
+      minimap?.update(trackId, cars, player.id, !get('online-lobby').open && !intro?.active && ceremonyElapsed === null && latest.phase !== 'finished');
       renderer.update(cars, player, false, spectator, latest.phase === 'finished'); audio?.update(player, latest, !player.done && !document.hidden);
     }
     requestAnimationFrame(draw);
     if (renderFrame || !latest || document.hidden) fpsDisplay?.tick(now, Boolean(renderFrame));
   }
-  menu(); requestAnimationFrame(draw);
+  menu(); window.NeuroBoot?.ready(); requestAnimationFrame(draw);
 })();

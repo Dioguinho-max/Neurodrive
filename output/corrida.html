@@ -1,6 +1,7 @@
 <!doctype html>
-<html lang="pt-BR">
+<html lang="pt-BR" class="game-booting">
   <head>
+<link rel="stylesheet" href="neurodrive-boot.css"><script src="neurodrive-boot.js" defer></script>
     <link rel="stylesheet" href="neurodrive-radio.css"><script src="neurodrive-radio-clips.js" defer></script><script src="neurodrive-radio-audio.js" defer></script><script src="neurodrive-radio.js" defer></script>
     <link rel="icon" type="image/svg+xml" href="assets/neurodrive-favicon.svg">
     <meta charset="utf-8">
@@ -22,7 +23,8 @@
     <link rel="stylesheet" href="neurodrive-hud.css">
     <script src="neurodrive-weather.js" defer></script><script src="neurodrive-fps.js" defer></script><script src="neurodrive-hud.js" defer></script><script src="neurodrive-gamepad.js" defer></script><link rel="stylesheet" href="neurodrive-gamepad.css">
     <link rel="stylesheet" href="neurodrive-easter-egg.css"><script src="neurodrive-easter-egg.js" defer></script>
-<script src="neurodrive-intro.js" defer></script><script src="neurodrive-drift-online.js" defer></script><script src="neurodrive-circuit-preview.js" defer></script><script src="neurodrive-race.js" defer></script>
+<script src="neurodrive-intro.js" defer></script><script src="neurodrive-drift-online.js" defer></script><script src="neurodrive-circuit-preview.js" defer></script><script src="neurodrive-minimap.js" defer></script>
+  <script src="neurodrive-race.js" defer></script>
     <link rel="stylesheet" href="neurodrive-menu.css?v=menus-2">
   <link rel="stylesheet" href="neurodrive-mobile.css">
   <link rel="stylesheet" href="neurodrive-home.css">
@@ -35,8 +37,11 @@
 <script src="neurodrive-mobile-pit.js" defer></script>
 
 <link rel="stylesheet" href="neurodrive-results.css"><script src="neurodrive-results.js" defer></script>
+
+  <link rel="stylesheet" href="neurodrive-minimap.css">
+<link rel="stylesheet" href="neurodrive-menu-mobile.css">
 </head>
-  <body><div id="weather-rain" class="weather-rain" aria-hidden="true"></div>
+  <body><dialog id="game-boot" open aria-labelledby="boot-title" aria-describedby="boot-status"><div class="boot-content"><p class="boot-caption">BETA &middot; RACING WITH FRIENDS</p><h1 id="boot-title" class="boot-logo">NEURO<span>DRIVE</span></h1><div class="boot-line" aria-hidden="true"></div><p id="boot-status" role="status">Preparando sua garagem...</p><button id="boot-enter" type="button" hidden>Entrar no jogo</button><button id="boot-browser" type="button" hidden>Continuar no navegador</button><button id="boot-retry" type="button" hidden>Recarregar</button></div></dialog><div id="weather-rain" class="weather-rain" aria-hidden="true"></div>
     <main id="neuro-race">
       <output id="game-fps" class="game-fps" aria-label="Desempenho gr&#225;fico" hidden>FPS &mdash;</output>
       <header class="viz-row game-toolbar">
@@ -216,6 +221,16 @@
           <p class="text-small">No manual, cada toque troca uma marcha. Reduções acima do corte são bloqueadas.</p>
         <label class="form-label">Qualidade gráfica <select class="form-select" id="race-quality"><option value="performance">Desempenho · recomendado</option><option value="high">Mais detalhes</option><option value="ultra">Super alto · exige mais da GPU</option></select></label>
       <label class="form-check"><input type="checkbox" id="show-fps"> Mostrar FPS</label>
+      <label class="form-check"><input type="checkbox" id="show-minimap"> Mostrar minimapa</label>
+<details class="rival-guide"><summary>Conheça seus rivais</summary><ul>
+<li>Luna Costa · especialista em chuva</li>
+<li>Rafa Torres · agressivo nas ultrapassagens</li>
+<li>Bia Rocha · preserva pneus e planeja paradas</li>
+<li>Caio Lima · velocidade e vácuo nas retas</li>
+<li>Nico Alves · cauteloso, com mais margem de segurança</li>
+<li>Dani Reis · equilíbrio entre ritmo e estratégia</li>
+</ul></details>
+
         <fieldset class="vehicle-picker"><legend>Sensação de pilotagem</legend><label class="form-check"><input id="race-feedback-camera" type="checkbox" checked> Câmera suave com a velocidade</label><label class="form-check"><input id="race-feedback-passing" type="checkbox" checked> Som discreto de ultrapassagens</label><label class="form-check"><input id="race-feedback-vibration" type="checkbox"> Vibração do controle (quando compatível)</label></fieldset><label class="form-check"><input id="race-sound" type="checkbox" checked> Som do motor</label>
         <label class="form-check"><input id="radio-sound" type="checkbox" checked> Toque do rádio</label>
         <label class="form-check"><input id="radio-voice" type="checkbox" checked> Voz da equipe</label>
@@ -273,7 +288,7 @@
                 <details class="pilot-search"><summary>Visitar outro piloto</summary><form id="pilot-search-form"><label class="form-label">Nome da conta<input id="pilot-search-name" required minlength="3" maxlength="20" placeholder="Nome usado no login"></label><button class="btn" type="submit" id="pilot-search-button">Ver perfil</button></form><div id="pilot-visitor" hidden></div></details>
               </section>
               <section id="account-achievements" class="account-section" role="tabpanel" aria-labelledby="account-tab-achievements" tabindex="0" hidden>
-                <h4>Minhas medalhas</h4><div id="pilot-medals" class="pilot-medals"></div>
+                <section class="pilot-progression"><h4>Desafios de progressão</h4><p>Corridas online, incluindo rede local. Recompensas automáticas, uma vez por conta.</p><div id="pilot-progression"></div></section><h4>Minhas medalhas</h4><div id="pilot-medals" class="pilot-medals"></div>
                 <details class="account-history" open><summary>Histórico de conquistas</summary><ul id="pilot-achievement-history" class="pilot-achievement-history"></ul></details><details class="account-help"><summary>Sobre minhas conquistas</summary><p class="text-small">Vitórias e pódios anteriores usam as datas salvas. Recordista começa nesta atualização e permanece mesmo se sua marca for superada.</p></details>
               </section>
               <section id="account-edit" class="account-section" role="tabpanel" aria-labelledby="account-tab-edit" tabindex="0" hidden>

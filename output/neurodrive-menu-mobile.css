@@ -1,0 +1,43 @@
+/* Touch menu only: keep racing controls and desktop composition unchanged. */
+@media(pointer:coarse),(max-width:600px){
+ #race-menu[open],#online-lobby[open]{padding: max(12px,env(safe-area-inset-top)) max(14px,env(safe-area-inset-right)) max(20px,env(safe-area-inset-bottom)) max(14px,env(safe-area-inset-left));scroll-padding-top:74px;overscroll-behavior:contain}
+ #race-menu[open]{display:block}
+ #race-menu .menu-hero{position:static;padding:0;min-width:0}
+ #race-menu .menu-hero h2{font-size:32px;margin:6px 0 14px}
+ #race-menu .home-showroom{height:160px;border-radius:14px}
+ #race-menu .home-pilot{margin:10px 0;padding:10px;border-radius:12px}
+ #race-menu .menu-garage-footer{gap:4px;margin-bottom:12px}
+ #race-menu .menu-content{max-width:none;min-width:0}
+ #race-menu .menu-pages{position:sticky;top:0;z-index:6;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:3px;padding:6px 0;background:#0b1722;border:0;border-radius:12px;overflow:visible}
+ #race-menu .menu-pages .btn{min-width:0;min-height:48px;padding:6px 2px;font-size:12px;letter-spacing:0;border-radius:9px}
+ #race-menu .menu-pages .btn::before{display:none}
+ #race-menu .menu-pages .btn[aria-pressed=true]{background:#9af0c6;color:#10241d}
+ #race-menu .mode-shortcuts{gap:7px}
+ #race-menu .mode-shortcut{border-radius:12px;transition:transform .15s,background .15s}
+ #race-menu .mode-shortcut:active{transform:scale(.96)}
+ #race-menu .mode-shortcut svg{height:54px}
+ #race-menu .mode-shortcut strong{font-size:16px;padding:8px}
+ #race-menu .mode-shortcut small{font-size:12px;padding:0 8px}
+ #race-menu :is(.form-select,.form-check,.championship-shortcut,.btn),#online-lobby :is(.btn,select,input){min-height:46px;touch-action:manipulation}
+ #race-menu .form-check{display:flex;align-items:center;gap:10px}
+ #race-menu input[type=checkbox]{width:20px;height:20px;flex-shrink:0}
+ #race-menu :is(#race-menu-play,#race-menu-resume){border-radius:12px;min-height:52px}
+ #race-menu .account-tabs{overflow-x:auto;flex-wrap:nowrap}
+ #race-menu .account-tabs .btn{flex-shrink:0}
+ #online-lobby .online-navigation{gap:12px;flex-wrap:wrap}
+ #online-lobby :is(input,select){font-size:16px;max-width:100%}
+}
+@media(pointer:coarse) and (orientation:landscape) and (min-width:650px){
+ #race-menu[open]{display:grid;grid-template-columns:minmax(170px,.65fr) minmax(0,1.7fr);gap:18px;align-items:start}
+ #race-menu .menu-hero{position:sticky;top:0}
+ #race-menu .home-showroom{height:140px}
+ #race-menu .home-car-caption{padding:24px 10px 10px;grid-template-columns:minmax(0,1fr);gap:3px}
+ #race-menu .home-car-caption > span{display:none}
+ #race-menu .home-car-caption strong{font-size:16px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+ #race-menu .home-car-caption .btn{grid-column:1;grid-row:auto;min-height:38px;padding:6px 10px;font-size:12px;justify-self:start;max-width:100%}
+ #race-menu .menu-hero h2{font-size:28px}
+ #race-menu .menu-garage-footer .beta-notice{display:none}
+ #race-menu .menu-section{padding-top:12px}
+ #race-menu .menu-section h3{font-size:24px;margin:8px 0 14px}
+}
+@media(prefers-reduced-motion:reduce){#race-menu .mode-shortcut{transition:none}}

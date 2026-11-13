@@ -75,6 +75,7 @@
       else get('pilot-photo').removeAttribute('src');
       get('pilot-initials').textContent=(next.nickname || next.username).slice(0,2).toUpperCase();
       if (!busy) { get('pilot-nickname').value=next.nickname || next.username; get('pilot-number').value=next.number ?? 0; }
+      window.NeuroAchievements?.renderProgression?.(get('pilot-progression'),next.progression);
       window.NeuroAchievements?.render(get('pilot-medals'),get('pilot-achievement-history'),next.achievements||[]);
       for (const key of ['races','wins','podiums','poles']) get('pilot-'+key).textContent=next.stats?.[key] ?? '—';
       const skin=skins.find(item=>item.id===next.equipped); get('pilot-car-name').textContent='Pintura equipada · '+(skin?.name || 'Original');
